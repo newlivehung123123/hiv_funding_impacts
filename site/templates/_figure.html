@@ -1,0 +1,184 @@
+{#
+   One figure: its drawing, the same numbers as a table, and the two files that carry them
+   away. Region and country pages both draw figures, and a figure that is defined twice is a
+   figure that is only fixed once, so it is defined here and both pages call it.
+
+   The chart and the table are both in the page. Switching between them shows one and hides
+   the other; it does not fetch anything and it does not redraw anything, so the switch is
+   immediate and it still works on a page saved to disk. With scripting off, the tabs are not
+   rendered at all and the table simply follows the chart down the page, which is the reading
+   order that markup already has.
+#}
+{% macro figure(f) %}
+<figure class="figure metal metal--plate edge" id="{{ f.id }}" data-figure data-view="chart">
+  <div class="figure__head">
+    <div class="figure__id">
+      <figcaption class="figure__t">{{ f.title }}</figcaption>
+      <span class="figure__src">{{ f.source }}</span>
+    </div>
+    <div class="figure__tools">
+      <div class="seg" role="tablist" aria-label="How to show {{ f.title }}">
+        <button type="button" class="seg__b is-on" role="tab" aria-selected="true"
+                data-view-to="chart" aria-controls="{{ f.id }}-chart">
+          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1 10.5l3.5-4L7.5 9 13 2.5"
+               fill="none" stroke="currentColor" stroke-width="1.4"/></svg>Chart
+        </button>
+        <button type="button" class="seg__b" role="tab" aria-selected="false"
+                data-view-to="table" aria-controls="{{ f.id }}-table">
+          <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M1.5 2h11v10h-11zM1.5 5.4h11M5.6 5.4V12"
+               fill="none" stroke="currentColor" stroke-width="1.2"/></svg>Table
+        </button>
+      </div>
+      {# an anchor and not a button: with scripting off it is a link to the CSV and it works,
+         and with scripting on the panel opens over it and offers the spreadsheet too #}
+      <a class="figbtn" href="{{ rel }}{{ f.dl.csv }}" download data-dl-open
+         data-dl-title="{{ f.title }}"
+         data-dl-csv="{{ rel }}{{ f.dl.csv }}" data-dl-csv-size="{{ f.dl.csv_size }}"
+         data-dl-shape="{{ f.table.row_shape }}"
+         {% if f.dl.xlsx %}data-dl-xlsx="{{ rel }}{{ f.dl.xlsx }}"
+         data-dl-xlsx-size="{{ f.dl.xlsx_size }}"{% endif %}
+         data-dl-rows="{{ f.table.long|length }}"
+         aria-label="Download the data behind {{ f.title }}">
+        <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v8.2M3.6 6.2L7 9.6l3.4-3.4M1.8 12.4h10.4"
+             fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+      </a>
+    </div>
+  </div>
+
+  {# The drawing is laid out for a column about 1180 units across. On a phone it gets a
+     quarter of that, and the axis labels come down with everything else until the years
+     along the bottom and the counts up the side are too small to read. So on a phone the
+     chart opens full screen, turned onto the long edge of the handset, where it has close
+     to three times the width and its labels can be enlarged to match. Tapping anywhere on
+     the drawing opens it; the control in the corner says so, and is what a keyboard and a
+     screen reader reach it by. Both are drawn only at phone width — on a desktop the
+     figure is already the size it was drawn for. #}
+  <div class="figure__chart" id="{{ f.id }}-chart" role="tabpanel" data-cview-open>
+    {{ f.svg|safe }}
+    {% if f.legend %}
+    <ul class="legend-inline">
+      {% for l in f.legend %}<li><i style="background:{{ l.colour }}"></i>{{ l.label }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    {# Under the drawing and not in a corner of it. A control set over the figure sits on
+       whatever the figure has drawn there, and on a series that climbs to the right that is
+       the last few years of it — the part a reader has most reason to look at. Below the
+       drawing it covers nothing, and it can say what it does in words instead of leaving a
+       glyph to be worked out. #}
+    <button type="button" class="cvbtn" aria-label="Enlarge {{ f.title }}">
+      <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M8.4 1.6h4v4M12.4 1.6L8.2 5.8M5.6 12.4h-4v-4M1.6 12.4l4.2-4.2"
+           fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Tap the chart to enlarge
+    </button>
+  </div>
+
+  <div class="figure__table" id="{{ f.id }}-table" role="tabpanel">
+    <div class="figure__tscroll">
+      <table class="tbl-fig{% if f.table.x_wraps %} tbl-fig--wrapx{% endif %}">
+        <thead>
+          <tr>{% for h in f.table.head %}<th{% if not loop.first %} class="num"{% endif %}>{{ h }}</th>{% endfor %}</tr>
+        </thead>
+        <tbody>
+          {% for r in f.table.body %}
+          <tr>
+            <th scope="row">{{ r.x }}</th>
+            {% for c in r.cells %}
+            <td class="num{% if c.flag %} is-prov{% endif %}">{{ c.t }}{% if c.flag %}<span class="prov" title="From a reporting period that is still open or that the source marks as incomplete">&deg;</span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="figure__tnote">
+      {{ f.table.n_rows }} {{ 'rows' if f.table.n_rows != 1 else 'row' }}, as drawn above.
+      {% if f.table.flagged %}A value marked &deg; comes from a reporting period that is still
+      open or that the source marks as incomplete.{% endif %}
+      Values are rounded for reading; the download carries them unrounded.
+    </p>
+  </div>
+
+  <p class="figure__note">{{ f.note|safe }}</p>
+</figure>
+{% endmacro %}
+
+
+{# The panel the download button opens. One per page, filled from whichever figure was asked,
+   so a page with six figures carries one of these and not six. #}
+{% macro download_dialog() %}
+<div class="dlg" data-dlg hidden>
+  <div class="dlg__scrim" data-dlg-close></div>
+  <div class="dlg__box metal metal--plate edge" role="dialog" aria-modal="true"
+       aria-labelledby="dlg-title">
+    <div class="dlg__head">
+      <div>
+        <h3 id="dlg-title">Download</h3>
+        <p class="dlg__sub" data-dlg-sub></p>
+      </div>
+      <button type="button" class="dlg__x" data-dlg-close aria-label="Close">
+        <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12"
+             fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+      </button>
+    </div>
+    <a class="dlg__opt" data-dlg-csv download>
+      <span class="dlg__optn">Data (CSV)</span>
+      <span class="dlg__optd" data-dlg-shape></span>
+      <span class="dlg__opts" data-dlg-csv-size></span>
+      <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v8.2M3.6 6.2L7 9.6l3.4-3.4M1.8 12.4h10.4"
+           fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+    </a>
+    <a class="dlg__opt" data-dlg-xlsx download>
+      <span class="dlg__optn">Data (Excel)</span>
+      <span class="dlg__optd">The same rows, with the figure's source and note on a second sheet.</span>
+      <span class="dlg__opts" data-dlg-xlsx-size></span>
+      <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1v8.2M3.6 6.2L7 9.6l3.4-3.4M1.8 12.4h10.4"
+           fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+    </a>
+    <p class="dlg__foot">
+      Every value carries the source it was read from. The whole panel, all
+      {{ stats.n_obs_fmt }} observations, is on the
+      <a href="{{ rel }}data/">Data</a> page.
+    </p>
+  </div>
+</div>
+{% endmacro %}
+
+
+{# The full-screen chart, for a phone.
+
+   One of these to a page, filled with a copy of whichever figure was tapped, for the same
+   reason the download panel is one and not six: six copies of an empty frame is five more
+   than the page needs. The copy is taken from the drawing already in the page, so what
+   opens is the figure the reader was looking at and not a second rendering of it that
+   could differ.
+
+   The stage is empty in the markup. Nothing is drawn here until a reader asks for it, and
+   on a desktop nothing ever does. #}
+{% macro chart_viewer() %}
+<div class="cview" data-cview hidden>
+  <div class="cview__scrim" data-cview-close></div>
+  <div class="cview__in" role="dialog" aria-modal="true" aria-labelledby="cview-title">
+    <div class="cview__head">
+      <div class="cview__id">
+        <p class="cview__t" id="cview-title" data-cview-t></p>
+        <span class="cview__s" data-cview-s></span>
+      </div>
+      <button type="button" class="cview__x" data-cview-close aria-label="Close">
+        <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2 2l10 10M12 2L2 12"
+             fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+      </button>
+    </div>
+    <div class="cview__stage" data-cview-stage></div>
+    <div class="cview__foot">
+      <div class="cview__legend" data-cview-legend></div>
+      {# Held upright the figure is turned on its side, because that is the only way it fits
+         at a size worth reading. Turning the handset turns it back the other way, so the
+         writing is upright however the phone is held; this line is what says so to a reader
+         still holding it the first way, and it goes when it no longer applies. #}
+      <p class="cview__hint">
+        <span class="cview__turn">Turn your phone to read this upright</span>
+        <span class="cview__tap" data-cview-hint></span>
+      </p>
+    </div>
+  </div>
+</div>
+{% endmacro %}

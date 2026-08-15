@@ -1,0 +1,46 @@
+IndicatorCode,IndicatorName
+WHS4_99,Antiretroviral therapy coverage among HIV-infected pregnant women for PMTCT (%)
+MDG_0000000033,Antiretroviral therapy coverage among people with HIV infection eligible for ART according to 2010 guidelines (%)
+MDG_0000000034,"Antiretroviral therapy coverage among people with advanced HIV infection (%), WHO 2006 guidelines"
+WHS2_138,Deaths due to HIV/AIDS (per 100 000 population)
+MDG_0000000017,Deaths due to tuberculosis among HIV-negative people (per 100 000 population)
+MDG_0000000018,Deaths due to tuberculosis among HIV-positive people (per 100 000 population)
+WHS2_170,Distribution of causes of death among children aged <5 years (%) - HIV/AIDS
+HIV_ARTCOVERAGE,Estimated antiretroviral therapy coverage among people living with HIV (%)
+HIV_0000000001,Estimated number of people (all ages) living with HIV
+HIV_0000000020,Estimated number of pregnant women living with HIV
+HIV_0000000021,Estimated number of pregnant women living with HIV needing antiretrovirals for preventing mother-to-child transmission
+HIV_0000000028,"HIV tests performed where results were received by a person (testing volume), estimated number per 1000 population"
+HIV_0000000027,"HIV tests performed where results were received by a person (testing volume), reported number"
+HIV_0000000029,"HIV tests performed where results were received by a person (testing volume), reporting period"
+RSUD_620,"HIV, Hepatitis counselling and treatment availability in specialized facilities and services"
+HHS_LAWPOLICY,"HIV, Hepatitis, and STI-related laws and policies"
+TB_hiv_art_pct,HIV-positive TB patients on ART (antiretroviral therapy) (%)
+TB_hiv_cpt_pct,HIV-positive TB patients on CPT (co-trimoxazole preventive therapy) (%)
+PRISON_D4_HIV_DIAG_TOT,In-prison HIV diagnosis (number of diagnoses)
+TB_e_inc_tbhiv_100k,Incidence of tuberculosis (per 100 000 population) (HIV-positive cases)
+SDGHIV,New HIV infections (per 1000 uninfected population)
+SDGHIV1524,New HIV infections among adults 15-24 years old (per 1000 uninfected population)
+TB_e_mort_exc_tbhiv_num,"Number of deaths due to tuberculosis, excluding HIV"
+TB_e_inc_tbhiv_num,"Number of incident tuberculosis cases,  (HIV-positive cases)"
+WHS10_6,Number of national population surveys -  HIV prevalence
+HIV_0000000026,Number of new HIV infections
+HIV_0000000006,Number of people dying from HIV-related causes
+HIV_0000000015,Number of pregnant women living with HIV who received antiretrovirals for preventing mother-to-child transmission
+HIV_0000000016,Number of pregnant women living with HIV who received antiretrovirals for preventing mother-to-child transmission
+HEPATITIS_HCV_TESTING_HIV_PERCENT,People living with HIV diagnosed with chronic hepatitis C infection (percent)
+HEPATITIS_HCV_TREATMENT_HIV_PERCENT,People living with HIV treated for chronic hepatitis C infection (percent)
+HEPATITIS_HCV_TESTING_PWID_PERCENT,"People living with HIV who inject drugs, diagnosed with chronic hepatitis C infection (percent)"
+HEPATITIS_HCV_TREATMENT_PWID_PERCENT,"People living with HIV who inject drugs, treated for chronic hepatitis C infection (percent)"
+HIV_POSITIVITY,Percentage of HIV-positive results returned to people in the calendar year
+HIV_VIRALLOADSUPPRESSEDART,Percentage of people living with HIV receiving treatment who have suppressed viral loads
+HIV_VIRALLOADSUPPRESSED,Percentage of people living with HIV who have suppressed viral loads
+HIV_STATUSKNOWNHIV,Percentage of people living with HIV who know their HIV status
+HIV_STATUSKNOWNART,Percentage of people living with HIV who know their status receiving antiretroviral therapy
+MDG_0000000021,Population aged 15-24 years with comprehensive correct knowledge of HIV/AIDS (%)
+MDG_0000000029,Prevalence of HIV among adults aged 15 to 49 (%)
+MDG_0000000019,Prevalence of HIV among adults aged >=15 years (per 100 000 population)
+RSUD_41,Specialized treatment services for drug use disoders and HIV/AIDS
+TB_hivtest_pct,TB patients with known HIV status (%)
+TB_hivtest_pos_pct,Tested TB patients HIV-positive (%)
+TB_c_tbhiv_tsr,Treatment success rate: HIV-positive TB cases

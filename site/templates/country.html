@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% from "_figure.html" import figure, download_dialog, chart_viewer with context %}
+{% block title %}{{ country.name }} — {{ site.name }}{% endblock %}
+{% block description %}HIV funding, epidemic estimates and service reporting for {{ country.name }}.{% endblock %}
+
+{% block main %}
+{# the page opens on the same plate of metal the home page does, so a reader arriving
+   from it stays on one surface #}
+<section class="page-band metal edge">
+  <div class="wrap page-head">
+    <p class="crumb">
+      <a href="{{ home }}">Home</a> &nbsp;/&nbsp;
+      <a href="{{ rel }}regions/southeast-asia/">Southeast Asia</a> &nbsp;/&nbsp; {{ country.iso3 }}
+    </p>
+    <h1>{{ country.name }}</h1>
+    <p class="lede">{{ country.lede }}</p>
+  </div>
+</section>
+
+<section class="wrap sect">
+  <div class="dl-row">
+    {% for k in country.keynums %}
+    <div class="dl metal {{ k.tone }} edge">
+      <div class="dl__n" style="font-size:20px;font-weight:300">{{ k.value }}</div>
+      <div class="dl__d">{{ k.label }}</div>
+      <div class="dl__s">{{ k.source }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="wrap sect">
+  {% for f in figures %}{{ figure(f) }}{% endfor %}
+  {% if not figures %}
+  <div class="callout">
+    <h4>No series long enough to draw</h4>
+    <p>
+      {{ country.name }} appears in the panel, but no indicator yet has enough years from a
+      single source to plot. The rows that do exist are listed below and are in the download.
+    </p>
+  </div>
+  {% endif %}
+</section>
+
+{% if flags %}
+<section class="wrap sect">
+  <div class="callout">
+    <h4>Data-quality flags on {{ country.name }}</h4>
+    {% for fl in flags %}
+    <p style="margin-top:12px"><b style="color:var(--steel-200);font-weight:400">{{ fl.what }}</b> — {{ fl.why }}</p>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section class="wrap sect sect--pb">
+  <div class="sec-head" style="padding:0">
+    <h2 class="sec-title">Sources behind these figures</h2>
+    <p class="sec-meta">{{ country.n_obs }} rows</p>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl-dark">
+      <thead>
+        <tr><th>Source</th><th>Type</th><th class="num">Rows</th><th class="num">Indicators</th>
+            <th class="num">Years</th><th>Read from</th><th class="num">Retrieved</th></tr>
+      </thead>
+      <tbody>
+        {% for s in country.sources %}
+        <tr>
+          <td>{{ s.name }}</td>
+          <td class="muted">{{ s.type }}</td>
+          <td class="num">{{ s.n }}</td>
+          <td class="num">{{ s.n_ind }}</td>
+          <td class="num">{{ s.years }}</td>
+          <td class="muted" style="max-width:34ch;word-break:break-all">
+            {% if s.url %}<a href="{{ s.url }}" rel="noopener">{{ s.host }}</a>{% else %}—{% endif %}
+          </td>
+          <td class="num muted">{{ s.retrieved }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec-head" style="padding:0;margin-top:44px">
+    <h2 class="sec-title">Indicators held</h2>
+    <p class="sec-meta">{{ country.indicators|length }} of {{ stats.n_indicators }}</p>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl-dark">
+      <thead>
+        <tr><th>Indicator</th><th>Domain</th><th>Unit</th><th class="num">Rows</th>
+            <th class="num">Years</th><th>Sources</th><th class="num">Most recent value</th></tr>
+      </thead>
+      <tbody>
+        {% for i in country.indicators %}
+        <tr>
+          <td>{{ i.name }}</td>
+          <td class="muted">{{ i.domain }}</td>
+          <td class="muted">{{ i.unit }}</td>
+          <td class="num">{{ i.n }}</td>
+          <td class="num">{{ i.years }}</td>
+          <td class="muted">{{ i.sources }}</td>
+          <td class="num">{{ i.latest }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="wrap sect sect--pb" style="padding-top:0">
+  <p style="font-size:12.5px;color:var(--steel-500);max-width:80ch;line-height:1.65">
+    Every row shown here is in the panel download, with its source URL and retrieval date
+    attached. See <a href="{{ rel }}data/" style="color:var(--steel-300);text-decoration:underline">Data</a>.
+  </p>
+</section>
+
+{% if figures %}{{ download_dialog() }}{{ chart_viewer() }}{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if figures %}<script src="{{ rel }}{{ asset('js/figure.js') }}" defer></script>{% endif %}
+{% endblock %}

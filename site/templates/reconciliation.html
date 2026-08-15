@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Reconciliation — {{ site.name }}{% endblock %}
+{% block description %}How the panel decides whether agreement between two sources is corroboration or republication.{% endblock %}
+
+{% block main %}
+<section class="wrap page-head">
+  <p class="crumb"><a href="{{ home }}">Home</a> &nbsp;/&nbsp; Reconciliation</p>
+  <h1>Reconciliation</h1>
+  <p class="lede">
+    When there are multiple values for the same measurement unit, the panel keeps every source's
+    own figure but not selectively displays a single best value. This page compares them. The
+    comparison is only worth reading once you know what kind of comparison it represents.
+  </p>
+</section>
+
+<section class="wrap sect">
+  <div class="grid-cards">
+    <div class="card metal edge">
+      {% set pic = photo('rel-derived') %}
+      {% if pic %}<span class="seg-photo" aria-hidden="true"
+                            style="background-image:url('{{ rel }}{{ pic }}')"></span>{% endif %}
+      <h3>Derived</h3>
+      <p class="card__meta">{{ recon.derived_fmt }} comparisons</p>
+      <p>
+        Both sources publish the same underlying estimate. UNAIDS, the WHO Global Health
+        Observatory and the World Bank largely republish the same Spectrum output, so agreement
+        between them is arithmetic. Counting it as triangulation would manufacture confidence.
+      </p>
+    </div>
+    <div class="card metal edge">
+      {% set pic = photo('rel-subset') %}
+      {% if pic %}<span class="seg-photo" aria-hidden="true"
+                            style="background-image:url('{{ rel }}{{ pic }}')"></span>{% endif %}
+      <h3>Subset</h3>
+      <p class="card__meta">{{ recon.subset_fmt }} comparisons</p>
+      <p>
+        One source measures a part of what the other measures. PEPFAR reports its own programme
+        footprint, not the national total, so a gap is expected by construction and is not a
+        contradiction.
+      </p>
+    </div>
+    <div class="card metal edge">
+      {% set pic = photo('rel-independent') %}
+      {% if pic %}<span class="seg-photo" aria-hidden="true"
+                            style="background-image:url('{{ rel }}{{ pic }}')"></span>{% endif %}
+      <h3>Independent</h3>
+      <p class="card__meta">{{ recon.independent_fmt }} comparisons</p>
+      <p>
+        Separate measurement systems: Such as a national programme register against a modelled
+        estimate, or OECD donor reporting against United States self-reporting. Only here that
+        data differences in the same measurement unit carry information.
+      </p>
+    </div>
+  </div>
+  <p style="font-size:12.5px;color:var(--steel-500);margin-top:16px;max-width:82ch;line-height:1.65">
+    A further {{ recon.insufficient|count }} comparisons had too few overlapping cells to
+    classify, so we leave them unclassified instead of assigning them to a category.
+  </p>
+</section>
+
+<section class="wrap sect">
+  <div class="sec-head" style="padding:0">
+    <h2 class="sec-title">How each verdict was reached</h2>
+    <p class="sec-meta">Inferred from the data, not assigned by hand</p>
+  </div>
+  <p style="font-size:13.5px;color:var(--steel-400);max-width:78ch;margin-top:12px;line-height:1.6">
+    Each source pair is classified from its own overlapping cells and the evidence is written out
+    alongside the verdict, so it can be checked or overridden. The thresholds are fixed in
+    advance. We treat two sources as sharing an estimate when they agree within
+    {{ recon.thr.derived_band }} on at least {{ recon.thr.derived_share }} of cells and the
+    typical difference is under {{ recon.thr.derived_med }}; we treat one as a subset of the
+    other when it is the smaller figure in at least {{ recon.thr.subset_dir }} of cells and the
+    median ratio passes {{ recon.thr.subset_ratio }}; we do not classify at all when there are
+    fewer than {{ recon.thr.min_cells }} cells.
+  </p>
+  <div class="tbl-wrap">
+    <table class="tbl-dark">
+      <thead>
+        <tr><th>Indicator</th><th>Source A</th><th>Source B</th><th class="num">Cells</th>
+            <th class="num">Median difference</th><th>Relationship</th><th>Evidence</th></tr>
+      </thead>
+      <tbody>
+        {% for p in pairs %}
+        <tr>
+          <td>{{ p.indicator }}</td>
+          <td class="muted">{{ p.a }}</td>
+          <td class="muted">{{ p.b }}</td>
+          <td class="num">{{ p.n }}</td>
+          <td class="num">{{ p.med }}</td>
+          <td><span class="badge{% if p.rel == 'independent' %} badge--clm{% endif %}">{{ p.rel }}</span></td>
+          <td class="muted" style="max-width:44ch">{{ p.evidence }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:11.5px;color:var(--steel-500);margin-top:12px">
+    The table shows {{ pairs|length }} of {{ recon.n_pairs_total }} source pairs, ordered by
+    relationship then by number of overlapping cells. The complete table is in the download.
+  </p>
+</section>
+
+<section class="wrap sect sect--pb">
+  <div class="sec-head" style="padding:0">
+    <h2 class="sec-title">Where independent sources disagree</h2>
+    <p class="sec-meta">{{ recon.n_divergent }} material divergences</p>
+  </div>
+  <p style="font-size:13.5px;color:var(--steel-400);max-width:78ch;margin-top:12px;line-height:1.6">
+    Only cells from independent pairs are shown, and only where both figures are large enough
+    for a ratio to mean anything. A difference is called material above
+    {{ recon.thr.divergence }}. Cells below the materiality floor for their unit, or where one
+    side is zero or negative, are set aside instead of being counted as disagreements.
+  </p>
+  <div class="tbl-wrap">
+    <table class="tbl-dark">
+      <thead>
+        <tr><th>Country</th><th class="num">Year</th><th>Indicator</th>
+            <th>Source A</th><th class="num">Value A</th>
+            <th>Source B</th><th class="num">Value B</th><th class="num">Difference</th></tr>
+      </thead>
+      <tbody>
+        {% for c in cells %}
+        <tr>
+          <td>{{ c.country }}</td>
+          <td class="num">{{ c.year }}</td>
+          <td class="muted">{{ c.indicator }}</td>
+          <td class="muted">{{ c.a }}</td>
+          <td class="num">{{ c.va }}</td>
+          <td class="muted">{{ c.b }}</td>
+          <td class="num">{{ c.vb }}</td>
+          <td class="num" style="color:{{ c.colour }}">{{ c.rel }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:11.5px;color:var(--steel-500);margin-top:12px">
+    The table shows {{ cells|length }} of {{ recon.n_divergent }} cells, largest difference first.
+  </p>
+</section>
+{% endblock %}

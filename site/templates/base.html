@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+{# Set before anything is painted, so a control that only works with scripting is only ever
+   drawn when scripting is there to work it, and nothing appears and then disappears. #}
+<script>document.documentElement.classList.replace('no-js','js')</script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}{{ site.name }}{% endblock %}</title>
+<meta name="description" content="{% block description %}{{ site.tagline }}{% endblock %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
+{# stamped with the file's own contents, so a change to it reaches a reader who has been
+   here before instead of waiting out the host's week-long cache #}
+<link rel="stylesheet" href="{{ rel }}{{ asset('css/site.css') }}">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23002147'/%3E%3Cpath d='M6 21 L12 13 L17 17 L26 8' stroke='%23C9A464' stroke-width='2.4' fill='none'/%3E%3C/svg%3E">
+{% block head %}{% endblock %}
+</head>
+<body{% if paper %} class="paper"{% endif %}>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="masthead" data-masthead>
+  <div class="masthead__bar metal metal--plate edge">
+    <div class="masthead__in">
+      <a class="brand" href="{{ home }}">
+        <svg viewBox="0 0 25 29" fill="none" aria-hidden="true">
+          <path d="M2 27V7l10.5-5L23 7v20" stroke="#C9A464" stroke-width="1.3"/>
+          <path d="M2 21l6.5-7 4.5 3.6L23 8" stroke="#F5F8FC" stroke-width="1.5"/>
+          <circle cx="8.5" cy="14" r="1.5" fill="#C9A464"/>
+          <circle cx="13" cy="17.6" r="1.5" fill="#C9A464"/>
+        </svg>
+        <span>
+          <span class="brand__t">HIV Funding Impacts</span>
+          <span class="brand__s">{{ site.masthead_sub }}</span>
+        </span>
+      </a>
+      <nav class="nav" data-nav aria-label="Sections">
+        <div class="nav__grp" data-navgrp>
+          <button type="button" class="nav__btn" data-navbtn aria-expanded="false"
+                  {% if nav == 'sea' %}aria-current="page"{% endif %}>
+            Regions <svg class="nav__chev" viewBox="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+          </button>
+          <ul class="nav__menu metal metal--plate edge" data-navmenu>
+            {% for r in nav_regions %}
+            <li>
+              {% if r.href %}<a href="{{ r.href }}">{{ r.name }}</a>
+              {% else %}<span aria-disabled="true">{{ r.name }}<i>Not yet published</i></span>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+        <a href="{{ rel }}reconciliation/"{% if nav == 'recon' %} aria-current="page"{% endif %}>Reconciliation</a>
+        <a href="{{ rel }}data/"{% if nav == 'data' %} aria-current="page"{% endif %}>Data</a>
+        <a href="{{ rel }}methods/"{% if nav == 'methods' %} aria-current="page"{% endif %}>Methods</a>
+        <a href="{{ rel }}about/"{% if nav == 'about' %} aria-current="page"{% endif %}>About</a>
+        {# the download sits on the bar itself on anything wider than a phone. A phone has
+           no room on the bar for it, so it comes back here, at the foot of the menu. #}
+        <a class="nav__dl" href="{{ rel }}data/">Download the panel</a>
+      </nav>
+      <button class="navtoggle" data-navtoggle aria-expanded="false">Menu</button>
+      <a class="btn" href="{{ rel }}data/">Download the panel</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+{% block main %}{% endblock %}
+</main>
+
+<footer class="foot metal {% if paper %}metal--plate{% else %}metal--base{% endif %} edge">
+  <div class="foot__in">
+    <div>
+      <h4>How to cite</h4>
+      <p class="foot__cite">{{ site.citation }}</p>
+    </div>
+    <div>
+      <h4>Sections</h4>
+      <ul>
+        <li>
+          Regions
+          <ul class="foot__sub">
+            {% for r in nav_regions %}
+            <li>{% if r.href %}<a href="{{ r.href }}">{{ r.name }}</a>
+                {% else %}<span aria-disabled="true">{{ r.name }}</span>{% endif %}</li>
+            {% endfor %}
+          </ul>
+        </li>
+        <li><a href="{{ rel }}reconciliation/">Reconciliation</a></li>
+        <li><a href="{{ rel }}data/">Data and downloads</a></li>
+        <li><a href="{{ rel }}methods/">Methods and sources</a></li>
+        <li><a href="{{ rel }}about/">About the project</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>Status</h4>
+      <ul>
+        <li>Panel built {{ stats.built_on }}</li>
+        <li>{{ stats.n_obs_fmt }} observations</li>
+        <li>{{ stats.n_sources }} sources</li>
+        <li>Phase 1.1, Southeast Asia</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot__bar">
+    <div>
+      <span>{{ site.name }}</span>
+      <span>&copy; {{ stats.built_year }} &nbsp;|&nbsp; Adrian Smith &amp; Jason Hung</span>
+    </div>
+  </div>
+</footer>
+
+<script src="{{ rel }}{{ asset('js/rack.js') }}" defer></script>
+<script src="{{ rel }}{{ asset('js/chart.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

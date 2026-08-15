@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "_figure.html" import figure, download_dialog, chart_viewer with context %}
+{% block title %}{{ region.name }} — {{ site.name }}{% endblock %}
+{% block description %}HIV funding, epidemic estimates and service reporting for {{ region.n_countries }} countries in {{ region.name }}.{% endblock %}
+
+{% block main %}
+{# the page opens on the same plate of metal the home page does, so a reader arriving
+   from it stays on one surface #}
+<section class="page-band metal edge">
+  <div class="wrap page-head">
+    <p class="crumb"><a href="{{ home }}">Home</a> &nbsp;/&nbsp; Regions</p>
+    <h1>{{ region.name }}</h1>
+    <p class="lede">
+      Nine countries, {{ stats.n_obs_fmt }} observations from {{ stats.n_sources }} sources,
+      covering {{ stats.year_min }} to {{ stats.year_max }}. Four national programmes are read
+      directly; the remainder appear through the international aggregators. Each country page
+      states which sources stand behind its figures.
+    </p>
+  </div>
+</section>
+
+<section class="wrap sect">
+  {% for f in figures %}{{ figure(f) }}{% endfor %}
+</section>
+
+<section class="wrap sect">
+  <div class="sec-head" style="padding:0">
+    <h2 class="sec-title">Countries</h2>
+    <p class="sec-meta">{{ region.n_countries }} in scope</p>
+  </div>
+  <div class="grid-cards">
+    {% for c in countries %}
+    <a class="card metal {{ c.tone }} edge" href="{{ rel }}countries/{{ c.iso3|lower }}/">
+      {% if c.photo %}<span class="seg-photo" aria-hidden="true"
+                            style="background-image:url('{{ rel }}{{ c.photo }}')"></span>{% endif %}
+      <h3>{{ c.name }}</h3>
+      <p class="card__meta{% if not c.built %} card__meta--off{% endif %}">{{ c.status_label }}</p>
+      <p>{{ c.blurb }}</p>
+      <div class="card__foot">
+        <span><b>{{ c.n_obs }}</b> rows</span>
+        <span><b>{{ c.n_indicators }}</b> indicators</span>
+        <span><b>{{ c.n_sources }}</b> sources</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+{% if mous %}
+<section class="wrap sect sect--pb">
+  <div class="sec-head" style="padding:0">
+    <h2 class="sec-title">Bilateral agreements</h2>
+    <p class="sec-meta">America First Global Health Strategy</p>
+  </div>
+  <p style="font-size:13.5px;color:var(--steel-400);max-width:74ch;margin-top:12px;line-height:1.6">
+    The United States is replacing its previous assistance arrangements with country-by-country
+    agreements. Only {{ mous|length|count }} {{ 'has' if mous|length == 1 else 'have' }} been
+    signed with countries in this region so far, out of {{ stats.n_mou }} worldwide. Terms are
+    recorded as published; where a figure was not stated, the cell is left empty.
+  </p>
+  <div class="tbl-wrap">
+    <table class="tbl-dark">
+      <thead>
+        <tr><th>Country</th><th>Signed</th><th class="num">Total</th><th class="num">US share</th>
+            <th class="num">Country co-investment</th><th>Programme areas</th><th>Covers HIV</th></tr>
+      </thead>
+      <tbody>
+        {% for m in mous %}
+        <tr>
+          <td>{{ m.country }}</td>
+          <td class="num">{{ m.date }}</td>
+          <td class="num">{{ m.total }}</td>
+          <td class="num">{{ m.us }}</td>
+          <td class="num">{{ m.co }}</td>
+          <td class="muted">{{ m.areas }}</td>
+          <td>{{ m.hiv }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:11.5px;color:var(--steel-500);margin-top:12px">
+    Source: KFF tracker of America First bilateral global health agreements, read
+    {{ stats.mou_retrieved }}.
+  </p>
+</section>
+{% endif %}
+
+<section class="wrap sect sect--pb">
+  <div class="callout">
+    <h4>What this region page does not yet show</h4>
+    <p>
+      There is no sub-national breakdown outside the Philippines, and no service-level reporting
+      outside Cambodia, Indonesia and Thailand. Vietnam's national programme dashboard is
+      offline; Malaysia, Myanmar, Laos and Timor-Leste appear through the aggregators only. The
+      country-by-country position is set out in
+      <a href="{{ rel }}methods/#feasibility" style="color:var(--steel-200)">Methods</a>.
+    </p>
+  </div>
+</section>
+
+{{ download_dialog() }}
+{{ chart_viewer() }}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ rel }}{{ asset('js/figure.js') }}" defer></script>
+{% endblock %}

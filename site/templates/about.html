@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}About the project — {{ site.name }}{% endblock %}
+{% block description %}Who runs the project, why it exists, and what it will cover next.{% endblock %}
+
+{% block main %}
+<div class="wrap paper__head">
+  <p class="paper__kick">About</p>
+  <h1>A record of what the HIV funding cuts did</h1>
+  <p class="paper__lede">
+    Our project keeps a running account of how the reorganisation of United States global health
+    assistance is affecting HIV services in LMICs, drawn from the published record exclusively.
+  </p>
+  <div class="paper__mark"></div>
+</div>
+
+<div class="wrap prose">
+  <h2>Why this project exists</h2>
+  <p>
+    In 2025 the United States began replacing its previous global health assistance arrangements
+    with country-by-country agreements under the America First Global Health Strategy. A total of
+    {{ stats.n_mou }} agreements have been signed so far and {{ stats.n_mou_hiv }} cover HIV. The
+    consequences for treatment, testing and prevention will show up in national programme data
+    over several years, in different places and at different speeds.
+  </p>
+  <p>
+    Most of the figures needed to reflect this <em>status quo</em> already exist. These figures are
+    scattered across donor reporting systems, international estimates and national programme
+    reports, each published on its own schedule, in its own vocabulary, and at its own level of
+    detail. Assembling them by hand for one country takes days and is out of date by the time it
+    is finished. Our pipeline does that assembly programmatically, and we ensure that the
+    resulting figures can be checked by reporting the data origins (i.e., original data sources).
+  </p>
+
+  <h2>Who runs this project</h2>
+  <p>
+    Dr. Adrian Smith (Associate Professor, Director of Clinical Studies; Nuffield Department of
+    Population Health, Oxford), who specialises in HIV epidemiology, recently presented how HIV
+    funding cuts from the United States affect LMICs. Dr. Jason Hung, who is a technically enabled
+    social and health data scientist partly trained in quantitative health sociology, relocated to
+    the Global South upon finishing his PhD at Cambridge. Upon discussion and given their common
+    interests in HIV/STI research in the Global South contexts, they decided to jointly build and
+    run this project. Adrian is
+    responsible for developing the research design and contextual framing. Jason, on the other
+    hand, is responsible for building the pipeline and this site.
+  </p>
+  <div class="note">
+    The project is not published by, or affiliated to, any research institution.
+  </div>
+
+  <h2>Where this project has got to</h2>
+  <p>
+    We built the aggregator layer already, which is complete and near-global, covering panel data
+    from UNAIDS, the WHO Global Health Observatory, the World Bank, the OECD Creditor Reporting
+    System, United States self-reported disbursements and PEPFAR programme results. On top of
+    that, we successfully built four Southeast Asian country connectors at the country layer.
+  </p>
+  <p>
+    We decided to choose Southeast Asia data collection as the pilot because Jason specialises in,
+    and is most familiar with, data science research in Southeast Asian contexts. We already built
+    the aggregator-level connector that covers Southeast Asia and the other seven LMIC regions.
+    What we lack is the country-level data collection and assessment for the remaining seven LMIC
+    regions.
+  </p>
+
+  <h2>What comes next</h2>
+  <ul>
+    <li>Extend the country-level assessment region by region, beginning with Eastern and Southern
+      Africa, which carries the largest share of both the epidemic and the signed agreements.</li>
+    <li>Separate United States funding by the agency that disbursed it, so that changes at USAID
+      can be told apart from changes at the Centers for Disease Control and Prevention.</li>
+    <li>Publish the pipeline, the codebook and the assembled panel so that the figures on this
+      site can be regenerated independently.</li>
+  </ul>
+
+  <h2>Corrections</h2>
+  <p>
+    If a figure here does not match what a source publishes, the discrepancy is worth reporting
+    and will be investigated against the stored retrieval record. The panel keeps the URL (for the
+    data source) and the date for every row, so it is usually possible to establish whether the
+    source changed or the pipeline read it wrongly.
+  </p>
+
+  <h2>How to cite</h2>
+  <p class="mono" style="font-family:var(--mono);font-size:14px;line-height:1.8;
+     border-left:2px solid var(--ox);padding-left:18px;color:#27313D">{{ site.citation }}</p>
+</div>
+{% endblock %}

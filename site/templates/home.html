@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+{% block title %}{{ site.name }} — {{ site.tagline }}{% endblock %}
+
+{% block main %}
+
+<section class="hero metal edge">
+  <div class="hero__canvas" id="hero-plot"></div>
+  <div class="hero__in">
+    <p class="kicker">Phase 1.1 &nbsp;·&nbsp; Southeast Asia</p>
+    <h1>What happens to HIV services <span class="soft">when the funding is withdrawn</span></h1>
+    <p class="hero__deck">
+      The United States has restructured its global health assistance under the America First
+      Global Health Strategy. This project brings together the published record of what follows,
+      including donor funding, epidemic estimates, treatment coverage, and what the services
+      themselves report. Our project aim is to measure the effect on HIV programmes in low- and
+      middle-income countries (LMICs). Southeast Asia is covered first, and we will expand the
+      data coverage to the rest of the developing world.
+    </p>
+    <div class="hero__foot"></div>
+  </div>
+
+  <div class="prov metal metal--plate">
+    <p class="hero__caption">
+      <b id="hero-cap-name">&nbsp;</b>
+      <span id="hero-cap-meta">&nbsp;</span>
+    </p>
+    <div class="prov__in">
+      {% for p in provenance %}
+      <div class="prov__i{% if p.hl %} prov__i--hl{% endif %}">
+        <div class="prov__n">{{ p.n }}</div>
+        <div class="prov__l">{{ p.l }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ── regions ─────────────────────────────────────────────────────────── -->
+<section class="sect">
+  <div class="sec-head">
+    <h2 class="sec-title">Regions</h2>
+    <p class="sec-meta">One of eight published</p>
+  </div>
+  <div class="wrap" style="max-width:var(--maxw);padding-top:10px">
+    <p style="font-size:13.5px;color:var(--steel-400);max-width:70ch;line-height:1.6">
+      Southeast Asia is the pilot region of our project and, so far, is the only one with a
+      published view. The other seven global regions are grouped and listed here and their
+      regional views will be available in due course. Point at any region to see the countries
+      it covers.
+    </p>
+  </div>
+
+  <div class="rack" data-rack>
+    {% for r in regions %}
+    {# a published region's slat is itself the link to its page, so it is an anchor; a region
+       with nothing to open stays a button that only expands #}
+    {% if r.status == 'live' %}
+    <a class="slat slat--live metal edge" href="{{ rel }}regions/{{ r.slug }}/" data-slat>
+    {% else %}
+    <div class="slat slat--planned metal metal--dormant edge"
+         role="button" tabindex="0" aria-expanded="false" data-slat>
+    {% endif %}
+      {% if r.photo %}<span class="slat__photo" aria-hidden="true"
+                            style="background-image:url('{{ rel }}{{ r.photo }}')"></span>{% endif %}
+      <span class="slat__spine">
+        <span class="slat__vname">{{ r.name }}</span>
+        <span class="slat__vtok">{{ r.n_countries }}</span>
+      </span>
+      <span class="slat__panel">
+        <span class="slat__tok">
+          <i class="led"></i>
+          {% if r.status == 'live' %}Published{% else %}Not yet published{% endif %}
+        </span>
+        <span class="slat__name">{{ r.name }}</span>
+        <span class="slat__note">{{ r.note }}</span>
+        <ul class="slat__countries">
+          {% for c in r.countries %}
+          <li class="{% if c.built %}built{% endif %}">{{ c.name }}{% if c.built %}<span class="tag">AT SOURCE</span>{% endif %}</li>
+          {% endfor %}
+        </ul>
+        <span class="slat__foot">
+          {% if r.status == 'live' %}
+          <span><b>{{ r.n_countries }}</b> countries</span>
+          <span><b>{{ r.n_obs }}</b> observations</span>
+          <span><b>{{ r.n_indicators }}</b> indicators</span>
+          <span><b>{{ r.years }}</b></span>
+          <span class="go">Open the region page →</span>
+          {% else %}
+          <span><b>{{ r.n_countries }}</b> countries in scope</span>
+          <span class="na">Figures not published for this region yet</span>
+          {% endif %}
+        </span>
+      </span>
+    {% if r.status == 'live' %}</a>{% else %}</div>{% endif %}
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ── what is in the panel ────────────────────────────────────────────── -->
+<section class="sect">
+  <div class="sec-head">
+    <h2 class="sec-title">What our panel holds</h2>
+    <p class="sec-meta">{{ stats.n_obs_fmt }} observations &nbsp;·&nbsp; {{ stats.year_min }}–{{ stats.year_max }}</p>
+  </div>
+  <div class="wrap" style="max-width:var(--maxw);padding-top:10px">
+    <p style="font-size:13.5px;color:var(--steel-400);max-width:70ch;line-height:1.6">
+      Every row carries the source it came from, the URL it was read from and the date it was
+      retrieved. Where two sources report the same figure, both are kept. Nothing is averaged
+      away.
+    </p>
+  </div>
+  <div class="tiles">
+    {% for t in categories %}
+    <a class="tile metal {{ t.tone }} edge" href="{{ rel }}data/#{{ t.slug }}">
+      {% if t.photo %}<span class="seg-photo" aria-hidden="true"
+                            style="background-image:url('{{ rel }}{{ t.photo }}')"></span>{% endif %}
+      <svg class="tile__spark" viewBox="0 0 300 72" preserveAspectRatio="none" aria-hidden="true">
+        <path d="{{ t.spark }}" fill="none" stroke="rgba(201,164,100,.45)" stroke-width="1.4"
+              vector-effect="non-scaling-stroke"/>
+        <path d="{{ t.spark_fill }}" fill="rgba(201,164,100,.07)" stroke="none"/>
+      </svg>
+      <h3>{{ t.name }}</h3>
+      <p>{{ t.blurb }}</p>
+      <div class="tile__foot">
+        <div>
+          <div class="tile__n">{{ t.n_fmt }} <span class="tile__unit">rows</span></div>
+          <div class="tile__u">{{ t.n_indicators }} indicators</div>
+        </div>
+        <div class="badges">
+          {% for b in t.sources %}<span class="badge{% if b == 'CLM Asia' %} badge--clm{% endif %}">{{ b }}</span>{% endfor %}
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ── reconciliation ──────────────────────────────────────────────────── -->
+<section class="band metal metal--plate edge" style="margin-top:clamp(38px,5vw,58px)">
+  <div class="band__in">
+    <div>
+      <p class="kicker">Reconciliation</p>
+      <h2>Most agreement between sources is republication, not corroboration.</h2>
+      <p>
+        UNAIDS, the WHO Global Health Observatory and the World Bank largely publish the same
+        modelled estimate. When they agree, that agreement is arithmetic. Treating it as
+        independent confirmation would manufacture confidence the data does not support.
+      </p>
+      <p>
+        Of {{ recon.n_total_fmt }} pairwise comparisons across the panel,
+        {{ recon.derived_pct }}% fall between sources that share an underlying estimate. Only
+        {{ recon.independent_fmt }} comparisons, on {{ recon.n_independent_pairs|count }} source
+        pairs, are between separate measurement systems, where the data differences carry
+        meaningful information.
+      </p>
+      <p class="small">
+        Every classification is inferred from the data and written out with the evidence behind
+        it (e.g., the number of overlapping cells, the median relative difference, the agreement
+        share and the direction consistency). Each one can be checked or overridden.
+      </p>
+      <p style="margin-top:20px">
+        <a class="btn" href="{{ rel }}reconciliation/">Read the reconciliation</a>
+      </p>
+    </div>
+    <div>
+      <p class="sec-meta" style="margin-bottom:10px">Comparisons by relationship</p>
+      <div class="stack">
+        {% for s in recon.stack %}<span style="width:{{ s.pct }}%;background:{{ s.colour }}"></span>{% endfor %}
+      </div>
+      <ul class="legend">
+        {% for s in recon.stack %}
+        <li>
+          <i class="sw" style="background:{{ s.colour }}"></i>
+          <b>{{ s.n_fmt }}</b>
+          <span>{{ s.label }} <span class="d">— {{ s.note }}</span></span>
+        </li>
+        {% endfor %}
+      </ul>
+      <div class="figrow">
+        <div>
+          <div class="n n--rust">{{ recon.n_divergent }}</div>
+          <div style="margin-top:5px">material divergences on comparable cells</div>
+        </div>
+        <div>
+          <div class="n">{{ recon.n_set_aside }}</div>
+          <div style="margin-top:5px">cells set aside as immaterial or non-comparable</div>
+        </div>
+        <div>
+          <div class="n">{{ stats.n_flagged }}</div>
+          <div style="margin-top:5px">rows carrying a data-quality flag</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── how it is built ─────────────────────────────────────────────────── -->
+<section class="sect sect--pb">
+  <div class="sec-head">
+    <h2 class="sec-title">How the panel is built</h2>
+    <p class="sec-meta">Phase 2 feasibility</p>
+  </div>
+  <div class="wrap" style="max-width:var(--maxw)">
+    <div class="trip">
+      <div>
+        <h3>Structured sources only</h3>
+        <p>
+          Figures come from machine-readable feeds and from published tables. Prose is never
+          parsed for numbers and no language model is used anywhere in the pipeline. Where a
+          country does not publish in a usable form, the site says so instead of estimating.
+          Such an approach is designed to maximise data accuracy and avoid data contamination.
+        </p>
+      </div>
+      <div>
+        <h3>Read at source where possible</h3>
+        <p>
+          National programme reporting is the primary record; the international aggregators are
+          the cross-check. Four Southeast Asian programmes are now read directly. The rest of
+          the region is covered by the aggregator layer alone, and each country page states
+          which applies.
+        </p>
+      </div>
+      <div>
+        <h3>Uncertainty is kept</h3>
+        <p>
+          Modelled estimates carry confidence bounds and those bounds are stored and drawn.
+          Reporting periods that are still open are recorded, because a partial year plotted as
+          a complete one results in measurement inaccuracy, as only provisional but not full
+          funding in a given year is measured.
+        </p>
+      </div>
+    </div>
+
+    <div class="status">
+      {% for c in country_status %}
+      <div class="status__c metal {{ c.tone }} edge status__c--{{ c.cls }}">
+        {% if c.photo %}<span class="seg-photo" aria-hidden="true"
+                              style="background-image:url('{{ rel }}{{ c.photo }}')"></span>{% endif %}
+        <div class="c">{% if c.href %}<a href="{{ c.href }}">{{ c.name }}</a>{% else %}{{ c.name }}{% endif %}</div>
+        <div class="s">{{ c.label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <ul class="keys">
+      <li>At source — the national programme publishes in a form the pipeline can read.</li>
+      <li>Lead — a source exists but is not yet accessible in a usable form.</li>
+      <li>Aggregator only — the country appears in the panel through UNAIDS, WHO, the World Bank
+          and OECD reporting.</li>
+      <li>The full assessment is in
+          <a href="{{ rel }}methods/#feasibility">Methods</a>.</li>
+    </ul>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>window.__HERO__ = {{ hero_json|safe }};</script>
+<script src="{{ rel }}static/js/hero.js" defer></script>
+{% endblock %}

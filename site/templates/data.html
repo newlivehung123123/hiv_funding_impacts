@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Data and downloads — {{ site.name }}{% endblock %}
+{% block description %}The assembled panel, the reconciliation tables and the bilateral agreement register, with the schema and citation.{% endblock %}
+
+{% block main %}
+<section class="wrap page-head">
+  <p class="crumb"><a href="{{ home }}">Home</a> &nbsp;/&nbsp; Data</p>
+  <h1>Data and downloads</h1>
+  <p class="lede">
+    All compiled, curated and harmonised datasets developed in this project are made publicly
+    accessible. For each dataset, one row is one figure, from one source, for one country,
+    indicator and year. Sources are not merged and duplicates are not removed, because the
+    differences between sources are part of what the project is measuring.
+  </p>
+</section>
+
+<section class="wrap sect">
+  <div class="dl-row">
+    {% for d in downloads %}
+    <a class="dl metal {{ d.tone }} edge" href="{{ rel }}{{ d.href }}" download>
+      {% if d.photo %}<span class="seg-photo" aria-hidden="true"
+                            style="background-image:url('{{ rel }}{{ d.photo }}')"></span>{% endif %}
+      <div class="dl__n">{{ d.file }}</div>
+      <div class="dl__d">{{ d.desc }}</div>
+      <div class="dl__s">{{ d.size }} &nbsp;·&nbsp; {{ d.rows }}</div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="wrap sect">
+  <div class="sec-head" style="padding:0">
+    <h2 class="sec-title">Columns</h2>
+    <p class="sec-meta">{{ schema|length }} fields</p>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl-dark">
+      <thead><tr><th>Field</th><th>Meaning</th></tr></thead>
+      <tbody>
+        {% for s in schema %}
+        <tr><td class="mono" style="color:var(--steel-100)">{{ s.f }}</td><td>{{ s.d }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="wrap sect">
+  <div class="sec-head" style="padding:0">
+    <h2 class="sec-title">Indicators</h2>
+    <p class="sec-meta">{{ stats.n_indicators }} in the panel</p>
+  </div>
+  {% for g in indicator_groups %}
+  <h3 id="{{ g.slug }}" style="font-family:var(--serif);font-size:19px;color:var(--spec);
+      margin-top:34px;font-weight:600;scroll-margin-top:84px">{{ g.name }}</h3>
+  <p style="font-size:12.5px;color:var(--steel-500);margin-top:6px;max-width:74ch">{{ g.blurb }}</p>
+  <div class="tbl-wrap">
+    <table class="tbl-dark">
+      <thead>
+        <tr><th>Indicator</th><th>Identifier</th><th>Unit</th><th class="num">Rows</th>
+            <th class="num">Countries</th><th class="num">Years</th><th>Sources</th></tr>
+      </thead>
+      <tbody>
+        {% for i in g.rows %}
+        <tr>
+          <td>{{ i.name }}</td>
+          <td class="mono muted">{{ i.id }}</td>
+          <td class="muted">{{ i.unit }}</td>
+          <td class="num">{{ i.n }}</td>
+          <td class="num">{{ i.n_countries }}</td>
+          <td class="num">{{ i.years }}</td>
+          <td class="muted">{{ i.sources }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+</section>
+
+<section class="wrap sect">
+  <div class="sec-head" style="padding:0">
+    <h2 class="sec-title">Sources</h2>
+    <p class="sec-meta">{{ stats.n_sources }} connectors</p>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl-dark">
+      <thead>
+        <tr><th>Source</th><th>Type</th><th class="num">Rows</th><th class="num">Countries</th>
+            <th class="num">Years</th><th>Read from</th><th class="num">Retrieved</th></tr>
+      </thead>
+      <tbody>
+        {% for s in sources %}
+        <tr>
+          <td>{{ s.name }}</td>
+          <td class="muted">{{ s.type }}</td>
+          <td class="num">{{ s.n }}</td>
+          <td class="num">{{ s.n_countries }}</td>
+          <td class="num">{{ s.years }}</td>
+          <td class="muted">{% if s.url %}<a href="{{ s.url }}" rel="noopener">{{ s.host }}</a>{% else %}—{% endif %}</td>
+          <td class="num muted">{{ s.retrieved }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="wrap sect sect--pb">
+  <div class="sec-head" style="padding:0">
+    <h2 class="sec-title">Terms of use</h2>
+  </div>
+  <p style="font-size:13.5px;color:var(--steel-400);max-width:78ch;margin-top:14px;line-height:1.66">
+    The panel is a compilation of figures published by the bodies listed above. Each of those
+    bodies sets its own terms of use, and those terms are stated at the source URL recorded on
+    every row. Anyone quoting a figure from the panel should cite this compilation and also the
+    body that published the figure, using the source name, the URL and the retrieval date
+    carried on that row.
+  </p>
+  <p class="mono" style="font-size:12px;color:var(--steel-300);margin-top:18px;max-width:70ch;line-height:1.75;
+     border-left:1px solid rgba(201,164,100,.4);padding-left:16px">{{ site.citation }}</p>
+</section>
+{% endblock %}

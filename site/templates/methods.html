@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Methods and sources — {{ site.name }}{% endblock %}
+{% block description %}How the panel is assembled: which sources are read, how national programme data is obtained country by country, and what the figures do not support.{% endblock %}
+
+{% block main %}
+<div class="wrap paper__head">
+  <p class="paper__kick">Methods</p>
+  <h1>How the panel is assembled</h1>
+  <p class="paper__lede">
+    We build a pipeline that reads published figures from structured feeds and from published
+    tables, keeps each source's own data value, and records where every figure came from (i.e.,
+    the data source). Our pipeline does not estimate, interpolate or reconcile away differences
+    between sources.
+  </p>
+  <div class="paper__mark"></div>
+</div>
+
+<div class="wrap prose">
+
+  <p>
+    Our project follows the effect of the reorganisation of United States global health
+    assistance on HIV services in LMICs. Measuring that effect requires data that represent two
+    things: (1) what donors report spending, and (2) what the services themselves report doing.
+    Neither alone is enough, because funding data are timely but say nothing about delivery,
+    while programme data describe delivery but its trackability is not real-time and is unevenly
+    distributed geographically.
+  </p>
+
+  <h2>Principles</h2>
+  <p>
+    We follow four rules that govern what enters the panel (/what data are collected).
+  </p>
+  <ul>
+    <li>
+      <strong>Structured sources only.</strong> Figures come from machine-readable feeds and from
+      published tables that can be read deterministically. Prose is never parsed for numbers.
+      Scanned documents are out of scope, because reading them reliably would require optical
+      character recognition and manual checking that the project cannot guarantee at scale.
+    </li>
+    <li>
+      <strong>No language models anywhere in the pipeline.</strong> Every figure is traceable to a
+      field in a file or a cell in a published table. An honest record that a country does not
+      publish in a usable form is more useful than a plausible number without a traceable origin.
+      Language models are not used for data extraction to minimise data contamination and to
+      maximise the validity and reliability of our project.
+    </li>
+    <li>
+      <strong>Data origin on every row.</strong> Each observation carries its source, the URL it
+      was read from, the source's own indicator code and the date of retrieval.
+    </li>
+    <li>
+      <strong>Uncertainty is kept.</strong> Modelled estimates carry lower and upper bounds and
+      those bounds are stored and drawn. The point estimates for the 95-95-95 targets in
+      particular carry intervals wide enough that a single number misrepresents them.
+    </li>
+  </ul>
+
+  <h2>What is read, and from where</h2>
+  <p>
+    We designed the pipeline to build the panel with two layers. The aggregator layer is
+    near-global and gives the panel its skeleton. Data in this layer are sourced primarily from
+    UNAIDS AIDSinfo, the WHO Global Health Observatory, the World Bank, the OECD Creditor
+    Reporting System, and United States self-reported disbursements from ForeignAssistance.gov
+    and programme results from PEPFAR Panorama. The country layer is the national programme
+    record, read directly where a country publishes it in a usable form.
+  </p>
+  <div class="tbl-scroll">
+    <table class="tbl">
+      <thead>
+        <tr><th>Source</th><th>What it provides</th><th>Type</th><th class="num">Rows</th><th class="num">Years</th></tr>
+      </thead>
+      <tbody>
+        {% for s in sources %}
+        <tr>
+          <td><strong>{{ s.name }}</strong><br><span style="color:#68717E;font-size:12px">{{ s.host }}</span></td>
+          <td>{{ s.what }}</td>
+          <td>{{ s.type }}</td>
+          <td class="num">{{ s.n }}</td>
+          <td class="num">{{ s.years }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="feasibility" style="scroll-margin-top:84px">Going to source, country by country</h2>
+  <p>
+    The question we encountered at the pilot stage was whether national programme data can
+    realistically be read at source, country by country. The answer varies notably, and the
+    variation is itself a finding. All nine Southeast Asian countries run a national HIV
+    programme database. Data exist in every country, but some do not allow foreign or
+    non-institutional access.
+  </p>
+  <ul>
+    <li>An open structured feed, as in Thailand, where the national programme's data mart answers
+      queries directly.</li>
+    <li>An open born-digital report whose tables can be read without interpretation, as in
+      Cambodia and the Philippines.</li>
+    <li>A closed database that releases only scanned documents or its submission to the
+      international aggregators. For these countries the realistic route is an institutional
+      data-sharing agreement, not public collection.</li>
+  </ul>
+  <p>
+    We decided whether a national report is worth reading at all by one factor. A report only adds
+    something if it carries data the aggregators do not already receive, such as sub-national
+    detail, more recent periods, key-population breakdowns, or programme flows. The Philippine
+    quarterly surveillance report, for example, qualifies. It is regional, quarterly, and richer
+    than the annual report the Philippines submits to UNAIDS. Malaysia's national report does not,
+    because that report is itself the country's annual submission to UNAIDS, so reading it would
+    return figures already in the panel through UNAIDS.
+  </p>
+  <div class="tbl-scroll">
+    <table class="tbl">
+      <thead>
+        <tr><th>Country</th><th>National source</th><th>Access</th><th>Position</th></tr>
+      </thead>
+      <tbody>
+        {% for f in feasibility %}
+        <tr>
+          <td><strong>{{ f.country }}</strong></td>
+          <td>{{ f.source }}</td>
+          <td>{{ f.access }}</td>
+          <td>{% if f.built %}<span class="pill-ok">{{ f.status }}</span>{% else %}<span class="pill-no">{{ f.status }}</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p>
+    In the pilot stage (i.e., exclusively extracting data from the Southeast Asia region), three
+    national cascades and one community layer are now read at source, by three different routes.
+    These are a live programme interface in Thailand, published report tables in Cambodia and the
+    Philippines, and a community-led monitoring interface covering Indonesia.
+  </p>
+
+  <h2>Reporting periods</h2>
+  <p>
+    Funding and programme data are filed in periods, and a period that is still open for data
+    collection is likely subject to a figure drop when the data collected are only provisional but
+    not full. For example, United States disbursements for fiscal year {{ flagpolicy.open_fy }} are
+    still being reported, and PEPFAR results for {{ flagpolicy.pepfar_year }} cover
+    {{ flagpolicy.pepfar_quarters }} of four quarters. Points from an incomplete period are drawn
+    with an open red marker and named in the note under every figure. They are never compared with
+    complete years.
+  </p>
+  <div class="note">
+    A total of {{ stats.n_flagged_explicit }} rows in the panel carry an explicit data-quality
+    flag. Most are breaks in PEPFAR reporting scope, where a change in which implementing partners
+    report makes one year incomparable with the next. The flag text is stored on the row and shown
+    on the country page.
+  </div>
+
+  <h2>Comparing sources</h2>
+  <p>
+    Where two sources report the same country, indicator and year, both values are kept and the
+    pair is compared. The comparison is classified before it is read, because agreement between
+    two sources that publish the same underlying estimate is arithmetic, not corroboration.
+    The classification method, the thresholds and every verdict with its evidence are set out on
+    the <a href="{{ rel }}reconciliation/">reconciliation page</a>.
+  </p>
+
+  <h2>What the panel does not support</h2>
+  <p>
+    The figures describe reported funding and reported service activity. They do not, on their
+    own, establish that a change in one caused a change in the other. Reporting lags differ by
+    source and by country, so a decline that appears in one series and not another may be a
+    difference in filing but not in delivery. Programme footprints are not national totals. Here,
+    PEPFAR reports what PEPFAR-supported sites did, which is a part of a country's response, not
+    the entirety of it. Community-led monitoring covers a small number of facilities and is a
+    sentinel signal, not a representative sample.
+  </p>
+
+  <h2>Reproducing the panel</h2>
+  <p>
+    We design the pipeline as a Python package with one connector per source and a single assembly
+    step. The pipeline writes the panel to CSV, Parquet and SQLite, runs the reconciliation, and
+    then we build this site from those files alone. The panel on this site was last assembled on
+    {{ stats.built_on }}.
+  </p>
+</div>
+{% endblock %}
