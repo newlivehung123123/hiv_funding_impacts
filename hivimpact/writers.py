@@ -107,11 +107,38 @@ MIN_REPORTERS = 8
 # it reaches us, so for those two this warning is the only defence there is: the panel
 # stays faithful to what the API returned, and the check says what it means.
 #
-# Zeros are excluded. A zero repeats legitimately all over count data, and the panel
-# already has a rule for reading it (a GAM zero means "not reported", not "none").
+# Zeros are excluded from the search for the repeated value. A zero repeats legitimately
+# all over count data, and the panel already has a rule for reading it (a GAM zero means
+# "not reported", not "none").
+#
+# Excluding zeros from the search but not from the test is what the first version got
+# wrong. Dropping them left the smallest printable count as the most common value in every
+# small-count series, so the check fired on three WHO TME columns that are not censored at
+# all: tbhiv_deaths reads 461 zeros, 315 ones, 179 twos and 98 threes, which is what a
+# series of genuinely small counts looks like.
+#
+# The condition that separates the two shapes is the presence of zeros in the series at
+# all. A source that suppresses values below a threshold cannot also print zero, because
+# zero is below any positive threshold, and a source that does print zero has already
+# published the smallest value there is, so nothing under the repeated value was hidden.
+# Measured over the panel, every genuine floor series contains no zeros whatsoever, while
+# the three WHO TME columns are between a tenth and a quarter zeros. A small tolerance is
+# allowed so that one stray zero cannot switch the check off. The exact tolerance decides
+# nothing today, because no series that meets the other two conditions sits between the
+# two groups: anything from 1 per cent to 10 per cent gives the same 12 warnings. It is
+# set at the tight end deliberately, since a floor that goes unwarned reaches an analysis
+# silently while a false warning costs a minute of checking.
+#
+# One other discriminator was measured and rejected. Censoring piles the suppressed values
+# onto the threshold, so it seemed that a floor should stand far above the next value up
+# while a small-count series decays smoothly into it. The two classes overlap: UNAIDS
+# new_infections is a real floor at 100 whose count is 2.74 times the count at 200, and
+# WHO GHO new_infections 2.08 times, against 2.2 for tbhiv_on_art, which is not censored.
+# Any threshold that keeps the real floors admits the false ones.
 FLOOR_SHARE = 0.05
 FLOOR_MIN_COUNTRIES = 5
 FLOOR_MIN_ROWS = 50
+FLOOR_MAX_ZERO_SHARE = 0.01  # a censoring source does not print zero
 
 
 def _unit_outliers(df: pd.DataFrame) -> pd.DataFrame:
@@ -175,17 +202,26 @@ def _unit_outliers(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _floor_values(df: pd.DataFrame) -> List[str]:
-    """Series where one exact non-zero value recurs often enough to be a publication floor."""
+    """Series where one exact non-zero value recurs often enough to be a publication floor.
+
+    A repeated value on its own is not evidence of censoring, so two things have to hold
+    together: the value has to be common across countries, and the series must not contain
+    zeros. The reasoning behind the second condition, and the measurement that set it, are
+    with the constants above.
+    """
     out: List[str] = []
     d = df.copy()
     d["_v"] = pd.to_numeric(d["value"], errors="coerce")
-    d = d[d["_v"].notna() & (d["_v"] != 0)]
+    d = d[d["_v"].notna()]
     if d.empty:
         return out
 
     found = []
-    for (ind, src), part in d.groupby(["indicator_id", "source_id"], dropna=False):
-        if len(part) < FLOOR_MIN_ROWS:
+    for (ind, src), whole in d.groupby(["indicator_id", "source_id"], dropna=False):
+        # Zeros count towards the series but never towards the candidate value.
+        zero_share = float((whole["_v"] == 0).mean())
+        part = whole[whole["_v"] != 0]
+        if len(part) < FLOOR_MIN_ROWS or zero_share > FLOOR_MAX_ZERO_SHARE:
             continue
         counts = part["_v"].value_counts()
         val, cnt = counts.index[0], int(counts.iloc[0])
