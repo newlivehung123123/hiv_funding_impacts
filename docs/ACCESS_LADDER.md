@@ -842,6 +842,34 @@ recorded that behaviour and capped its retries since July 2026. The sentinel pro
 answers a bad request with a 500 rather than an empty result makes its own logs unreadable, so the
 run log has to be checked against what the connector actually wrote before a warning is believed.
 
+### 9e. The cheapest source in the ladder was the one already on disk
+
+Four Global Fund indicators were held out of the connector on 2026-09-05 on the stated grounds that
+TB preventive services for people in HIV care are published by nobody else, so mapping them would
+create a series with no second instrument. That reasoning was sound and the premise was false.
+UNAIDS AIDSinfo publishes the proportion counterpart of three of them, and those exports were
+already sitting in `data/raw/unaids/` where a previous download had put them.
+
+The connector reads any CSV in that directory and classifies it by matching substrings of the
+filename against a list of 11 core indicators. A file the list does not name is counted as skipped
+and passed over in silence. Seven `TB and HIV` exports had been skipped that way on every run, and
+they hold about 14,100 country-year cells across 193 countries: TB and HIV treatment co-management
+for 168 countries over 2000 to 2024, incident TB cases in people living with HIV for 192, TB-related
+deaths for 191, and the three TB preventive therapy proportions the Global Fund counts publish the
+other side of.
+
+**The general rule this adds to §8b. A source graded once is not graded forever, and neither is a
+source already ingested.** The ladder's grades describe what an organisation publishes, and every
+grade in this document was assigned by probing a remote host. Nothing in the ladder describes how
+much of what arrived was ever read. A connector that names the files it wants and skips the rest
+will report a healthy run, a rising row count and no warning at all, while sitting on material it
+never opened. **Count what a connector skipped, not only what it mapped, and read that number as
+often as the row count.** For this connector the number is 114 of 146 files still unread, reducing
+to 111 distinct indicator names, among them condom and needle distribution volumes, opioid agonist
+therapy coverage, male circumcisions performed, procured self-test kits, early infant diagnosis,
+late HIV diagnosis and prevention-programme coverage for each key population. Several of those are
+commodity and service volumes of exactly the kind this project argues move first.
+
 ---
 
 ## Status of the claims here
@@ -955,3 +983,7 @@ run log has to be checked against what the connector actually wrote before a war
 | A spike against the next value up does not separate a floor from a small count | UNAIDS `new_infections` is a genuine floor at 2.74 times the count at 200 and WHO GHO at 2.08, against 2.2 for `tbhiv_on_art`, which is not censored. Any threshold keeping the real floors admits the false ones |
 | The UNAIDS censoring and DHS country-name fixes are confirmed in the data | `hiv_expenditure_total` 961 rows with none at exactly 100 USD, against 42 and a 273-row floor warning before. DHS returns 9 rows for COD across 2007, 2013 and 2023, where the name mismatch returned none |
 | The community-led monitoring sentinel's HTTP 500s are the documented empty-quarter behaviour, not an outage | Every 2023-Q1 fetch across all eight indicators returned 500 on 2026-09-05, as the connector has recorded since July 2026. The server raises an unhandled `KeyError` and serves a Django debug page (`/home/brian/CLM_DB/interface/api.py`, line 256) for any request it cannot satisfy. The same run wrote 23 rows over 2023–2025 on all eight indicators |
+| The TB preventive services the Global Fund counts are not a single-source series | UNAIDS AIDSinfo publishes the proportion counterpart of all three, in `data/raw/unaids/`: newly enrolled started on TPT (131 countries, 2013–2024), currently enrolled started on TPT (106, 2017–2024), completed a course of TPT (58, 2019–2024) |
+| A connector can report a clean run while skipping most of what it was given | `unaids_aidsinfo` classifies by filename substring against 11 core names and counts the rest as skipped. 114 of 146 exports were never read, reducing to 111 distinct indicator names |
+| Seven of those unread exports are TB and HIV, and hold about 14,100 cells | Co-management of TB and HIV treatment (168 countries, 2000–2024, 2,536 cells), incident TB cases in PLHIV (192, 4,749), TB-related deaths in PLHIV (191, 4,734), plus the three TPT proportions and TB disease at enrolment |
+| UNAIDS censors 62% of the incident-TB series and none of the TB-deaths series | `Incident TB cases in people living with HIV`: 2,934 of 4,749 cells are `<100`. `TB-related deaths among people living with HIV`: no censoring at all and 714 zeros, which is the shape the corrected floor detector has to leave alone |

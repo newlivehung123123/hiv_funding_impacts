@@ -170,13 +170,82 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "WHO TME newrel_art. The end of the TB/HIV cascade: tested, found positive, treated."),
 
+    # -- TB preventive services for people already in HIV care ------------------
+    # Screening a person in HIV care for TB, and putting them on preventive therapy, are
+    # the two services in this panel that a clinic can stop without stopping anything a
+    # patient would notice missing. Nobody is turned away and no refill is interrupted, so
+    # a cut shows here before it shows in the treatment numbers. Both are funded as grant
+    # line items, which is what makes them cuttable on their own.
+    #
+    # Each is carried as a count and as a percentage, because the Global Fund publishes
+    # people and UNAIDS publishes proportions, and neither is derivable from the other
+    # without the denominator each organisation used. Held apart, the two are a check on
+    # one another. Merged, they would be a unit error.
+    IndicatorSpec("plhiv_tb_screened", "People living with HIV in care screened for TB", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "Global Fund Annual_Results. The first step of TB case-finding among people "
+                  "already in HIV care, and the cheapest step to quietly drop."),
+    IndicatorSpec("tpt_initiations", "People living with HIV on ART who started TB preventive therapy", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "Global Fund Annual_Results. A started course, not a completed one, so it moves "
+                  "in the year the service is delivered, the same property that makes "
+                  "art_initiations the panel's target indicator."),
+    IndicatorSpec("tpt_completions", "People who completed a course of TB preventive therapy", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "Global Fund Annual_Results. A course runs three to six months, so a completion "
+                  "counted this year began under last year's funding and this series lags "
+                  "tpt_initiations by about a year. The two must not be differenced to infer "
+                  "drop-out within one year."),
+    IndicatorSpec("tbhiv_on_cpt", "HIV-positive TB patients given co-trimoxazole preventive therapy", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "Global Fund Annual_Results. Runs alongside tbhiv_on_art on the same patients, "
+                  "so a gap between the two is a supply or protocol failure rather than a change "
+                  "in who reached care."),
+
+    # The UNAIDS proportions of the same services, country-reported through GAM. Their
+    # denominators are stated in the indicator names and differ from one another, so
+    # tpt_initiation_new_pct and tpt_initiation_current_pct are not two readings of one
+    # quantity and must not be pooled.
+    IndicatorSpec("tpt_initiation_new_pct",
+                  "% of people newly enrolled in HIV treatment started on TB preventive therapy", "percent",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "UNAIDS AIDSinfo, 2013-2024. The percentage counterpart to tpt_initiations, "
+                  "over a denominator the panel also holds as art_initiations, so the count and "
+                  "the proportion can be reconciled against each other."),
+    IndicatorSpec("tpt_initiation_current_pct",
+                  "% of people currently enrolled in HIV treatment started on TB preventive therapy", "percent",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "UNAIDS AIDSinfo, 2017-2024. Denominator is everyone in care, not the new "
+                  "enrolments, so it falls as a programme catches up with its existing cohort "
+                  "and that fall is not a cut."),
+    IndicatorSpec("tpt_completion_pct",
+                  "% of people living with HIV on ART who completed a course of TB preventive therapy", "percent",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "UNAIDS AIDSinfo, 2019-2024, 58 countries. The thinnest of these series and the "
+                  "one most likely to move because a different set of countries reported."),
+    IndicatorSpec("plhiv_new_tb_diagnosed_pct",
+                  "% of people newly enrolled in HIV treatment diagnosed with TB disease", "percent",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "UNAIDS AIDSinfo, 2013-2024. The yield of TB screening in HIV care, and it reads "
+                  "like hiv_test_positivity_pct: rising yield on a falling number screened is a "
+                  "programme narrowing to the sickest patients, not a worsening epidemic."),
+    IndicatorSpec("tbhiv_comanagement_pct", "% of TB patients living with HIV who are on ART", "percent",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "UNAIDS AIDSinfo, 2000-2024, 168 countries. The percentage counterpart to "
+                  "tbhiv_on_art over tb_patients_hiv_positive, both of which the panel holds from "
+                  "WHO TME, so this is a third instrument on a step two others already measure."),
+
     # -- TB/HIV burden, modelled, with WHO's own bounds -------------------------
     IndicatorSpec("tbhiv_incidence", "Incident TB cases among people living with HIV", "count",
                   SourceType.MODELLED_ESTIMATE, "epi",
-                  "WHO TME e_inc_tbhiv_num, with its published low and high bounds."),
+                  "WHO TME e_inc_tbhiv_num, with its published low and high bounds, and the UNAIDS "
+                  "AIDSinfo export of the same quantity for 193 countries over 2000-2024. Both are "
+                  "modelled, and WHO and UNAIDS share inputs, so agreement between them is weaker "
+                  "evidence than agreement between two routine records."),
     IndicatorSpec("tbhiv_deaths", "Deaths from TB among people living with HIV", "count",
                   SourceType.MODELLED_ESTIMATE, "epi",
-                  "WHO TME e_mort_tbhiv_num. A component of HIV mortality that UNAIDS folds into "
+                  "WHO TME e_mort_tbhiv_num, and the UNAIDS AIDSinfo export of the same quantity "
+                  "for 192 countries. A component of HIV mortality that UNAIDS folds into "
                   "aids_deaths, so the two overlap and must not be added together."),
 
     # -- TB/HIV money, and the TB programme's funding mix as an exposure measure -

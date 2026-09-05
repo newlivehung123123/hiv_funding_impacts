@@ -121,6 +121,16 @@ _SERIES: Dict[str, GFSeries] = {
     # -- the TB/HIV component --------------------------------------------------
     "TB Patients with documented HIV status": GFSeries("tb_patients_hiv_tested"),
     "HIV-positive TB patients on ART during TB treatment": GFSeries("tbhiv_on_art"),
+    "HIV-positive TB patients on CPT prophylaxis during treatment": GFSeries("tbhiv_on_cpt"),
+
+    # -- TB preventive services for people already in HIV care -------------------
+    # Held out of the first version of this connector on the grounds that nothing else in
+    # the panel measured them. That was wrong about the panel. UNAIDS AIDSinfo publishes
+    # the proportion counterpart of all three, and those exports were already sitting in
+    # data/raw/unaids unread, so these are two-instrument series and always were.
+    "People living with HIV in care screened for TB": GFSeries("plhiv_tb_screened"),
+    "People living with HIV on ART who initiated TB preventive therapy": GFSeries("tpt_initiations"),
+    "People who completed TPT": GFSeries("tpt_completions"),
 }
 
 # Named so the log can say these were seen and left out on purpose, which is the whole
@@ -152,20 +162,7 @@ _UNMAPPED_HIV = {
     "Young people aged 10-24 years reached with HIV prevention programs",
 }
 
-# 2. TB preventive services delivered to people living with HIV. These are HIV service
-#    flows funded as line items, so they are the class of measurement this project argues
-#    falls first, and the Global Fund would be the only source of them. WHO TME carries no
-#    equivalent column, so mapping any of these creates a single-source series and that is
-#    a decision to take deliberately rather than in passing. Row counts as of 2026-09-05:
-#    TB screening among people in HIV care 297, TB preventive therapy started 356.
-_UNMAPPED_TBHIV = {
-    "HIV-positive TB patients on CPT prophylaxis during treatment",
-    "People living with HIV in care screened for TB",
-    "People living with HIV on ART who initiated TB preventive therapy",
-    "People who completed TPT",
-}
-
-# 3. The rest of the Global Fund's portfolio. Annual_Results is not an HIV dataset, it is
+# 2. The rest of the Global Fund's portfolio. Annual_Results is not an HIV dataset, it is
 #    every indicator the institution's grants report, so malaria, drug-resistant TB and
 #    the cross-cutting health-systems lines all arrive in the same response and are all
 #    outside this panel.
@@ -201,7 +198,7 @@ _UNMAPPED_OTHER_DISEASE = {
     "TB patients tested using WHO recommended rapid tests",
 }
 
-_KNOWN_UNMAPPED = frozenset(_UNMAPPED_HIV | _UNMAPPED_TBHIV | _UNMAPPED_OTHER_DISEASE)
+_KNOWN_UNMAPPED = frozenset(_UNMAPPED_HIV | _UNMAPPED_OTHER_DISEASE)
 
 
 class GlobalFundConnector(BaseConnector):

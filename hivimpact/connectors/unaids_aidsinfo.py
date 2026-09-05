@@ -60,6 +60,23 @@ CORE_MAP: List[Tuple[str, str]] = [
     ("coverage of pregnant women who receive arv for pmtct", "pmtct_coverage_pct"),
     ("people receiving pre-exposure prophylaxis (prep)", "prep_recipients"),
     ("country-reported hiv expenditure", "hiv_expenditure_total"),
+
+    # The seven "TB and HIV" exports. These sat unread in data/raw/unaids until 2026-09-05,
+    # because the connector only reads a file it can name and nothing here had a canonical
+    # id. Three of them are the counterpart to the TB preventive services the Global Fund
+    # publishes as counts, which is what turns those from a single-source series into a
+    # measured one. The two modelled files land on canonicals WHO TME already fills.
+    #
+    # Keep these below the core entries and keep each string long enough to be unambiguous.
+    # First match wins, and "newly enrolled ... started on TB preventive therapy" and
+    # "currently enrolled ... started on TB preventive therapy" differ by one word.
+    ("newly enrolled in hiv treatment started on tb preventive therapy", "tpt_initiation_new_pct"),
+    ("currently enrolled in hiv treatment started on tb preventive therapy", "tpt_initiation_current_pct"),
+    ("on art who completed a course of tpt", "tpt_completion_pct"),
+    ("newly enrolled in hiv treatment diagnosed with tb disease", "plhiv_new_tb_diagnosed_pct"),
+    ("co-management of tb and hiv treatment", "tbhiv_comanagement_pct"),
+    ("incident tb cases in people living with hiv", "tbhiv_incidence"),
+    ("tb-related deaths among people living with hiv", "tbhiv_deaths"),
 ]
 
 
