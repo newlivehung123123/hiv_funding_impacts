@@ -705,6 +705,75 @@ three's version asks what else the file already downloaded contains.
 
 ---
 
+## 9. What a fourth pass changed, starting with a source three rounds had written off
+
+*Added 2026-09-05.*
+
+### 9a. A block page is a version number, not a decision about us
+
+Round three recorded the Global Fund's documented API host as edge-blocked: `fetch.theglobalfund.org`
+answered every request with an Azure Front Door page reading "The request is blocked." on an HTTP
+403, including the bare root, which is what a network-level ban looks like. The connector registry
+carried the conclusion drawn from that, which was that the Global Fund had no country-level feed and
+would enter the panel only as an OECD CRS donor code.
+
+Both readings were wrong, and the fourth pass overturned them by opening the host in a browser and
+reading `data-service.theglobalfund.org/api`, which lists the live versions. **Versions 2 and 3.3
+are retired.** Every path the earlier documentation gives sits under a retired version, and a
+retired version and a closed door return the identical page, down to the bare root. The first
+request to `/v4.2/odata/` succeeded from the same machine, on the same network, with plain `curl`
+and no headers at all.
+
+§8b said a grade attaches to a route and not to an institution. This adds the sharper form. **A
+grade attaches to a route at a version, and a 403 that covers the whole host is evidence about the
+path, not about the requester.** Read the service's own version list before concluding anything from
+a block page, and treat any source whose refusal was uniform across every path as a source that has
+not actually been probed.
+
+### 9b. What the Global Fund publishes that nothing else in the panel does
+
+`AllProgrammaticIndicators` filtered to `programmaticDataSet eq 'Annual_Results'` is 15,313 rows of
+country by year by indicator, grant-reported, in a single response with no `nextLink`. Of the 38
+HIV indicator names it carries, 19 map to canonical indicators the panel already holds and 19 are
+named in the connector as deliberately unmapped.
+
+The one that matters is *People newly diagnosed with HIV initiated on ART*. 114 rows carry it,
+across 40 country codes and the years 2017 to 2024. That is a count of people who started
+treatment in a year, which is the quantity that falls the moment a clinic stops enrolling, and it
+arrives through grant reporting that has no connection to the UNAIDS estimate WHO and the World
+Bank republish. The panel's only other initiation series is `hiv_reg_new2` from WHO's tuberculosis
+dataset (§8a), so for every country the two share this is a second independent instrument on the
+project's central indicator. The series stops at 2024, so it dates the cut rather than showing it.
+
+### 9c. Two traps, and one of them defeats every check we have
+
+**`$expand` empties an OData result instead of failing.** Asking for `$expand=geography` on
+`AllProgrammaticIndicators` returns HTTP 200 with an empty value array. The same query without the
+expand returns rows. A connector written the obvious way therefore reports a source with nothing in
+it, and every downstream check agrees, because zero rows is a perfectly well-formed answer. The
+diagnostic that found it was running `$top=1` twice, once with the expand and once without, and
+comparing the counts. **When a source returns no rows, re-request it with each query option removed
+in turn before recording the source as empty.** The connector joins on `recordId` instead, which for
+this dataset is a Geography id.
+
+**A partial row wearing a country's code.** 21 of those 114 ART-initiation rows are marked
+`Subnational` and carry a country-level geography exactly like the national ones. South Africa's
+2022 subnational row is 1,531 people, against a national figure in the hundreds of thousands. This
+is the same class as the GHO catalogue-name error in §8c and it is worse. Nothing in the country
+code, the year or the value marks the row as partial, and no range check can catch it, because
+1,531 is an ordinary number for a small country's annual initiations and the row does not even have
+to be small. `geographicCoverage` is the only field that separates the two, and a connector that
+does not read that field mixes one grant's catchment into a national series silently. Only
+`National` rows are emitted, and the subnational count is logged rather than dropped in silence.
+
+Two related shapes in the same service. 63 of the 300 geographies are `Multicountry`, so a regional
+grant's results would otherwise land on whichever country its code resolved to, and only
+`level == "Country"` geographies are accepted. And the Global Fund now enters the panel twice, as
+service results here and as money through the OECD CRS donor code `9OTH012`, which are different
+quantities from the same institution and must not be totalled together.
+
+---
+
 ## Status of the claims here
 
 | Claim | Basis |
@@ -749,7 +818,12 @@ three's version asks what else the file already downloaded contains.
 | Naomi is a cross-section, not a series | Period list read for all 32: one historical estimate, then 2025-4, then 2026-3 and 2027-3 as projections (MWI and ZAF add one each). The historical year matches the country's last national HIV survey in 12 of the 15 WCA countries |
 | Naomi's national ART figure is not independent | Level-0 `art_current` returns unit-round means (NGA 1,510,000, GIN 98,069, TCD 82,674, NER 19,821); GIN's sits 0.9% from the Global Fund's 2024 figure a year earlier |
 | Global Fund results are an open API | `data.api.theglobalfund.org/results/{cycles,stats,table}`, no auth, read 2026-08-15: annual 2017–2024 for 22 of 24 WCA countries, ART series for 10 of the 12 with no PEPFAR; GAB has results but no HIV indicator, GNQ none at all |
-| The Global Fund's documented API host is edge-blocked, not gone | `fetch.theglobalfund.org` returns an Azure Front Door "The request is blocked" page from this network; the Data Explorer backend serving the same data answers normally |
+| ~~The Global Fund's documented API host is edge-blocked~~ — overturned 2026-09-05, see below | `fetch.theglobalfund.org` returns an Azure Front Door "The request is blocked" page from this network; the Data Explorer backend serving the same data answers normally |
+| The block was two retired API versions, not an edge ban | `data-service.theglobalfund.org/api` lists V4.2, V4.1 and V4.0 as live, read 2026-09-05. Every path under `/v2/` and `/v3.3/` returns the block page including the bare root; `/v4.2/odata/` returns data to plain `curl` with no headers, from the same machine and network |
+| The Global Fund publishes ART initiations by country and year | `AllProgrammaticIndicators?$filter=programmaticDataSet eq 'Annual_Results'`, read 2026-09-05: 15,313 rows in one response with no `nextLink`, 38 HIV indicator names. *People newly diagnosed with HIV initiated on ART* has 114 rows across 40 country codes, 2017–2024 |
+| `$expand` empties this OData result rather than failing | `$top=1` returns 1 row; `$top=1&$expand=geography` returns HTTP 200 with an empty value array. Joined on `recordId` instead, verified against `/Geographies?$filter=id eq …` resolving to CPV / Cabo Verde |
+| A Global Fund row can be subnational and still carry a country geography | 21 of the 114 ART-initiation rows are `geographicCoverage: Subnational`; ZAF 2022 reads 1,531 people. 63 of the 300 geographies are `Multicountry`. Only National rows on Country geographies are emitted |
+| The four Global Fund CSVs already in `data/raw/` cannot reach the panel | Read 2026-09-05: `annual-results.csv` 66 rows with no country column, `expenditures.csv` 251 rows with neither country nor year, `funding-requests.csv` 901 rows with a geography and no money, `pledges-and-contributions.csv` 158 rows on the donor side only |
 | DHS covers WCA far better than it was being used | `surveyCharacteristicIds=23`: 18 of 24 WCA countries have a survey with HIV biomarkers; the API serves `breakdown=subnational` and the connector never asks for it |
 | Every DHS row for DR Congo was being dropped | `to_iso3("Congo Democratic Republic")` returned `None` — the DHS Program's own spelling, absent from `_OVERRIDES` while four others were present. Fixed at `hivimpact/normalize.py:48`; all 92 DHS country names re-resolved, one still unmapped ("Nigeria (Ondo State)", correctly) |
 | The additive test has to be applied per table | DR Congo PNMLS GAM 2024 report, read 2026-08-15: 7 tables sourced "Données DHIS2", 4 to the PNLS 2023 report, provincial PrEP to PEPFAR, Tableau LVI to REDES — four classifications in one document |
