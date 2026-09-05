@@ -209,15 +209,25 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
     IndicatorSpec("tpt_initiation_new_pct",
                   "% of people newly enrolled in HIV treatment started on TB preventive therapy", "percent",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
-                  "UNAIDS AIDSinfo, 2013-2024. The percentage counterpart to tpt_initiations, "
-                  "over a denominator the panel also holds as art_initiations, so the count and "
-                  "the proportion can be reconciled against each other."),
+                  "UNAIDS AIDSinfo, 2013-2024. Not the percentage counterpart to tpt_initiations, "
+                  "which was the expectation until it was tested on the 2026-09-05 panel. Dividing "
+                  "the Global Fund count by art_initiations reproduces this figure within one "
+                  "percentage point in 41 of 181 country-years, misses by a median of 11.5 points, "
+                  "and exceeds 100 per cent in 32 of them, Eswatini 2024 reaching 3,093 per cent on "
+                  "194,482 courses against 6,288 new enrolments. The Global Fund counts everyone on "
+                  "ART who started a course, so the matching proportion is "
+                  "tpt_initiation_current_pct."),
     IndicatorSpec("tpt_initiation_current_pct",
                   "% of people currently enrolled in HIV treatment started on TB preventive therapy", "percent",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "UNAIDS AIDSinfo, 2017-2024. Denominator is everyone in care, not the new "
-                  "enrolments, so it falls as a programme catches up with its existing cohort "
-                  "and that fall is not a cut."),
+                  "enrolments, so the series falls as a programme catches up with its existing "
+                  "cohort and that fall is not a cut. This is the proportion tpt_initiations "
+                  "belongs to: the Global Fund count over on_art_count reproduces this figure "
+                  "within one percentage point in 48 of 111 country-years, within five in 76, and "
+                  "never exceeds 100 per cent. The remainder disagree because the two "
+                  "organisations counted different facilities, which is what makes the pair worth "
+                  "holding rather than collapsing."),
     IndicatorSpec("tpt_completion_pct",
                   "% of people living with HIV on ART who completed a course of TB preventive therapy", "percent",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
@@ -239,14 +249,22 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
     IndicatorSpec("tbhiv_incidence", "Incident TB cases among people living with HIV", "count",
                   SourceType.MODELLED_ESTIMATE, "epi",
                   "WHO TME e_inc_tbhiv_num, with its published low and high bounds, and the UNAIDS "
-                  "AIDSinfo export of the same quantity for 193 countries over 2000-2024. Both are "
-                  "modelled, and WHO and UNAIDS share inputs, so agreement between them is weaker "
-                  "evidence than agreement between two routine records."),
+                  "AIDSinfo export of the same quantity for 193 countries over 2000-2024. The two "
+                  "are one instrument published twice, not two: on the 1,815 overlapping "
+                  "country-years where UNAIDS prints an uncensored number, the two figures are "
+                  "identical in 97.5 per cent and within one per cent in 99.0 per cent. Use WHO "
+                  "TME. UNAIDS covers 497 country-years WHO TME lacks and every one of them is a "
+                  "censored `<100` bound, so the UNAIDS export adds no point estimate anywhere."),
     IndicatorSpec("tbhiv_deaths", "Deaths from TB among people living with HIV", "count",
                   SourceType.MODELLED_ESTIMATE, "epi",
                   "WHO TME e_mort_tbhiv_num, and the UNAIDS AIDSinfo export of the same quantity "
-                  "for 192 countries. A component of HIV mortality that UNAIDS folds into "
-                  "aids_deaths, so the two overlap and must not be added together."),
+                  "for 192 countries. One instrument published twice, on the same measurement as "
+                  "tbhiv_incidence: of 4,302 overlapping country-years, 3,941 carry an identical "
+                  "non-zero figure, 315 are zero in both files, and 46 differ. Unlike the "
+                  "incidence export this one is uncensored, so its 432 country-years beyond WHO "
+                  "TME are usable numbers and worth keeping. A component of HIV mortality that "
+                  "UNAIDS folds into aids_deaths, so this series and aids_deaths overlap and must "
+                  "not be added together."),
 
     # -- TB/HIV money, and the TB programme's funding mix as an exposure measure -
     # The first four are HIV-specific: collaborative TB/HIV activities, which is a budget

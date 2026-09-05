@@ -870,6 +870,44 @@ therapy coverage, male circumcisions performed, procured self-test kits, early i
 late HIV diagnosis and prevention-programme coverage for each key population. Several of those are
 commodity and service volumes of exactly the kind this project argues move first.
 
+### 9f. Three of the seven files turned out to be a republication, and the test says which
+
+The seven TB and HIV exports were mapped on the expectation that all seven would add a second
+instrument. The run of 2026-09-05 wrote them into the panel and the exact-agreement test, the same
+test that exposed UNAIDS GAM as a republication of the national NASA reports, was applied to each.
+The seven do not behave alike, and mapping them was still right, because the test can only be run on
+data that has been ingested.
+
+**Two are WHO republished.** On `tbhiv_deaths`, 4,302 country-years overlap WHO TME. 3,941 carry an
+identical non-zero figure, 315 are zero in both files, and 46 differ. On `tbhiv_incidence`, of the
+1,815 overlapping country-years where UNAIDS prints an uncensored number, 97.5 per cent are identical
+and 99.0 per cent agree within one per cent. Two organisations do not independently model 3,941
+national TB death counts and land on the same integer. The benchmark for what genuine independence
+looks like is in the same panel: Global Fund and WHO TME both count ART initiations, agree exactly in
+8 per cent of country-years, and differ by a median of 3.5 per cent.
+
+**The incidence export is worse than redundant.** UNAIDS covers 497 country-years WHO TME lacks, and
+every one of the 497 is a censored `<100` bound. Where the two overlap UNAIDS censors 2,934 cells
+that WHO TME publishes as numbers. The export adds no point estimate anywhere in the panel. The
+deaths export is uncensored and its 432 extra country-years are usable, so it stays for coverage.
+
+**The three proportions are a genuine second instrument, but not of the series they were mapped
+against.** The expectation written into `indicators.py` was that the Global Fund count of TPT
+initiations divided by `art_initiations` would reproduce the UNAIDS newly-enrolled proportion.
+Tested on 181 country-years it reproduces it within one percentage point in 41, misses by a median of
+11.5 points, and exceeds 100 per cent in 32, Eswatini 2024 reaching 3,093 per cent on 194,482 courses
+against 6,288 new enrolments. The Global Fund counts everyone on ART who started a course, not the
+new enrolments. Against the right denominator the identity holds: the Global Fund count over
+`on_art_count` reproduces the *currently* enrolled proportion within one percentage point in 48 of
+111 country-years, within five in 76, and never exceeds 100 per cent.
+
+**The general rule this adds to §9d. Two sources naming the same quantity are a hypothesis about
+which two series pair, not a fact, and the arithmetic decides it.** Both errors here were errors of
+pairing rather than of ingestion, both were invisible until the rows were in the panel, and both were
+caught by dividing one series by another and reading the answer against 100 per cent. **An identity
+that a pairing implies is a test the pairing has to pass. Run it before writing the pairing into a
+note.**
+
 ---
 
 ## Status of the claims here
@@ -987,3 +1025,8 @@ commodity and service volumes of exactly the kind this project argues move first
 | A connector can report a clean run while skipping most of what it was given | `unaids_aidsinfo` classifies by filename substring against 11 core names and counts the rest as skipped. 114 of 146 exports were never read, reducing to 111 distinct indicator names |
 | Seven of those unread exports are TB and HIV, and hold about 14,100 cells | Co-management of TB and HIV treatment (168 countries, 2000–2024, 2,536 cells), incident TB cases in PLHIV (192, 4,749), TB-related deaths in PLHIV (191, 4,734), plus the three TPT proportions and TB disease at enrolment |
 | UNAIDS censors 62% of the incident-TB series and none of the TB-deaths series | `Incident TB cases in people living with HIV`: 2,934 of 4,749 cells are `<100`. `TB-related deaths among people living with HIV`: no censoring at all and 714 zeros, which is the shape the corrected floor detector has to leave alone |
+| The run of 2026-09-05 landed all nine new canonicals | Panel 159,063 rows. `unaids_aidsinfo` mapped 32 files against 25 before, 39,451 rows. Global Fund: `tpt_initiations` 341, `plhiv_tb_screened` 272, `tpt_completions` 8, `tbhiv_on_cpt` 3. UNAIDS: `tbhiv_comanagement_pct` 2,536, `plhiv_new_tb_diagnosed_pct` 971, `tpt_initiation_new_pct` 709, `tpt_initiation_current_pct` 294, `tpt_completion_pct` 128 |
+| The UNAIDS TB/HIV burden exports are WHO republished, not a second instrument | `tbhiv_deaths`: of 4,302 overlapping country-years, 3,941 identical non-zero, 315 zero in both, 46 differ. `tbhiv_incidence`: of the 1,815 uncensored overlaps, 97.5% identical, 99.0% within 1%. Against ART initiations, where the two instruments are genuinely independent, exact agreement is 8% |
+| The UNAIDS incident-TB export adds no point estimate anywhere | All 497 of its country-years beyond WHO TME are censored `<100` bounds, and it censors 2,934 cells WHO TME publishes as numbers. The deaths export is uncensored, so its 432 extra country-years are kept |
+| The Global Fund TPT count pairs with the currently-enrolled proportion, not the newly-enrolled one | Over `art_initiations`: within 1pp in 41 of 181 country-years, median gap 11.5pp, above 100% in 32, SWZ 2024 at 3,093% on 194,482 courses against 6,288 new enrolments. Over `on_art_count`: within 1pp in 48 of 111, within 5pp in 76, never above 100% |
+| The censoring check was labelling reporting ceilings as floors | AIDSinfo censors at both ends and `>98` is a ceiling. 148 WHO GHO `viral_suppression_pct` rows and 141 UNAIDS `pmtct_coverage_pct` rows sit at exactly 98, which is the largest value either series contains. The three cases separate on where the repeated value sits: series minimum, series maximum, or neither, the last being UNAIDS stacking `<100` and `<500` in one file |

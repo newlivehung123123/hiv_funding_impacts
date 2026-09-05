@@ -202,12 +202,25 @@ def _unit_outliers(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _floor_values(df: pd.DataFrame) -> List[str]:
-    """Series where one exact non-zero value recurs often enough to be a publication floor.
+    """Series where one exact non-zero value recurs often enough to be a publication limit.
 
     A repeated value on its own is not evidence of censoring, so two things have to hold
     together: the value has to be common across countries, and the series must not contain
     zeros. The reasoning behind the second condition, and the measurement that set it, are
     with the constants above.
+
+    Where the repeated value sits in its own series decides what the repetition means, and
+    for eight months this check called every one of them a floor. AIDSinfo censors at both
+    ends. `<100` puts a display floor under a small count, and `>98` puts a ceiling over a
+    cascade percentage that reached its target, so 148 rows of WHO GHO viral suppression at
+    exactly 98 and 141 rows of UNAIDS PMTCT coverage at exactly 98 were reported as floors
+    when 98 is the largest value either series contains. A reader who believed the label
+    would have concluded those countries were being rounded up from nothing.
+
+    The three cases separate completely on the panel of 2026-09-05. The repeated value is
+    the series minimum (censoring floor), or its maximum (reporting ceiling), or neither,
+    which is UNAIDS stacking two notations in one file: on_art_count repeats 500 with 167
+    rows below it, because `<100` and `<500` are both in use.
     """
     out: List[str] = []
     d = df.copy()
@@ -228,12 +241,18 @@ def _floor_values(df: pd.DataFrame) -> List[str]:
         share = cnt / len(part)
         n_countries = part.loc[part["_v"] == val, "country_iso3"].nunique()
         if share >= FLOOR_SHARE and n_countries >= FLOOR_MIN_COUNTRIES:
-            found.append((share, cnt, len(part), n_countries, ind, src, val))
+            if val == part["_v"].min():
+                kind = "a censoring floor"
+            elif val == part["_v"].max():
+                kind = "a reporting ceiling"
+            else:
+                kind = "a censoring limit with other values below it"
+            found.append((share, cnt, len(part), n_countries, ind, src, val, kind))
 
-    for share, cnt, total, n_countries, ind, src, val in sorted(found, reverse=True):
+    for share, cnt, total, n_countries, ind, src, val, kind in sorted(found, reverse=True):
         out.append(
             f"{ind}/{src}: value {val:g} repeats {cnt} times ({share:.0%} of {total} rows, "
-            f"{n_countries} countries) — likely a censoring floor, not a measurement"
+            f"{n_countries} countries) — likely {kind}, not a measurement"
         )
     return out
 
