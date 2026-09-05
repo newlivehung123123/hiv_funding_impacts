@@ -47,6 +47,11 @@ _OVERRIDES = {
     "dr congo": "COD",
     "congo dem. rep.": "COD",
     "congo, dem. rep.": "COD",
+    # The DHS Program's own spelling. Without this line every DHS row for DR Congo was
+    # dropped silently, including the CD2023 survey — the most recent HIV-testing survey
+    # in West and Central Africa, in the region's second-largest epidemic. Found while
+    # desk-researching WCA, by comparing the DHS country list against this mapping.
+    "congo democratic republic": "COD",
     "congo": "COG",
     "congo, rep.": "COG",
     "iran (islamic republic of)": "IRN",

@@ -63,18 +63,84 @@ CORE_MAP: List[Tuple[str, str]] = [
 ]
 
 
-def _clean_num(cell) -> Optional[float]:
+def _parse_cell(cell) -> Tuple[Optional[float], Optional[str]]:
+    """Parse one AIDSinfo cell into (number, censoring notation).
+
+    AIDSinfo censors small figures for display: `<100`, `<500`, `<200`, `<0.1`, `<0.01`
+    and, in the cascade files, `>95`. There are 66,291 such cells across the exports in
+    data/raw/unaids. They are bounds, and stripping the `<` puts a point estimate in the
+    panel that the source never asserted — which is how Ukraine came to be recorded as
+    spending 100 US dollars on HIV in 2018, between 108 million in 2017 and 100 million
+    in 2019. The notation is returned alongside the number so the caller can decide what
+    the bound means for its own indicator.
+    """
     if cell is None:
-        return None
+        return None, None
     s = str(cell).strip()
     if s in ("", "...", "…", "-", "N/A", "NA", "nan"):
-        return None
+        return None, None
+    censored = s if s[:1] in ("<", ">") else None
     s = (s.replace(" ", "").replace(" ", "").replace(" ", "")
          .replace(",", "").replace("<", "").replace(">", ""))
     try:
-        return float(s)
+        return float(s), censored
     except ValueError:
+        return None, None
+
+
+def _clean_num(cell) -> Optional[float]:
+    """The bare number, where the censoring carries no meaning worth keeping."""
+    return _parse_cell(cell)[0]
+
+
+def _bound(cell, is_lower: bool) -> Optional[float]:
+    """One end of the source's own uncertainty interval.
+
+    The bound columns are censored on the same rule as the point column, so they need
+    reading the same way. A `<100` in a lower column does not mean the interval stops at
+    100 — it means it reaches down to nothing. A `>98` in an upper column states no
+    ceiling at all rather than a ceiling of 98. Read literally, both narrow the interval
+    the source published, which is the wrong direction for an uncertainty bound to move.
+    """
+    v, censored = _parse_cell(cell)
+    if v is None or not censored:
+        return v
+    if censored.startswith("<") and is_lower:
+        return 0.0
+    if censored.startswith(">") and not is_lower:
         return None
+    return v
+
+
+def _censored_row(value: Optional[float], notation: str, unit: str,
+                  lower: Optional[float], upper: Optional[float]):
+    """Turn a censored cell into (value, lower, upper) for the panel.
+
+    The notation means different things in the two instruments AIDSinfo publishes, and
+    the difference is not a matter of degree. In the epidemiological files a `<100` sits
+    inside a series whose other years run to about 800, so it is an honest small estimate
+    of a small epidemic — 37 countries have their entire new-infections series censored,
+    and blanking it would delete them from the panel. In the country-reported expenditure
+    file the same `<100` sits inside a series whose other years have a median of 22.4
+    million US dollars: South Africa is `<100` for 2015 and 2016 against an other-year
+    median of 2.42 billion. No country spent under 100 dollars on HIV. There the notation
+    is the display floor standing in for a GAM return with no usable total, which makes
+    it a non-report — the same finding as the GAM zero, arrived at from the other side.
+
+    So a censored count keeps its number, bounded, and a censored currency amount keeps
+    no number at all. Either way the notation itself is recorded, so the choice can be
+    revisited without re-reading the raw exports.
+    """
+    if notation.startswith(">"):
+        # The cascade files report `>95` for a country at or above the target: a floor,
+        # not a ceiling, so the bound goes on the other side.
+        lower = value if lower is None else lower
+    else:
+        lower = 0.0 if lower is None else lower
+        upper = value if upper is None else upper
+        if unit == "USD":
+            value = None
+    return value, lower, upper
 
 
 def _classify(stem: str) -> Optional[Tuple[str, str, str]]:
@@ -155,33 +221,44 @@ class UNAIDSAidsinfoConnector(BaseConnector):
                 if not iso3 or (wanted and iso3 not in wanted):
                     continue
                 for y in year_cols:
-                    val = _clean_num(row[y])
+                    val, censored = _parse_cell(row[y])
                     if val is None:
                         continue
                     year = int(y)
                     if year < start_year or year > end_year:
                         continue
+                    lo = _bound(row.get(f"{y}_lower"), True)
+                    hi = _bound(row.get(f"{y}_upper"), False)
+                    extra = {"export_file": path.name}
+                    if censored:
+                        val, lo, hi = _censored_row(val, censored, unit, lo, hi)
+                        extra["censored"] = censored
                     yield self.make_row(
                         country_iso3=iso3, country_name=str(row["Country"]),
                         indicator_id=canonical, year=year, value=val,
-                        value_lower=_clean_num(row.get(f"{y}_lower")),
-                        value_upper=_clean_num(row.get(f"{y}_upper")),
+                        value_lower=lo, value_upper=hi,
                         population_group=pop, sex=sex, unit=unit, source_type=src_type,
                         source_url="https://aidsinfo.unaids.org/",
                         source_indicator_code=path.stem[:80],
-                        extra={"export_file": path.name},
+                        extra=extra,
                     )
                     n += 1
                 if recent_col and recent_year and start_year <= recent_year <= end_year:
-                    val = _clean_num(row[recent_col])
+                    val, censored = _parse_cell(row[recent_col])
                     if val is not None:
+                        lo = hi = None
+                        extra = {"export_file": path.name, "most_recent": True}
+                        if censored:
+                            val, lo, hi = _censored_row(val, censored, unit, None, None)
+                            extra["censored"] = censored
                         yield self.make_row(
                             country_iso3=iso3, country_name=str(row["Country"]),
                             indicator_id=canonical, year=recent_year, value=val,
+                            value_lower=lo, value_upper=hi,
                             population_group=pop, sex=sex, unit=unit, source_type=src_type,
                             source_url="https://aidsinfo.unaids.org/",
                             source_indicator_code=path.stem[:80],
-                            extra={"export_file": path.name, "most_recent": True},
+                            extra=extra,
                         )
                         n += 1
             log.info("unaids_aidsinfo: %-60s -> %d rows (%s / %s)", path.name[:60], n, canonical, pop)
