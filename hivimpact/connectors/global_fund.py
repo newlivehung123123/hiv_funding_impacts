@@ -42,8 +42,18 @@ Three traps, all of which would enter the panel silently.
     would land on whichever country the code resolved to. Only geographies the service
     itself grades as Country are accepted.
 
-The whole Annual_Results dataset is 15,313 rows and arrives in one response with no
-nextLink, so there is no paging to get wrong.
+Annual_Results is not an HIV dataset. It is 15,313 rows covering every indicator the
+institution's grants report, so malaria, drug-resistant TB and the cross-cutting
+health-systems lines arrive in the same response and are named in _UNMAPPED_OTHER_DISEASE
+rather than skipped silently. The whole dataset arrives at once with no nextLink, so there
+is no paging to get wrong.
+
+Measured on the run of 2026-09-05: 4,797 rows emitted over nine canonical indicators, 2,034
+subnational rows left out and 80 rows whose geography is not a country. The count of
+reporting countries in `new_diagnoses` falls from 22 in 2023 to eight in 2024, which is
+grant reporting arriving late rather than diagnoses collapsing, so every Global Fund series
+has to be read on the countries reporting both years. `writers._reporter_drops` says so in
+the validation log.
 """
 from __future__ import annotations
 
@@ -104,13 +114,16 @@ _SERIES: Dict[str, GFSeries] = {
 
     # -- the TB/HIV component --------------------------------------------------
     "TB Patients with documented HIV status": GFSeries("tb_patients_hiv_tested"),
+    "HIV-positive TB patients on ART during TB treatment": GFSeries("tbhiv_on_art"),
 }
 
-# Named so the log can say these were seen and left out on purpose. The panel has no
-# population dimension for adolescent girls, prisoners or the service's "other vulnerable
-# populations", and no canonical indicator for the rest. Adding one is a decision about
-# the panel's vocabulary, not about this source.
-_KNOWN_UNMAPPED = frozenset({
+# Named so the log can say these were seen and left out on purpose, which is the whole
+# point of the mechanism: a warning that fires on 31 names every run hides the one new
+# name that matters. Three different reasons appear below and they are kept apart.
+
+# 1. HIV indicators with no canonical id, or no population dimension in the panel. Adding
+#    either is a decision about the panel's vocabulary and not about this source.
+_UNMAPPED_HIV = {
     "Adolescent girls and young women (AGYW) reached with HIV prevention programs",
     "Adolescent girls and young women who received antiretroviral pre-exposure prophylaxis",
     "Antenatal care attendees tested for syphilis",
@@ -131,7 +144,58 @@ _KNOWN_UNMAPPED = frozenset({
     "Young people aged 10-24 years reached by comprehensive sexuality education and/or "
     "life skills-based HIV education",
     "Young people aged 10-24 years reached with HIV prevention programs",
-})
+}
+
+# 2. TB preventive services delivered to people living with HIV. These are HIV service
+#    flows funded as line items, so they are the class of measurement this project argues
+#    falls first, and the Global Fund would be the only source of them. WHO TME carries no
+#    equivalent column, so mapping any of these creates a single-source series and that is
+#    a decision to take deliberately rather than in passing. Row counts as of 2026-09-05:
+#    TB screening among people in HIV care 297, TB preventive therapy started 356.
+_UNMAPPED_TBHIV = {
+    "HIV-positive TB patients on CPT prophylaxis during treatment",
+    "People living with HIV in care screened for TB",
+    "People living with HIV on ART who initiated TB preventive therapy",
+    "People who completed TPT",
+}
+
+# 3. The rest of the Global Fund's portfolio. Annual_Results is not an HIV dataset, it is
+#    every indicator the institution's grants report, so malaria, drug-resistant TB and
+#    the cross-cutting health-systems lines all arrive in the same response and are all
+#    outside this panel.
+_UNMAPPED_OTHER_DISEASE = {
+    "Care & support services to TB patients",
+    "Cases of Malaria treated",
+    "Cases reported within 24 hours of treatment (elimination settings)",
+    "Children who received seasonal malaria chemoprophylaxis",
+    "Confirmed malaria cases fully investigated and classified",
+    "Contacts of people with bacteriologically confirmed TB evaluated for TB",
+    "Districts achieving national target for the proportion of confirmed malaria patients "
+    "who received first-line antimalarial treatment",
+    "Districts achieving national target for the proportion of suspected malaria patients "
+    "who received a parasitological test",
+    "Infants who received the full number of courses of perennial malaria chemoprevention (PMC)",
+    "Insecticide-treated mosquito nets distributed",
+    "Malaria foci fully investigated and classified",
+    "Number of cases of XDR TB enrolled on treatment",
+    "Number of community based organizations that received a pre-defined package of training",
+    "Number of iCCM conditions treated among children under five in target areas",
+    "People in contact with TB patients received preventive therapy",
+    "People with TB treated",
+    "Percentage of TB patients with DST result for at least Rifampicin",
+    "Population covered by Indoor Residual Spraying",
+    "Pregnant women attending antenatal clinics who received intermittent preventive "
+    "treatment for malaria",
+    "Prevention: People covered by LLINs distributed",
+    "RR-TB and/or MDR-TB cases notified",
+    "RR-TB and/or MDR-TB that began second-line treatment",
+    "RR/MDR-TB patients with DST results for Fluoroquinolone",
+    "Structures covered by Indoor Residual Spraying",
+    "Suspected malaria cases that receive a parasitological test",
+    "TB patients tested using WHO recommended rapid tests",
+}
+
+_KNOWN_UNMAPPED = frozenset(_UNMAPPED_HIV | _UNMAPPED_TBHIV | _UNMAPPED_OTHER_DISEASE)
 
 
 class GlobalFundConnector(BaseConnector):

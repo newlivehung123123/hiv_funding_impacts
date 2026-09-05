@@ -733,17 +733,28 @@ not actually been probed.
 ### 9b. What the Global Fund publishes that nothing else in the panel does
 
 `AllProgrammaticIndicators` filtered to `programmaticDataSet eq 'Annual_Results'` is 15,313 rows of
-country by year by indicator, grant-reported, in a single response with no `nextLink`. Of the 38
-HIV indicator names it carries, 19 map to canonical indicators the panel already holds and 19 are
-named in the connector as deliberately unmapped.
+country by year by indicator, grant-reported, in a single response with no `nextLink`. Annual_Results
+is not an HIV dataset. It carries 69 indicator names covering the institution's whole portfolio,
+of which 20 map to canonical indicators and 49 are named in the connector as deliberately unmapped,
+26 of those because they are malaria, drug-resistant TB or health-systems lines.
 
-The one that matters is *People newly diagnosed with HIV initiated on ART*. 114 rows carry it,
-across 40 country codes and the years 2017 to 2024. That is a count of people who started
-treatment in a year, which is the quantity that falls the moment a clinic stops enrolling, and it
-arrives through grant reporting that has no connection to the UNAIDS estimate WHO and the World
-Bank republish. The panel's only other initiation series is `hiv_reg_new2` from WHO's tuberculosis
-dataset (§8a), so for every country the two share this is a second independent instrument on the
-project's central indicator. The series stops at 2024, so it dates the cut rather than showing it.
+The run of 2026-09-05 emitted **4,797 rows over nine canonical indicators**, leaving out 2,034
+subnational rows and 80 rows whose geography is not a country.
+
+The one that matters is *People newly diagnosed with HIV initiated on ART*, a count of people who
+started treatment in a year, arriving through grant reporting that has no connection to the UNAIDS
+estimate WHO and the World Bank republish. **The national series is much smaller than the raw row
+count suggests, and the filters are why.** 114 rows carry the indicator across 40 country codes and
+the years 2017 to 2024. After dropping subnational rows and multicountry geographies, 93 rows
+survive, across 33 countries, and the series starts in 2021 rather than 2017. Every row before 2021
+is subnational or regional, so the Global Fund began reporting this indicator nationally only in
+2021. Reporting countries then rise, 17 in 2021 to 32 in 2024, which is the opposite direction from
+`new_diagnoses` in the same dataset and means the two series cannot be read the same way.
+
+The panel's only other initiation series is `hiv_reg_new2` from WHO's tuberculosis dataset (§8a),
+so for the countries the two share this is a second independent instrument on the project's central
+indicator. The Global Fund also supplies a second reading of `tbhiv_on_art`, 592 rows against WHO
+TME's `newrel_art`.
 
 ### 9c. Two traps, and one of them defeats every check we have
 
@@ -820,7 +831,9 @@ quantities from the same institution and must not be totalled together.
 | Global Fund results are an open API | `data.api.theglobalfund.org/results/{cycles,stats,table}`, no auth, read 2026-08-15: annual 2017–2024 for 22 of 24 WCA countries, ART series for 10 of the 12 with no PEPFAR; GAB has results but no HIV indicator, GNQ none at all |
 | ~~The Global Fund's documented API host is edge-blocked~~ — overturned 2026-09-05, see below | `fetch.theglobalfund.org` returns an Azure Front Door "The request is blocked" page from this network; the Data Explorer backend serving the same data answers normally |
 | The block was two retired API versions, not an edge ban | `data-service.theglobalfund.org/api` lists V4.2, V4.1 and V4.0 as live, read 2026-09-05. Every path under `/v2/` and `/v3.3/` returns the block page including the bare root; `/v4.2/odata/` returns data to plain `curl` with no headers, from the same machine and network |
-| The Global Fund publishes ART initiations by country and year | `AllProgrammaticIndicators?$filter=programmaticDataSet eq 'Annual_Results'`, read 2026-09-05: 15,313 rows in one response with no `nextLink`, 38 HIV indicator names. *People newly diagnosed with HIV initiated on ART* has 114 rows across 40 country codes, 2017–2024 |
+| The Global Fund publishes ART initiations by country and year | `AllProgrammaticIndicators?$filter=programmaticDataSet eq 'Annual_Results'`, run 2026-09-05: 15,313 rows in one response with no `nextLink`, 69 indicator names, 4,797 rows emitted over 9 canonical indicators. *People newly diagnosed with HIV initiated on ART* has 114 rows across 40 country codes 2017–2024 raw, and **93 rows across 33 countries 2021–2024** after the national and country-geography filters |
+| The Global Fund's national ART-initiation series starts in 2021 | Every row for 2017–2020 is subnational or multicountry; reporting countries run 17 (2021), 22, 22, 32 (2024) |
+| Its `new_diagnoses` series moves the opposite way | `writers._reporter_drops` on the same run: reporting countries 22 (2023) → 8 (2024). Grant reporting arriving late, not diagnoses collapsing |
 | `$expand` empties this OData result rather than failing | `$top=1` returns 1 row; `$top=1&$expand=geography` returns HTTP 200 with an empty value array. Joined on `recordId` instead, verified against `/Geographies?$filter=id eq …` resolving to CPV / Cabo Verde |
 | A Global Fund row can be subnational and still carry a country geography | 21 of the 114 ART-initiation rows are `geographicCoverage: Subnational`; ZAF 2022 reads 1,531 people. 63 of the 300 geographies are `Multicountry`. Only National rows on Country geographies are emitted |
 | The four Global Fund CSVs already in `data/raw/` cannot reach the panel | Read 2026-09-05: `annual-results.csv` 66 rows with no country column, `expenditures.csv` 251 rows with neither country nor year, `funding-requests.csv` 901 rows with a geography and no money, `pledges-and-contributions.csv` 158 rows on the donor side only |
