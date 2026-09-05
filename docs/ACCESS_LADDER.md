@@ -833,10 +833,14 @@ such rows and a 273-row floor warning before the censoring fix. The DHS connecto
 rows for the Democratic Republic of the Congo across 2007, 2013 and 2023, where the country name
 mismatch had returned none.
 
-**One source degraded between runs.** `data.clm-asia.org/api/` returned HTTP 500 on every fetch for
-the 2023 first quarter across all eight indicators. The community-led monitoring sentinel is a grade
-above the aggregators precisely because nobody else republishes it, which is the same reason nothing
-in the panel can stand in for it while it is down.
+**A run warning can be a fault the code already answered.** `data.clm-asia.org/api/` returned HTTP
+500 on every fetch for the 2023 first quarter across all eight indicators, which reads like a source
+going down and is not. That server raises an unhandled `KeyError` and serves a Django debug page for
+any request it cannot satisfy, including a quarter with almost nothing in it, and the connector has
+recorded that behaviour and capped its retries since July 2026. The sentinel produced 23 rows over
+2023 to 2025 on all eight indicators in the same run. The general point is that a source which
+answers a bad request with a 500 rather than an empty result makes its own logs unreadable, so the
+run log has to be checked against what the connector actually wrote before a warning is believed.
 
 ---
 
@@ -950,4 +954,4 @@ in the panel can stand in for it while it is down.
 | The censoring-floor check fired on three WHO TME columns that are not censored | `tbhiv_deaths` reads 461 zeros, 315 ones, 179 twos, 98 threes. Dropping zeros before taking the mode leaves the smallest printable count as the mode of any small-count series. Fixed by counting zeros towards the series: 12 genuine floors carry none, the three WHO TME columns are a tenth to a quarter zeros |
 | A spike against the next value up does not separate a floor from a small count | UNAIDS `new_infections` is a genuine floor at 2.74 times the count at 200 and WHO GHO at 2.08, against 2.2 for `tbhiv_on_art`, which is not censored. Any threshold keeping the real floors admits the false ones |
 | The UNAIDS censoring and DHS country-name fixes are confirmed in the data | `hiv_expenditure_total` 961 rows with none at exactly 100 USD, against 42 and a 273-row floor warning before. DHS returns 9 rows for COD across 2007, 2013 and 2023, where the name mismatch returned none |
-| The community-led monitoring sentinel went down between runs | `data.clm-asia.org/api/` returned HTTP 500 on every 2023-Q1 fetch across all eight indicators on 2026-09-05. Nothing in the panel republishes it, which is why it was graded above the aggregators |
+| The community-led monitoring sentinel's HTTP 500s are the documented empty-quarter behaviour, not an outage | Every 2023-Q1 fetch across all eight indicators returned 500 on 2026-09-05, as the connector has recorded since July 2026. The server raises an unhandled `KeyError` and serves a Django debug page (`/home/brian/CLM_DB/interface/api.py`, line 256) for any request it cannot satisfy. The same run wrote 23 rows over 2023–2025 on all eight indicators |
