@@ -10,8 +10,9 @@ fall where anyone expected. This note sets out the finding, the taxonomy it prod
 one prediction it makes that the next region can test.
 
 The per-country evidence lives in [`PHASE2_FEASIBILITY.md`](PHASE2_FEASIBILITY.md) for Southeast
-Asia and [`PHASE3_FEASIBILITY_AFRICA.md`](PHASE3_FEASIBILITY_AFRICA.md) for sub-Saharan Africa.
-This note is the argument built on top of them.
+Asia, [`PHASE3_FEASIBILITY_AFRICA.md`](PHASE3_FEASIBILITY_AFRICA.md) for sub-Saharan Africa, and
+[`PHASE4_FEASIBILITY_WCA.md`](PHASE4_FEASIBILITY_WCA.md) for West and Central Africa. This note
+is the argument built on top of them.
 
 ---
 
@@ -139,6 +140,64 @@ error; its HMIS is the thing that shows a login.
 So the practical guidance inverts by region, as the ladder said it would: **country-side first in
 Southeast Asia, donor-side first in Africa** — with South Africa the one country where both
 doors are open, and Rwanda the one national HMIS in the probe that did not immediately refuse.
+
+## 4b. West and Central Africa, and the grade the ladder was missing
+
+§4a left the region that had only been probed, not researched. Twenty-four countries were then
+worked through to the Phase 2 standard; the evidence is in
+[`PHASE4_FEASIBILITY_WCA.md`](PHASE4_FEASIBILITY_WCA.md). The country-side result is the
+prediction's third confirmation and the strongest one: **no national source in the region reached
+grade 1**. Nigeria's National Data Repository is behind a login and, since NACA's April 2026
+statement directing all requests to the agency, behind a policy as well; DR Congo's VIH DATAPRO
+is a registration wall over an expired strategic plan's indicators; Côte d'Ivoire's PNLS
+publishes Spectrum output, which fails the Malaysia test on sight, and the ministry's open RASS
+yearbook series stops at 2020.
+
+One country-side source reaches grade 2 and passes the additive test, and it makes a point the
+first three regions did not. **Cameroon's CNLS annual report** is open, born-digital, and carries
+the ten regions on the ART cascade, viral-load coverage and suppression, retention, PMTCT and
+testing; key populations as programme counts with linkage rates, not as modelled
+prevalence; and 2024 funding broken down by donor with execution against budget. Its source line
+says where all of that comes from: *2024 DHIS2 database (26/03/2025)*. Cameroon's national HIV
+database is the same DHIS2 that returned a login wall in six countries in §4a — and the ministry
+publishes an extract of it as a public report. So a login wall is a barrier to the *database* and
+not necessarily to the *data*, which is worth re-checking in Kenya, Tanzania, Uganda, Malawi,
+Ethiopia and Nigeria before any of them is written off. The grade-3 verdict in those six was
+recorded against the system, and the question of what the ministry publishes out of it was never
+asked.
+
+The Cameroon file also earns a methods line. An automated read of the PDF reported it as scanned
+images with no extractable tables, which would have ended the enquiry at grade 3. Opening it
+showed a full text layer and every table extracting cleanly. A tool's summary of a document is
+not evidence about the document.
+
+The ladder's own logic then produced something it had not anticipated. Grade 4 was defined as
+donor-side reporting, and PEPFAR was taken as the case. But half the countries in this region —
+twelve of twenty-four, holding 632,800 people living with HIV — have no PEPFAR rows at all, so
+the grade-4 escape hatch is shut exactly where the country-side door is shut hardest. What opens
+instead is a layer the ladder had no name for: **regional publication, open and structured, by
+the bodies that sit above the country**.
+
+- **UNAIDS Naomi** publishes sub-national estimates for 15 of the region's 24 countries through
+  an open JSON API on `nmviewerserver.azurewebsites.net`, with credible intervals on every value
+  and area detail to level 3. Seven of those 15 are among the twelve with no PEPFAR.
+- **The Global Fund Data Explorer** publishes annual programme results 2017–2024 for 22 of 24
+  through an open JSON API on `data.api.theglobalfund.org`, including key-population indicators
+  no aggregator carries. Ten of the twelve no-PEPFAR countries get an ART series from it.
+
+Both are grade 1 by every criterion the ladder uses, and both were found the same way Thailand's
+Data Mart was: by watching what a public dashboard asks its own backend for. Neither publisher
+documents them as APIs. So the practical guidance for this region is neither of the two the
+ladder had — **regional-side first in West and Central Africa** — and the grade-4 definition
+should be read as *the layer above the country*, of which the bilateral donor is one case and the
+multilateral funder and the estimates programme are two more.
+
+Two cautions carry forward. Naomi's period list mixes one historical estimate with projections
+dated 2026 and 2027, which is the Thembisa fitted-versus-projected problem in a new place and
+would be worse here, since the projections postdate the cuts and predate knowledge of them.
+And Naomi's national ART figure is the country's own programme total fed in as a constraint, so
+it agrees with the Global Fund's by construction — Guinea's two figures sit 0.9% apart across a
+year — which is a `derived` relationship the reconciler must not score as corroboration.
 
 ## 5. Why the funder column is the whole point
 
@@ -355,6 +414,295 @@ The lesson generalises past this project. Before going looking for a new source,
 sources already ingested are being asked for and what they are being asked to throw away. The
 aggregation step is where information goes missing, and it goes missing silently.
 
+
+## 7. What a second pass changed, and the two grades the ladder was still missing
+
+*Added 2026-08-15, after the West and Central African search was run a second time and the first
+pass was judged to have stopped too early.*
+
+The first WCA pass produced four candidates. The second produced ten country sources and five
+source classes the first had not opened. Almost none of that came from searching harder in the
+ordinary sense. It came from four rules being wrong, and the rules are the part worth keeping.
+
+### 7a. The additive test is per table, not per document
+
+Phase 2 established the Malaysia test: a source earns a connector only if it carries something
+the aggregators do not. Phase 4 round one applied it to whole documents, and so ruled out every
+national GAM report as redundant with the GAM submission UNAIDS already publishes.
+
+DR Congo's 2024 PNMLS report shows why that is wrong. It names a source under each table, and
+the names differ: seven tables come from the national DHIS2, four from the programme's own
+annual report, the provincial PrEP table from PEPFAR, and one — Tableau LVI — from the REDES
+expenditure survey. Four classifications in one document. The PEPFAR table is `derived` and must
+never be counted as corroborating our PEPFAR connectors; the DHIS2 tables are the gated database
+in print and are `independent`.
+
+**A document is never redundant as a whole.** Each table's named source decides its own status.
+
+### 7b. And it is per file inside a dataset family
+
+The same error at a larger scale, and this one was ours rather than a country's. The pipeline
+reads three files from PEPFAR Spotlight. Spotlight publishes **fifteen**, all open, all direct,
+all at the same host, in the same zip convention the pipeline already parses. The class had been
+marked as covered because three of its members were.
+
+Four of the twelve unread files are additive against everything the panel holds: an
+operating-unit budget series reaching back to **2004** and split by beneficiary population, a
+commodities file with planned ARV and test-kit quantities, a modality file carrying
+community-versus-facility case-finding and the whole attrition set (`TX_RTT`, the loss-to-follow-up
+reasons, interruption by duration), and a health-workforce inventory. The single most direct
+measurement of the cut's mechanism anywhere in this project — outreach testing collapsing while
+facility testing holds — was sitting in a file at a host the pipeline downloads from weekly.
+
+§6 said to check what the ingested sources are being asked to throw away. Round two extends it:
+**check what else the ingested source publishes.** Enumerate the family before declaring it read.
+
+### 7c. Grade 3.5 — published to a human, not to a machine
+
+The ladder had grade 2 (open born-digital report) and grade 3 (gated database). Nigeria sits
+between them and neither name fits.
+
+`wallboard.nascp.gov.ng` is the national programme's dashboard, public, free, no login, refreshed
+20 February 2026, carrying 1,593,757 people on ART with a state selector and PrEP, HTS, ART and
+PMTCT tabs. It is more current and more granular than anything the aggregators publish for
+Nigeria. Its query backend returns 403 to every scripted request even with the correct cluster
+and resource key and matching Origin and Referer; the page renders correctly in a browser and
+emits no data request an automated client can capture.
+
+The data is published. It is not gated. It is simply addressed to a person with a mouse.
+
+**Grade 3.5 is where the ladder's binary of open-versus-gated fails**, and it matters for how the
+feasibility answer is phrased. Counting Nigeria as gated understates what its programme
+publishes; counting it as open overstates what a contamination-safe pipeline can take. A headless
+browser would reach it, at the cost of a component that breaks silently on the next
+republication, and that trade is the researcher's to make rather than a default.
+
+> **Superseded by §8b (2026-08-17).** The 403 described here is real, and the grade drawn from it
+> was still wrong: the same programme publishes an open JSON API on two other hosts. Nigeria is
+> grade 1. The grade 3.5 category stays in the ladder — it describes a real thing — but this is no
+> longer an example of it.
+
+### 7d. Grade 3 has a second door: open, gated by an agreement
+
+IHME's Development Assistance for Health database, 1990–2026, released 11 June 2026, carries the
+projection years that hold the 2025 cuts. It is public and free. The download sits behind a
+click-through non-commercial user agreement and a login.
+
+That is a gate, but not the same gate as a national ministry's. Nobody has to be granted
+anything: a researcher accepts terms once and the file is theirs. It resolves the way the
+pipeline already resolves UNAIDS AIDSinfo — a hand download into `data/raw/`, with the connector
+reading the file and never the site. Accepting terms on someone's behalf is not mine to do, so
+the route is recorded as manual by design and not as a limitation.
+
+### 7e. The method that opened three hosts: read the application, not the page
+
+Three sources looked empty and were not. Chad's statistics office returned one identical
+3,239-byte shell for every path; `data.pepfar.gov` returned an identical 1,993-byte shell; IHME's
+financing viewer did the same. All three are JavaScript applications, and in all three cases the
+addresses were sitting in the bundle:
+
+- fetch `/static/js/main.*.js`
+- grep it for `http`, `/api`, `.zip`, `.xlsx`, `.csv`
+- try the endpoints without a token — some need one and some do not
+
+Chad's `/api/menus` answers `401 Token d'accès requis`, and `/api/publications/search?q=` answers
+without any token at all, listing the health statistics yearbook series 2005–2023. PEPFAR's
+bundle held fifteen hardcoded dataset paths. IHME's held the GHDx series URL that its own site
+search returns 403 for.
+
+**A shell response is not an absent source.** It is the most common false negative in this whole
+exercise, and both an ordinary fetch tool and `curl` report it as a page with nothing in it.
+
+### 7f. The layer above the country now has a domestic-money column
+
+§5 of this note found the funder layer inside PEPFAR's own files. Round two found the layer the
+panel was missing on the other side: **money that is not donor money.**
+
+`hivfinancial.unaids.org` publishes the Global AIDS Monitoring programme-expenditure database as
+one open 5.5 MB spreadsheet — 59,947 rows, 121 countries, expenditure years 2011–2024, the NASA
+programme hierarchy down the rows, and down the columns a split by financing source with central
+government, sub-national government, social security, **households**, private insurance,
+corporations, PEPFAR and the Global Fund each in their own column.
+
+For the panel's taxonomy it splits in two. The PEPFAR and Global Fund columns are `derived`
+against connectors the project already has, and must not be read as corroborating them. The
+domestic public, household and private columns are `independent` and exist in no other source
+the pipeline touches. The question of who absorbs a withdrawn donor — the state, or the
+patient — is answerable only from those columns.
+
+It also replaces most of a hand-extraction programme. Round one's plan was to read national AIDS
+spending assessment PDFs country by country; this file covers 18 of the 24 WCA countries, and the
+PDFs stay valuable only where it has no entry (Cameroon, Congo-Brazzaville, Cabo Verde,
+Guinea-Bissau, Equatorial Guinea, São Tomé) or where the report breaks spending down further than
+the spreadsheet does.
+
+### 7g. Four traps that are general, not local
+
+Each was found by checking a figure that looked like a finding, and each would have produced a
+publishable number that was wrong.
+
+**A zero is not a measurement.** In the GAM expenditure database a zero means *not reported*.
+Mali's 2024 row shows 3,184,591 USD of domestic spending and no international spending at all,
+while the Global Fund's own API shows Mali holding active HIV grants disbursing across that year.
+Read literally, that row says a donor left. It says a country did not fill in a column.
+
+**Same-origin agreement is not triangulation.** Benin's GAM figure agrees with Benin's NASA
+report to within 3–5%, and DR Congo's with its REDES table to within 2%. Both pairs are one
+national exercise published twice. The agreement is worth having — it establishes that the
+spreadsheet can stand in for the PDF, which is what removes the hand extraction — but it
+corroborates the extraction and not the measurement, and the reconciliation layer must not treat
+it as two sources agreeing.
+
+**A quantity column is not unit-stable across years.** PEPFAR's commodities file gives Nigeria
+*HIV-1/2, Determine, 100 Tests* at 75,757 units and 85.60 USD each in FY2024, and the same item
+string at 5,965,515 units and 0.80 USD each in FY2025 — a pack one year and a single test the
+next. The naive read is testing supply rising fifty-eight-fold in the year the money fell. The
+per-unit price is the only thing in the file that reveals it.
+
+**A code column can hold several vocabularies at once.** IATI transaction types come back as `D`,
+`E`, `C`, `11`, `IF`, `R`, `IR` and `LR` from the same query, and 1,834 of 46,964 distinct
+activity/date/value keys appear under more than one of them. A connector has to pick one
+vocabulary and dedupe against the others, or it double-counts disbursements.
+
+### 7h. What round two costs, and what it says to the next region
+
+The first pass cost a day and produced four candidates; the second cost a day and produced
+fourteen. That ratio is the finding. A first pass over an unfamiliar region measures which
+sources are easy to find, and easy-to-find and additive are close to uncorrelated: the largest
+country-side money source in this region is one spreadsheet three clicks from a page the project
+had already used, and the sharpest service-disruption signal is a file on a host the pipeline
+downloads from every week.
+
+The instruction that produced this section — search again, and keep going until the search is
+exhausted rather than until it is satisfying — is not a work-rate instruction. **A single pass
+systematically under-finds, and the shortfall is not spread evenly: it lands on the sources that
+are additive.** Every region after this one gets two passes, and the second one starts by
+enumerating the families the first marked as covered.
+
+---
+
+## 8. What a third pass changed, and the traps that now live in code
+
+*Added 2026-08-17. §7h prescribed two passes for every region. This was the third pass over the
+same region, and it produced two large sources and one overturned grade, so the prescription was
+still set too low.*
+
+### 8a. The fourth search rule: searching for the topic word under-finds
+
+Rounds one and two both keyed on HIV — the word, its French forms, DAC purpose code 13040, HIV in
+a catalogue title. That is the right key for a source about HIV and a useless one for a source
+carrying HIV as a handful of columns inside a collection about something else.
+
+WHO's tuberculosis dataset holds **100 HIV-related variables across nine of its datasets**,
+including the only ART-initiation series anywhere in this project — national TB programmes report
+how many people started ART because they need it as a denominator for preventive-treatment
+coverage. WHO's Global Health Expenditure Database carries an HIV line for every country in it.
+Neither has HIV in its name. Neither was visible to any search this project ran before round
+three.
+
+The failure repeats inside a single site. Chad's statistics office serves a title-matching search
+endpoint where `q=sante` returns nothing and `q=VIH` returns nothing, while ten editions of the
+national health statistics yearbook sit in the catalogue under the string `SANITAIRES`.
+
+**Enumerate a catalogue; do not search it.** And when a health collection is ruled out because it
+is about something else, check its columns before believing that.
+
+### 8b. A source graded once is not graded forever
+
+§7c invented grade 3.5 for Nigeria on the evidence that the national wallboard's Power BI backend
+returns 403 to every scripted request. That evidence was correct and the grade drawn from it was
+wrong.
+
+Nigeria's National Data Repository has an open JSON API. `ndr.nascp.gov.ng/public/GetRecencyData/`
+returns state-level recency yield with numerators, denominators, age bands and a monthly
+viral-load series from March 2020; `ctd.nascp.gov.ng/facilitydata/` returns all 37 states with
+treatment, PLHIV estimate and coverage, dated December 2025. Plain `curl` gets HTTP 000. The same
+request with HTTP/1.1, a browser user agent and `Referer: https://ndr.nascp.gov.ng/public/wallboard`
+returns the data. **A `Referer` header was the whole gate.**
+
+A grade attaches to a route and not to an institution. Nigeria had one closed route and three open
+ones, and the log recorded the institution as closed on the strength of the first. Any source
+graded 3 or higher on a single probe is re-probed on the next pass, and the re-probe enumerates
+the host's other paths before it repeats the one that failed.
+
+### 8c. Four more traps, and this time three of them have code
+
+§7g listed four traps as things to watch for. Round three found four more, and built a check for
+three of them, which is the part worth generalising: a trap described in a document protects
+whoever reads the document, and a trap in `validate()` protects everyone who runs the pipeline.
+
+**A unit error is a discontinuity; growth is continuous.** Gabon's entire 2024 TB/HIV expenditure
+row is CFA francs filed into columns the dictionary declares to be US dollars — 325,375,873
+against that country's own median of 9,836, a factor of 33,000. There is no currency field to
+check against. The connector emits it exactly as published, because a connector records what the
+source said and validation says what it means, and `writers._unit_outliers` catches it. The
+discriminator matters more than the threshold: most large jumps in these money columns are real
+variation on budgets of a few thousand dollars, so the check tests for a break in an otherwise
+stable series and not for a big ratio.
+
+**A fall in reporters is not a fall in the thing measured.** `writers._reporter_drops` names every
+series where the reporting country set shrinks sharply between two years, so that nobody totals
+two years of a changed panel and reads the difference as a change in the world.
+
+**A censoring floor is not a measurement.** UNAIDS censors small figures for display — `<100`,
+`<500`, `<0.1`, `>98` — across 66,291 cells, and whoever strips the sign is left holding the
+threshold as though it were data. Ukraine's HIV expenditure reads **100 US dollars for 2018**,
+sitting between 108,000,000 in 2017 and 100,000,000 in 2019. The AIDSinfo connector can repair its
+own share because the CSVs still carry the `<`; the WHO and World Bank APIs return the floored
+number with the notation already gone, so for those two the check is the only defence there is.
+`writers._floor_values` names all twelve affected groups across three connectors.
+
+The same notation means different things in different instruments, and that distinction cannot be
+automated away: in the epidemiological files `<100` is a real small epidemic (37 countries are
+censored end to end), and in the money file it is a country that did not report. WHO GHO confirms
+the first from outside — Maldives is `<100` in AIDSinfo for its whole series and 2, 3, 5, 6, 8
+people in GHO.
+
+**The catalogue name is not the indicator, and no check will catch that one.** GHO code
+`HIV_0000000020` is catalogued as *Estimated number of pregnant women living with HIV* and returns
+69, 67, 64, 63, 56, 61 for Nigeria. It is PMTCT coverage as a percentage: 36,701 of 53,000 is 69.2
+in 2020, and 26,566 of 47,000 is 56.5 in 2024, both of which the code returns rounded. Loaded on
+the strength of its name it would have entered the panel as a headcount, in units of `count`, at
+roughly a thousandth of the true value — and **no range check, no outlier check and no bounds
+check would have found it**, because 56 to 69 is an unremarkable number for a count to be. The
+only thing that catches this class is reading the values against a second source before mapping
+the code.
+
+This indicts the auto-resolution path in our own GHO connector, which resolves codes by matching
+catalogue names. That path now logs a warning telling the reader to verify before trusting it, and
+the fourteen mapped series are pinned by code. Related, and the reason the name cannot be trusted
+even to be unique: `HIV_0000000015` and `HIV_0000000016` carry identical catalogue names, and 15
+returns an empty array.
+
+### 8d. One detector, two readings, and only one of them is a unit error
+
+Run over the whole panel, `_unit_outliers` flagged 247 rows under the single label *possible
+currency/unit mismatch*. Split by direction, it is 17 rows above their series and 230 below, and
+those are not the same finding. Above is the currency error the check was written for. Below is
+almost never a unit problem: South Africa's 2021 TB/HIV figures are 42 and 37 against a normal six
+figures, which is a reporting collapse in the second COVID year.
+
+The check now reports the two directions separately. What makes this more than tidier wording is
+where the low side lands: 42 of those 230 rows are UNAIDS HIV expenditure at exactly 100 US
+dollars, which `_floor_values` independently names as a censoring floor two warnings later. **Two
+checks built for different faults converging on the same rows is the strongest evidence either of
+them offers**, and neither would have produced it while the low side was mislabelled as a currency
+mismatch.
+
+### 8e. What round three says about when to stop
+
+Round one produced four candidates, round two fourteen, round three two large sources and a grade
+overturned on the region's largest epidemic. The returns are falling, which is the expected shape,
+but they have not fallen to nothing and the third pass reached the only flow measurement in the
+whole panel.
+
+The stopping rule that comes out of this is not a number of passes. **Stop when a pass produces
+only sources you already know how to classify.** Rounds two and three each ended by changing a
+rule about what counts as a source — per-table in round two, per-column in round three — and a
+pass that changes the rule is a pass that was worth running. Round four's key, if there is one,
+is columns inside sources already ingested: §7b asked what else the source publishes, and round
+three's version asks what else the file already downloaded contains.
+
 ---
 
 ## Status of the claims here
@@ -393,4 +741,63 @@ aggregation step is where information goes missing, and it goes missing silently
 | African country-side portals gated | Probed 2026-08-03: 62 endpoints, 19 countries. Login wall observed at 6 (KEN, TZA, UGA, MWI, ETH, NGA); 12 TLS-unverifiable; 15 inconclusive (guessed hostname or edge 403) |
 | One open country-side source in Africa | South Africa (Thembisa), connector built and value-checked against the workbook |
 | Provinces do not sum to South Africa's national total | Stated in the workbook's Notes sheet; measured on the panel (PLHIV 2022 +0.45%, on-ART 2022 −0.63%) |
-| West and Central Africa | **Not established.** Probed thinly; needs the desk research Southeast Asia got |
+| No WCA national source reaches grade 1 | Per-country desk research, [`PHASE4_FEASIBILITY_WCA.md`](PHASE4_FEASIBILITY_WCA.md): NGA login wall plus a stated formal-request policy, COD registration wall, CIV Spectrum output and a RASS series ending 2020 |
+| Cameroon's CNLS report is grade 2 and additive | 2024 report opened 2026-08-15: born-digital, all tables extract as text, 123 pages. Ten regions on the ART cascade (Table 38, active file 449,290 national), VL coverage 43.3–91.5% by region against 68.7% national (Table 42), 12-month retention by region (Table 40), KP programme counts with linkage rates (Table 18), 2024 funding by donor with execution rates (Tables 46–49) |
+| A DHIS2 login wall is not proof the data is unpublished | Cameroon's report sources every regional table to "2024 DHIS2 database (26/03/2025)" — the same system class that refused six countries in the §4a probe |
+| Half of WCA has no PEPFAR data at all | Panel of 2026-08-04: 12 of 24 WCA countries carry 0 `pepfar_*` rows (CPV, CAF, TCD, COG, GNQ, GAB, GMB, GIN, GNB, MRT, NER, STP), holding 632,800 PLHIV in the latest year |
+| Naomi is an open API, not just a viewer | `nmviewerserver.azurewebsites.net/api/v1/{countries,options,boundaries,areas}`, no auth, CORS-open, enumerated 2026-08-15: 32 countries, 15 in WCA, 25 indicators, area levels 0–3, `lower`/`mean`/`upper` on every value |
+| Naomi is a cross-section, not a series | Period list read for all 32: one historical estimate, then 2025-4, then 2026-3 and 2027-3 as projections (MWI and ZAF add one each). The historical year matches the country's last national HIV survey in 12 of the 15 WCA countries |
+| Naomi's national ART figure is not independent | Level-0 `art_current` returns unit-round means (NGA 1,510,000, GIN 98,069, TCD 82,674, NER 19,821); GIN's sits 0.9% from the Global Fund's 2024 figure a year earlier |
+| Global Fund results are an open API | `data.api.theglobalfund.org/results/{cycles,stats,table}`, no auth, read 2026-08-15: annual 2017–2024 for 22 of 24 WCA countries, ART series for 10 of the 12 with no PEPFAR; GAB has results but no HIV indicator, GNQ none at all |
+| The Global Fund's documented API host is edge-blocked, not gone | `fetch.theglobalfund.org` returns an Azure Front Door "The request is blocked" page from this network; the Data Explorer backend serving the same data answers normally |
+| DHS covers WCA far better than it was being used | `surveyCharacteristicIds=23`: 18 of 24 WCA countries have a survey with HIV biomarkers; the API serves `breakdown=subnational` and the connector never asks for it |
+| Every DHS row for DR Congo was being dropped | `to_iso3("Congo Democratic Republic")` returned `None` — the DHS Program's own spelling, absent from `_OVERRIDES` while four others were present. Fixed at `hivimpact/normalize.py:48`; all 92 DHS country names re-resolved, one still unmapped ("Nigeria (Ondo State)", correctly) |
+| The additive test has to be applied per table | DR Congo PNMLS GAM 2024 report, read 2026-08-15: 7 tables sourced "Données DHIS2", 4 to the PNLS 2023 report, provincial PrEP to PEPFAR, Tableau LVI to REDES — four classifications in one document |
+| PEPFAR Spotlight publishes 15 datasets and the pipeline reads 3 | Dataset paths taken from `data.pepfar.gov/static/js/main.9f74f1e6.js` 2026-08-15; all 15 return 200 unauthenticated from `data.pepfar.gov/media/`; connectors read `Enhanced_Geographical_Analysis`, `Public_Partner_Budgets_and_Expenditures`, `Public_Partner_MER_TopLine` |
+| Four of the unread files are additive | `PEPFAR_OU_Budgets_and_Program_Expenditures` (budget from 2004, by Program/Sub Program/Beneficiary, against the partner file's FY2021 start), `PEPFAR_OU_Commodities_Procurements` (planned ARV/RTK quantity and budget, COP18–COP24), `Country_Level_Results_by_Modality_Coarse_Age_and_Sex` (28 modalities, `TX_RTT`, loss-to-follow-up reasons), `HRH_Inventory_Public_Dataset` (FY2025 workforce) |
+| Community case-finding falls harder than facility case-finding | `Country_Level_Results_by_Modality`, Q4 FY2024 → Q4 FY2025, modalities grouped by PEPFAR's own `Mod`/`Active`/`SNS` convention: 10 of 12 WCA countries with PEPFAR data; NGA −15.1% vs −4.6%, CIV −33.3% vs −3.4%, CMR −100% vs −10.0%, COD −52.0% vs −12.2%, BFA −86.7% vs +7.0% |
+| Nigeria's PEPFAR first-line ARV line is zeroed, not missing | COP24/FY2025 carries *DTG/3TC/TDF 50/300/300 mg, 90 Tablets* as a present row at quantity 0 and budget 0, against 2,550,449 units and 31,153,224 USD in COP23/FY2024; adult ARV 4,667,649 → 863,629 units overall |
+| A commodity quantity column changes unit between years | NGA *HIV-1/2, Determine, 100 Tests*: 75,757 units at 6,484,799 USD (85.60 each, a pack) in FY2024; 5,965,515 units at 4,772,412 USD (0.80 each, a test) in FY2025 — identical item string |
+| FY2025 publishes Q4 only | Spotlight's own front page, and confirmed in the files: FY2025 Q1–Q3 columns are empty in every MER download, so no FY2025 annual total exists for a cumulative indicator |
+| UNAIDS publishes GAM programme expenditure as one open file | `hivfinancial.unaids.org/GARPR16-GAM2025ProgrammeExpenditures-20250903.xlsx`, 5,497,605 bytes, no auth, read 2026-08-15: 59,947 rows, 121 countries, cycles GARPR 2016–GAM 2025, expenditure years 2011–2024, 18 of 24 WCA countries, 8 with 2024 |
+| It carries domestic and household money nothing else in the panel has | Columns 5–14: central and sub-national government, development banks, social security, private insurance, **households**, corporations, non-profits; columns 15–21 split external by PEPFAR, Global Fund and other |
+| Its zeros mean "not reported" | MLI 2024: 3,184,591 USD domestic, 0 international, while `data.api.theglobalfund.org` shows active disbursing HIV grants in Mali that year. GMB 2024 totals 33,054 USD; TCD reports 21.7m USD international with no donor split |
+| GAM and the national NASA reports agree, and that is not triangulation | BEN 2024: 14,757,867 USD against 9,292,143,634 FCFA in the NASA report (3–5% apart, inside the exchange rate). COD 2021: 223,877,209 / 163,912,882 USD against 227.8m / 167,861,131 in Tableau LVI (under 3%). Both pairs are one national exercise published twice — fidelity, not corroboration |
+| IATI is open through d-portal and is current to this month | `d-portal.org/q?from=act,trans`, sector 13040, no key, read 2026-08-15: 26 publishers reporting HIV activity in Nigeria including UNAIDS itself, Gates, FCDO and NGOs; latest WCA disbursement dated 2026-08-15, against OECD CRS running 12–18 months behind |
+| Its transaction-type column mixes vocabularies | `D`, `E`, `C`, `11`, `IF`, `R`, `IR`, `LR` returned by the same query; 1,834 of 46,964 distinct activity/date/value keys appear under more than one code |
+| `sum()` in the d-portal query API returns zero silently | Every aggregate query returned 0 or null; the same rows pulled raw and summed in Python give NGA HIV disbursements 395,198,777 (2024) → 330,726,636 (2025) |
+| UNICEF SDMX is mostly a republication | `HIV_AIDS` dataflow, 139,446 rows, read 2026-08-15: of 26,242 WCA rows, 21,460 are sourced "UNAIDS 2025 estimates" and 1,270 to Global AIDS Monitoring; the additive slice is 3,512 MICS/DHS rows with `WEALTH_QUINTILE` and `RESIDENCE`, latest MICS 2019 and latest DHS 2022 |
+| IHME DAH is open but behind a user agreement | GHDx record `ihme-data/dah-1990-2026-20260611`, released 2026-06-11, 1990–2026; downloads route through `ghdx.healthdata.org/download-access/login` under a free non-commercial user agreement — a manual drop into `data/raw/`, the same pattern as the UNAIDS AIDSinfo CSVs |
+| Nigeria's national dashboard is public and unreachable by machine | `wallboard.nascp.gov.ng`, refreshed 2026-02-20: 1,593,757 on ART, 953,709 suppressed, state selector, PrEP/HTS/ART/PMTCT tabs. `modelsAndExploration`, `explore/…/exploration` and `conceptualschema` all return 403 to scripted requests with the correct cluster and resource key and matching Origin and Referer; renders correctly in a browser |
+| Chad publishes its DHIS2 contents as a yearbook | `inseed.ssn-tchad.td` serves one 3,239-byte shell for every path; endpoint recovered from its JS bundle. `/api/menus` returns `401 Token d'accès requis`, `/api/publications/search?q=` returns the series 2005–2023. The 2023 edition (286 pages, July 2024) carries Tableau 306, the ART cohort by province with stock, inclusions and transfers |
+| A shell response is not an absent source | Three hosts returned an identical short page for every path — `inseed.ssn-tchad.td` (3,239 bytes), `data.pepfar.gov` (1,993 bytes) and IHME's FGH viewer — and in all three the real addresses were hardcoded in `/static/js/main.*.js` |
+| Ghana's NASA international line is derived from donor ledgers | Stated in the report's own methods section: built from Global Fund principal-recipient records and the PEPFAR expenditure report. Its domestic public, household and private lines are independent |
+| Togo's 2023 yearbook is unrecoverable by any route tried | `sante.gouv.tg` redirects to `sante-assurances.gouv.tg` and returns `text/html` for the `.pdf` path; the PNLS site returns 500; the Wayback capture is exactly 5,242,880 bytes — the archive's 5 MiB cap, which keeps `%PDF` and the page objects but loses the trailer, so `pypdf` cannot open it |
+| WHO AFRO's data portal is gone | `aho.afro.who.int` returns 404 at every path including the root; only the Azure blob container behind it answers, with listing disabled, so it serves exact blob names and a 404 there is not evidence of absence |
+| The Global Fund API carries no PU/DRs | Documents entity read 2026-08-15: 2,283 items in nine types — funding requests, concept notes, country profiles — all qualitative |
+| WHO's TB dataset carries 100 HIV variables | `extranet.who.int/tme/generateCSV.asp?ds=dictionary`, read 2026-08-17: 698 variables across 19 datasets, 100 of them HIV-related across 9 — 30 in Notification, 23 in Outcomes, 21 in Estimates, 8 in non-routine HIV surveillance |
+| TME's ART totals are an independent channel, not a republication | `hiv_all` against the panel's UNAIDS on-ART series, 180 shared country-years: within 1% in 32%, more than 10% apart in 28%, median gap 2.2% |
+| TME carries ART initiations for all 24 WCA countries | `hiv_reg_new2`: 998 rows, 2013–2024, 153 countries, 24 of 24 in WCA. COD 107,468 (2020), 96,516, 97,177, 83,436, 65,651 (2024) with no missing year; CMR 75,954 (2021) → 38,059 (2024); CIV 40,703 (2020) → 26,765 (2024) |
+| The initiation series is ragged and must be read only on consecutive years | GIN reports 61,197 (2020) and 7,884 (2024) with nothing between; of the 24 WCA countries only COD reports every year 2019–2024 |
+| `hiv_new` is the same variable under a second name | Identical in 94% of the 235 country-years carrying both; mapped as a gap-filler that adds exactly 39 country-years, with the source column stamped per row |
+| Expected USAID funding to national TB programmes falls 58% in 2025 | TME budget file: 134,747,052 USD (2018) → 235,509,731 (2024) → 98,701,987 (2025); countries expecting anything 31 → 23. The budget file reaches 2025, the expenditure file stops at 2024 |
+| The TB funding columns are exposure and not HIV money | `cf_tot_usaid` and siblings are whole-TB-programme totals; mapped under `tb_funding_*` and excluded from any HIV financing total |
+| Gabon's 2024 expenditure row is CFA francs in USD columns | `exp_tbhiv` 325,375,873 against that country's own median of 9,836 (33,000×); `rcvd_tot_gf` 731,795,829. Emitted as published; caught by `writers._unit_outliers` |
+| The TME connector emits a clean panel slice | 23,705 rows over 20 mapped columns, 215 countries, 2000–2025, 0 duplicate panel keys; 19 offline controls pass |
+| GHO's reported ART is not the modelled series republished | `HIV_0000000009` against the panel's UNAIDS figures, 2,030 shared country-years: 1% identical, 52% within 1%, 13% more than 10% apart. It also reaches 1,766 country-years the panel held no ART figure for, 170 of them 2023 or later |
+| GHO un-censors UNAIDS from outside | Maldives is `<100` throughout AIDSinfo; GHO reports 2, 3, 5, 6, 8 people for 2010–2014, rising to 39 in 2025 |
+| GHO carries testing volume and positivity, which the panel did not have | `HIV_0000000027` and `HIV_POSITIVITY`: 936 rows, 143 countries, 2022–2024, 19 of 24 WCA. NGA 2022: 12,390,356 tests at 2.38% all ages, 2.17 women 15+, 3.31 men 15+, 0.92 under 15 |
+| The testing splits partition the all-ages total | Women 15+, men 15+ and under-15 sum to the all-ages figure exactly in 82% of country-years — the same one-level-or-the-other rule as the PEPFAR agency split |
+| A GHO catalogue name can be wrong about its own indicator | `HIV_0000000020`, catalogued *Estimated number of pregnant women living with HIV*, returns 69, 67, 64, 63, 56, 61 for Nigeria. It is PMTCT coverage: 36,701/53,000 = 69.2% (2020) and 26,566/47,000 = 56.5% (2024), the numerator from `HIV_0000000016` and the denominator from `HIV_0000000021`. Not mapped |
+| Two GHO codes share one catalogue name and one of them is empty | `HIV_0000000015` and `HIV_0000000016` carry identical names; 15 returns `{"value":[]}` |
+| The GHO connector was discarding the age dimension and could not read its own sex codes | These series return `SEX_BTSX`/`AGEGROUP_YEARSALL`; the map knew only bare `BTSX`. All 19,400 `who_gho` rows in the 2026-08-15 panel are `sex='all'`, so the original seven series carry no sex dimension and the map had never been exercised |
+| Nigeria's National Data Repository is an open JSON API | Three endpoints confirmed 2026-08-17: `ndr.nascp.gov.ng/public/GetRecencyData/`, `ctd.nascp.gov.ng/facilitydata/`, `ndr.nascp.gov.ng/public/surveillance-report`. Plain `curl` returns HTTP 000; HTTP/1.1 with a browser UA and `Referer: …/public/wallboard` returns the data |
+| Nigeria's national treatment figure, December 2025 | 1,672,219 on treatment against 1,904,364 PLHIV, 87.8%, all 37 states. The endpoint takes no parameters, so it is a snapshot with no history and re-runs are new snapshots |
+| NDR and GHO are independent instruments for Nigeria | 1,672,219 (NDR, Dec 2025) against 1,550,000 (GHO reported ART, 2025) — about 8% apart, no shared origin |
+| State treatment exceeds state PLHIV in several Nigerian states | Bauchi 158%, Adamawa 121%, Benue 115%: patients are counted where treated, not where resident. The source ships the correction as `txcurr_res_state` / `txcurr_res_outof_state`; a state coverage figure computed without it is wrong |
+| UNAIDS censoring floors reach 66,291 cells | `<100`, `<500`, `<0.1`, `>98` in the AIDSinfo CSVs. UKR `hiv_expenditure_total` reads 100 USD for 2018, between 108,000,000 (2017) and 100,000,000 (2019). `_floor_values` names 12 affected groups across 3 connectors in the 2026-08-15 panel |
+| The unit check has two readings and only one is a unit error | 2026-08-15 panel: 247 rows flagged, 17 above their series and 230 below. 42 of the low side are `hiv_expenditure_total` at exactly 100 USD, which `_floor_values` independently names as a censoring floor; ZAF 2021 TB/HIV reads 42 and 37 against a normal six figures |
+| WAHO is the sixth gated DHIS2 | `waho.dhis2.org`, probed 2026-08-17: all five unauthenticated paths redirect 302 to the login page |
+| WHO AFRO's observatory is dead, and its atlases are republications | `aho.afro.who.int` 404 at every path; the surviving country atlases are 2022 PDFs carrying GHO and UNAIDS figures the panel already holds |
+| Chad's INSEED publishes ten health statistics yearbooks, and its search hides them | Catalogue enumerated 2026-08-17: 135 publications in 15 series, including `ANNUAIRE-STATISTIQUES-SANITAIRES-2023` (published 2024). `q=sante` returns 0 and `q=VIH` returns 0; the endpoint matches title text and the titles read `SANITAIRES` |
+| WHO GHED carries an HIV line and is independent of GAM | `apps.who.int/nha/database/Home/IndicatorsDownload/en`, 38.9 MB, open. Built from national health accounts, not from the GAM submission. `dis11` splits into `_gghed`/`_ext`/`_pvtd`; `dis11_usd` is in **millions** of USD while its neighbours are not |

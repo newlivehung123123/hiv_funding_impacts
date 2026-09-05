@@ -31,8 +31,11 @@ This repository is **Phase 1**: the aggregator layer.
   Log: [`docs/PHASE2_FEASIBILITY.md`](docs/PHASE2_FEASIBILITY.md).
 - **Phase 3** — extend region by region to all LMICs. Africa first, since that is where the
   funding cut lands hardest. Log: [`docs/PHASE3_FEASIBILITY_AFRICA.md`](docs/PHASE3_FEASIBILITY_AFRICA.md).
-  The methods note built on both regions — what is reachable, and the donor-side layer that
-  carries the funder as a column — is [`docs/ACCESS_LADDER.md`](docs/ACCESS_LADDER.md).
+- **Phase 4** — West and Central Africa, the region Phase 3 probed but did not research. Half its
+  countries have no PEPFAR data at all, and the sources that reach them are regional and not
+  national. Log: [`docs/PHASE4_FEASIBILITY_WCA.md`](docs/PHASE4_FEASIBILITY_WCA.md).
+  The methods note built on all three regions — what is reachable, and the layer above the country
+  that carries the funder as a column — is [`docs/ACCESS_LADDER.md`](docs/ACCESS_LADDER.md).
 
 ## Install
 
