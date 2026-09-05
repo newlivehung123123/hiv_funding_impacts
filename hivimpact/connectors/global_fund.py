@@ -54,6 +54,12 @@ reporting countries in `new_diagnoses` falls from 22 in 2023 to eight in 2024, w
 grant reporting arriving late rather than diagnoses collapsing, so every Global Fund series
 has to be read on the countries reporting both years. `writers._reporter_drops` says so in
 the validation log.
+
+One row in that run is a different quantity from its own series. Ethiopia's 2017 testing
+figure is 7,919,182 against roughly 300,000 in every other year from 2018 to 2024, a 27-fold
+break of the kind §8c of ACCESS_LADDER describes. It is emitted as published, because a
+connector records what the source said and validation says what it means, and
+`writers._unit_outliers` names it.
 """
 from __future__ import annotations
 
