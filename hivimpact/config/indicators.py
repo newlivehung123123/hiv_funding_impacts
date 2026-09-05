@@ -109,6 +109,129 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
     IndicatorSpec("prep_recipients", "People receiving PrEP", "count",
                   SourceType.ROUTINE_PROGRAMME, "prevention"),
 
+    # -- testing throughput (WHO GHO, reported by countries) ---------------------
+    # Testing is the first service to feel a funding cut and the first to show it. A
+    # treatment cohort is slow to move, because people already on ART stay on ART for a
+    # while after the money stops; the number of tests a programme runs in a year moves
+    # the same quarter the outreach teams are stood down. The two indicators belong
+    # together: volume alone cannot separate a programme that has stopped testing from
+    # one that has stopped finding, and positivity rises when a shrinking programme
+    # retreats to the highest-yield sites.
+    IndicatorSpec("hiv_tests_performed", "HIV tests performed with the result returned to the person", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "WHO GHO HIV_0000000027, reported by countries and split by sex and age. "
+                  "Counts tests where the person received the result, so it measures completed "
+                  "service contacts and not specimens processed. The splits are a partition of "
+                  "the all-ages figure and not additions to it — women 15+, men 15+ and children "
+                  "under 15 sum to the total exactly in 82 per cent of country-years — so "
+                  "anything that totals the panel must use one level or the other and never "
+                  "both, the same rule as the agency split above. The 11 per cent that are more "
+                  "than five per cent apart are countries whose disaggregated reporting is "
+                  "incomplete, which is worth knowing in its own right."),
+    IndicatorSpec("hiv_test_positivity_pct", "% of returned HIV test results that were positive", "percent",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "The yield of the testing programme (WHO GHO HIV_POSITIVITY). Read next to "
+                  "hiv_tests_performed: falling volume with rising positivity is a programme "
+                  "narrowing to its highest-yield sites, which is what retrenchment looks like."),
+
+    # -- ART initiations: the flow the panel was missing ------------------------
+    # Almost everything else here is a stock, and a stock is the wrong instrument for
+    # detecting a funding cut. People already on treatment stay on treatment for a while
+    # after the money stops, so on_art_count falls slowly and late. Initiations fall in
+    # the same reporting period the outreach and testing stop, because a programme that
+    # is not finding people cannot start them.
+    #
+    # The series comes from the WHO TB programme, which collects it to work out how many
+    # people on ART should be offered TB preventive treatment. That is why it was invisible
+    # to every search that keyed on HIV.
+    IndicatorSpec("art_initiations", "People newly enrolled on ART during the year", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "A period flow, not a stock — do not compare it with on_art_count or subtract "
+                  "one from the other. WHO TME hiv_reg_new2, falling back to hiv_new where that "
+                  "is absent; the two agree in 94 per cent of the country-years that have both, "
+                  "and source_indicator_code records which column each row came from. DR Congo "
+                  "runs 96,516 in 2022 to 65,651 in 2024 and Cameroon 75,954 in 2021 to 38,059 "
+                  "in 2024, which is the kind of movement this project exists to measure."),
+
+    # -- TB/HIV integrated services, as a three-step cascade --------------------
+    # A distinct service line, and one donors fund as a line item, so it can be cut on its
+    # own while general HIV testing continues. Reported by national TB programmes for new
+    # and relapse TB patients; the 0-14 columns are carried at age_group 0-14.
+    IndicatorSpec("tb_patients_hiv_tested", "TB patients with an HIV test result recorded", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "WHO TME newrel_hivtest. The pre-2015 equivalent (hivtest) counted all TB "
+                  "patients and not only new and relapse cases, so it is a different measurement "
+                  "and is deliberately not mapped onto this id — joining them would put a "
+                  "definition change in the middle of the series and read as a jump in 2015."),
+    IndicatorSpec("tb_patients_hiv_positive", "TB patients recorded as HIV-positive", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "WHO TME newrel_hivpos. Numerator to tb_patients_hiv_tested."),
+    IndicatorSpec("tbhiv_on_art", "HIV-positive TB patients started or continued on ART", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "WHO TME newrel_art. The end of the TB/HIV cascade: tested, found positive, treated."),
+
+    # -- TB/HIV burden, modelled, with WHO's own bounds -------------------------
+    IndicatorSpec("tbhiv_incidence", "Incident TB cases among people living with HIV", "count",
+                  SourceType.MODELLED_ESTIMATE, "epi",
+                  "WHO TME e_inc_tbhiv_num, with its published low and high bounds."),
+    IndicatorSpec("tbhiv_deaths", "Deaths from TB among people living with HIV", "count",
+                  SourceType.MODELLED_ESTIMATE, "epi",
+                  "WHO TME e_mort_tbhiv_num. A component of HIV mortality that UNAIDS folds into "
+                  "aids_deaths, so the two overlap and must not be added together."),
+
+    # -- TB/HIV money, and the TB programme's funding mix as an exposure measure -
+    # The first four are HIV-specific: collaborative TB/HIV activities, which is a budget
+    # line a donor can cut on its own. Required against expected is the funding gap as the
+    # country itself states it, a year before any service number moves.
+    IndicatorSpec("tbhiv_budget", "Budget required for collaborative TB/HIV activities", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing"),
+    IndicatorSpec("tbhiv_funding_expected", "Expected funding for collaborative TB/HIV activities", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Read against tbhiv_budget: the shortfall is the country's own statement of "
+                  "what it does not expect to be able to pay for."),
+    IndicatorSpec("tbhiv_expenditure", "Actual expenditure on collaborative TB/HIV activities", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing"),
+    IndicatorSpec("tbhiv_funding_received", "Funding received for collaborative TB/HIV activities", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing"),
+
+    # These six are TB-programme totals and NOT HIV money. They are here as an exposure
+    # measure: a country-year record of how much USAID was expected to put into a health
+    # programme, next to the two funders that were not cut. Expected USAID funding across
+    # all reporting countries falls from 235.5m USD in 2024 to 98.7m in 2025, and the number
+    # of countries expecting anything from USAID falls from 31 to 23. Anything totalling HIV
+    # financing must exclude every id beginning tb_funding_.
+    IndicatorSpec("tb_funding_expected_usaid", "Expected USAID funding for the national TB programme", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Exposure measure, not HIV money. The budget file states 2025 while the "
+                  "expenditure file stops at 2024, so this is intent recorded after the cuts and "
+                  "tb_funding_received_usaid is the last actual before them."),
+    IndicatorSpec("tb_funding_expected_gf", "Expected Global Fund funding for the national TB programme", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Exposure measure, not HIV money. A comparison arm: the Global Fund was not cut."),
+    IndicatorSpec("tb_funding_expected_domestic", "Expected domestic funding for the national TB programme", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Exposure measure, not HIV money. The second comparison arm, and the one that "
+                  "would have to rise for a country to absorb a donor withdrawal."),
+    IndicatorSpec("tb_funding_received_usaid", "USAID funding received by the national TB programme", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing", "Exposure measure, not HIV money."),
+    IndicatorSpec("tb_funding_received_gf", "Global Fund funding received by the national TB programme", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing", "Exposure measure, not HIV money."),
+    IndicatorSpec("tb_funding_received_domestic", "Domestic funding received by the national TB programme", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing", "Exposure measure, not HIV money."),
+
+    # -- PMTCT, in counts as well as the coverage percentage --------------------
+    # pmtct_coverage_pct above is a ratio, and a ratio hides which half moved. These are
+    # its numerator and denominator as WHO receives them, so a fall in coverage can be
+    # attributed to fewer women treated or to a changed estimate of how many needed it.
+    IndicatorSpec("pmtct_arv_count", "Pregnant women with HIV who received ARVs for PMTCT", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "Numerator of pmtct_coverage_pct (WHO GHO HIV_0000000016; the identically "
+                  "named HIV_0000000015 is catalogued but empty)."),
+    IndicatorSpec("pregnant_women_hiv", "Estimated pregnant women with HIV needing ARVs for PMTCT", "count",
+                  SourceType.MODELLED_ESTIMATE, "denominator",
+                  "Denominator of pmtct_coverage_pct (WHO GHO HIV_0000000021). Modelled, so it "
+                  "moves for reasons that have nothing to do with the programme."),
+
     # -- key-population programme flows (population_group carries WHICH key population) ---
     # NCHADS Cambodia "Boosted CoPCT" quarterly report. These are PERIOD FLOWS (activity
     # during a quarter), summed to an annual value; the sharpest funding-cut signal because

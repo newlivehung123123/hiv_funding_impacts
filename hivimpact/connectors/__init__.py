@@ -1,6 +1,7 @@
 """Aggregator connectors (Phase 1)."""
 from .world_bank import WorldBankConnector
 from .who_gho import WHOGHOConnector
+from .who_tme import WHOTMEConnector  # the HIV columns of WHO's TB dataset
 from .unaids_aidsinfo import UNAIDSAidsinfoConnector
 from .oecd_crs import OECDCRSConnector
 from .dhs import DHSConnector
@@ -24,6 +25,7 @@ CONNECTORS = {
     for c in (
         WorldBankConnector,       # denominators + prevalence (API)
         WHOGHOConnector,          # HIV epi + cascade estimates (API)
+        WHOTMEConnector,          # ART totals and initiations, TB/HIV cascade and money (CSV API)
         UNAIDSAidsinfoConnector,  # UNAIDS modules (CSV export ingest)
         OECDCRSConnector,         # external HIV financing: total + US + Global Fund (SDMX API)
         DHSConnector,             # survey HIV prevalence (API)
@@ -39,7 +41,7 @@ CONNECTORS = {
 CONNECTORS.update(COUNTRY_CONNECTORS)
 
 __all__ = [
-    "WorldBankConnector", "WHOGHOConnector", "UNAIDSAidsinfoConnector", "OECDCRSConnector",
+    "WorldBankConnector", "WHOGHOConnector", "WHOTMEConnector", "UNAIDSAidsinfoConnector", "OECDCRSConnector",
     "DHSConnector", "ForeignAssistanceConnector", "PEPFARPanoramaConnector",
     "PEPFARAgencyConnector", "PEPFARExpenditureConnector", "PEPFARSNUConnector",
     "CLMAsiaConnector",
