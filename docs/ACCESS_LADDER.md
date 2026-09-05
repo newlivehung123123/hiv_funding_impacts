@@ -783,6 +783,61 @@ grant's results would otherwise land on whichever country its code resolved to, 
 service results here and as money through the OECD CRS donor code `9OTH012`, which are different
 quantities from the same institution and must not be totalled together.
 
+### 9d. What the two instruments say when both are asked the same question
+
+The Global Fund connector makes `art_initiations` the first indicator in this panel carried by two
+independent instruments, so the run of 2026-09-05 was the first chance to ask whether they agree.
+The whole panel at that point was 144,318 rows over 226 countries and 17 sources.
+
+**They agree, and they are not copies of one another.** WHO TME and the Global Fund both report
+national ART initiations for 75 country-years across 29 countries. The two figures are within 1 per
+cent of each other in 24 per cent of those country-years, within 10 per cent in 63 per cent, and
+more than 25 per cent apart in 24 per cent, with a median gap of 3.5 per cent. `tbhiv_on_art` is
+carried by both for 571 country-years across 87 countries, agreeing within 1 per cent in 37 per
+cent, within 10 per cent in 70 per cent, more than 25 per cent apart in 15 per cent, median gap 2.8
+per cent. Two instruments that agreed exactly would be one instrument published twice, which is what
+§4b found for GAM against the national NASA reports. A quarter of country-years a quarter apart is
+the signature of two organisations counting the same patients through different reporting chains,
+the health ministry's TB register in one case and the grant's own results framework in the other.
+
+**Comparing the two requires matching the age group as well as the country and year.** WHO TME
+publishes `tbhiv_on_art` for all ages and for children under 15 as separate rows, 226 of the latter.
+A comparison keyed on country and year alone silently sets a national all-ages figure from one
+instrument against a paediatric figure from the other, and reports the disagreement as a measurement
+difference. Matching on age group moves the median gap from 6.1 per cent to 2.8 per cent.
+
+**Both instruments show ART initiations falling into 2024.** On the 88 countries where WHO TME
+reports both 2023 and 2024, 46 fell and the total dropped 14.4 per cent. On the 21 countries where
+the Global Fund reports both years, 14 fell and the total dropped 29.6 per cent. Of the 45
+consecutive-year changes both instruments can see, 33 agree on the direction and 12 do not. The two
+totals are not comparable to each other, because the Global Fund's 21 countries are a different and
+much smaller set, but each is computed on countries reporting both of its own years, which is what
+the reporter-drop warning in §5 exists to enforce.
+
+**A validation detector can be confidently wrong in a way the panel cannot show.** The same run
+raised three new censoring-floor warnings on WHO TME, at the value 1, and all three were false. The
+check dropped zeros before looking for the most repeated value, which leaves the smallest printable
+count as the mode of any small-count series: `tbhiv_deaths` reads 461 zeros, 315 ones, 179 twos and
+98 threes, which is a small-count distribution and not a threshold with nothing below it. A series
+that contains zeros has already published the smallest value there is, so nothing under its mode was
+suppressed, and zeros now count towards the series even though they can never be the candidate
+value. Over the panel the separation is total, with all 12 genuine floors carrying no zeros at all
+and the three WHO TME columns between a tenth and a quarter zeros. One plausible alternative was
+measured and rejected: the repeated value's count against the count of the next value up separates
+nothing, because UNAIDS `new_infections` is a genuine floor at 2.74 times the next value and WHO GHO
+at 2.08, against 2.2 for `tbhiv_on_art`, which is not censored.
+
+**The same run confirmed two earlier fixes in the data rather than in the code.** UNAIDS
+`hiv_expenditure_total` now stands at 961 rows with none reading exactly 100 US dollars, against 42
+such rows and a 273-row floor warning before the censoring fix. The DHS connector now returns nine
+rows for the Democratic Republic of the Congo across 2007, 2013 and 2023, where the country name
+mismatch had returned none.
+
+**One source degraded between runs.** `data.clm-asia.org/api/` returned HTTP 500 on every fetch for
+the 2023 first quarter across all eight indicators. The community-led monitoring sentinel is a grade
+above the aggregators precisely because nobody else republishes it, which is the same reason nothing
+in the panel can stand in for it while it is down.
+
 ---
 
 ## Status of the claims here
@@ -889,3 +944,10 @@ quantities from the same institution and must not be totalled together.
 | WHO AFRO's observatory is dead, and its atlases are republications | `aho.afro.who.int` 404 at every path; the surviving country atlases are 2022 PDFs carrying GHO and UNAIDS figures the panel already holds |
 | Chad's INSEED publishes ten health statistics yearbooks, and its search hides them | Catalogue enumerated 2026-08-17: 135 publications in 15 series, including `ANNUAIRE-STATISTIQUES-SANITAIRES-2023` (published 2024). `q=sante` returns 0 and `q=VIH` returns 0; the endpoint matches title text and the titles read `SANITAIRES` |
 | WHO GHED carries an HIV line and is independent of GAM | `apps.who.int/nha/database/Home/IndicatorsDownload/en`, 38.9 MB, open. Built from national health accounts, not from the GAM submission. `dis11` splits into `_gghed`/`_ext`/`_pvtd`; `dis11_usd` is in **millions** of USD while its neighbours are not |
+| ART initiations now have two independent instruments, and they agree without matching | WHO TME against the Global Fund, 75 country-years over 29 countries: within 1% in 24%, within 10% in 63%, more than 25% apart in 24%, median gap 3.5%. `tbhiv_on_art`: 571 country-years, 87 countries, 37% within 1%, 70% within 10%, median gap 2.8% |
+| Comparing two instruments needs the age group matched, not just country and year | WHO TME publishes `tbhiv_on_art` for all ages and for under-15s as separate rows, 226 of the latter. Keying on country and year alone sets a national figure against a paediatric one and moves the median gap from 2.8% to 6.1% |
+| Both instruments show ART initiations falling into 2024 | WHO TME, 88 countries reporting both 2023 and 2024: 46 fell, total −14.4%. Global Fund, 21 countries: 14 fell, total −29.6%. Of 45 consecutive-year changes both can see, 33 agree on direction and 12 do not |
+| The censoring-floor check fired on three WHO TME columns that are not censored | `tbhiv_deaths` reads 461 zeros, 315 ones, 179 twos, 98 threes. Dropping zeros before taking the mode leaves the smallest printable count as the mode of any small-count series. Fixed by counting zeros towards the series: 12 genuine floors carry none, the three WHO TME columns are a tenth to a quarter zeros |
+| A spike against the next value up does not separate a floor from a small count | UNAIDS `new_infections` is a genuine floor at 2.74 times the count at 200 and WHO GHO at 2.08, against 2.2 for `tbhiv_on_art`, which is not censored. Any threshold keeping the real floors admits the false ones |
+| The UNAIDS censoring and DHS country-name fixes are confirmed in the data | `hiv_expenditure_total` 961 rows with none at exactly 100 USD, against 42 and a 273-row floor warning before. DHS returns 9 rows for COD across 2007, 2013 and 2023, where the name mismatch returned none |
+| The community-led monitoring sentinel went down between runs | `data.clm-asia.org/api/` returned HTTP 500 on every 2023-Q1 fetch across all eight indicators on 2026-09-05. Nothing in the panel republishes it, which is why it was graded above the aggregators |
