@@ -908,6 +908,342 @@ caught by dividing one series by another and reading the answer against 100 per 
 that a pairing implies is a test the pairing has to pass. Run it before writing the pairing into a
 note.**
 
+### 9g. The audit §9e asked for, and the indicator it found unread
+
+§9e ended by asking for a number that no run produces, the count of what each connector skipped.
+[`scripts/audit_coverage.py`](../scripts/audit_coverage.py) now produces it. The audit reads only
+local files, fetches nothing, and is meant to be run whenever the panel is rebuilt.
+
+Connectors fail three different ways, so the audit measures three different things. A **directory
+reader** is handed a folder and opens the files whose names it recognises, so the audit lists the
+files it did not open. A **wide file picker** opens one file holding many indicator codes and keeps
+the codes named in a dictionary, so the audit lists the codes nobody has looked at. A **pull by name
+connector** asks a remote interface for a fixed list of series and cannot skip anything, because it
+never sees the catalogue, so the audit can only report the size of the request and leave checking
+the catalogue as a manual job. Those five connectors ask for 14, 8, 3, 3 and 2 named series
+respectively, against catalogues running to hundreds or thousands of codes.
+
+The audit found the AIDSinfo case §9e already describes, 32 of 146 exports read. It found 3 of 15
+PEPFAR archives read, the 12 unopened ones including the health workforce inventory, commodity
+procurements, partner performance and both site-level files. It found four Global Fund CSVs on disk
+that no connector reads, because the Global Fund connector reads the OData API instead, which is
+the same disease with a different cause, material downloaded and never decided about. And it found
+the case that matters.
+
+**`pepfar_panorama` was reading 2 of the 71 MER indicators inside the one file it opens, and one of
+the 69 it ignored was `TX_NEW`, the count of people newly started on antiretroviral therapy.** That
+is the indicator this project exists to measure, the one §1 argues almost nobody publishes, sitting
+in a file that had been on disk since July 2026 and was opened on every single run. `TX_NEW` carries
+the same coverage as the `TX_CURR` series the connector already read, 57 countries over fiscal years
+2018 to 2025, so the fix was one dictionary entry per connector.
+
+Before the entry was written the pairing was tested, per §9f. PEPFAR measures a programme footprint
+rather than a country, so a PEPFAR figure above the WHO TME national total would mean the pairing
+was wrong. Across the 266 overlapping country-years PEPFAR sits at or below the national total in 86
+per cent and takes a median share of 0.74, which is the shape a funder's share should have. Fifteen
+country-years exceed 1.25, led by Mali 2020 at 5.19 and Uganda 2019 at 1.98, and PEPFAR's October to
+September fiscal year against WHO's calendar year accounts for part of that. `TX_NEW` also covers 88
+country-years across 38 countries where WHO TME publishes no initiation figure at all, and splitting
+it by funding agency gives `art_initiations_usaid` against `art_initiations_cdc`, which is the
+within-country comparison in its sharpest form. A treatment cohort falls slowly after a cut because
+people already enrolled keep collecting refills. Enrolment stops the week the clinic stops testing.
+
+`HTS_TST` and `PrEP_NEW` were mapped in the same pass. Sixty-six MER codes remain unmapped, among
+them `TX_ML` and `TX_RTT`, which count people who left treatment and people who returned to it.
+Both measure care disruption directly and neither has a canonical indicator yet, so both were left
+as a decision to make rather than taken quietly. `TX_ML` equals the sum of its own seven sub-codes
+to within one per cent, so mapping the total alone is correct and mapping the parts as well would
+double count.
+
+**The general rule this adds to §9e. A connector must report what it discarded, in the same log line
+it reports what it used.** `global_fund` already does this, naming 24 series, declaring 45 out of
+scope, and tallying anything matching neither at run time, so a new indicator appearing in the API
+is reported instead of dropped. Every PEPFAR connector now logs the files it did not read. **An
+unread file is not a loss, it is a decision nobody has made yet, and the fix is to record the
+decision where the connector lives so the next audit reports a choice instead of a gap.**
+
+### 9h. The 114 unread AIDSinfo exports, decided one by one
+
+The audit in §9g reported `unaids_aidsinfo` reading 32 of 146 exports. Every one of the remaining
+114 has now been opened, counted and either mapped or declared out of scope with a reason. The
+connector reads 51, declares 95, and leaves nothing undecided.
+
+Nineteen exports were mapped. Four of them land on canonicals another source already fills, so each
+was measured against the series already in the panel before the mapping was written, per §9f.
+`hiv_tests_performed` agrees with WHO GHO exactly in 100 per cent of 323 overlapping country-years.
+That is not corroboration, that is UNAIDS reprinting the GHO series, and the mapping exists only for
+the 92 country-years GHO does not carry. `hiv_test_positivity_pct` agrees exactly in 22.5 per cent
+and within one percentage point in 65.1 per cent, which is the same instrument at finer precision
+because UNAIDS prints two decimals where GHO rounds. `pmtct_arv_count` agrees exactly in 76.7 per
+cent of 1,515 overlaps. Only `pregnant_women_hiv` behaves like a second instrument, agreeing exactly
+in 17.4 per cent of 759 overlaps with a median gap of 6.8 per cent, close to the Global Fund against
+WHO TME benchmark of 8 per cent exact and a 3.5 per cent median gap.
+
+Six new canonicals cover the vertical transmission chain either side of `pmtct_coverage_pct`, plus
+two prevention commodities. The chain matters because a country can hold PMTCT coverage steady while
+antenatal testing collapses, since coverage is computed among women already known to have HIV.
+`anc_hiv_testing_pct` falling while `pmtct_coverage_pct` holds is the signature of a programme
+shrinking its own denominator. `circumcisions_performed` is the most cancellable service in the
+panel, a one-off surgical procedure delivered in campaigns that PEPFAR largely paid for, and the 15
+countries reporting it are close to the whole global programme rather than a sample of it.
+
+Two key-population canonicals were added, and the reason is a denominator. PEPFAR reports how many
+men who have sex with men its partners reached. Only UNAIDS says how many there are to reach.
+`kp_size_estimate` supplies that figure for 552 country-population pairs across five key
+populations, and `kp_prevention_coverage_pct` supplies the baseline a cut starts from for 156. Both
+carry a single value stamped 2024, which is when UNAIDS last compiled the figure rather than when the
+survey behind it ran, so both rows carry `extra["most_recent"]` and neither can show a change.
+
+The 95 declared exports fall into groups. Thirty-six are age bands of `plhiv`, `new_infections` or
+`aids_deaths` across 183 to 184 countries and 35 years, roughly 173,000 cells, and the panel has no
+`age_group` column. Twenty-nine are single-point 2024 key-population snapshots measuring stigma,
+violence, condom use, syphilis and viral hepatitis, which are outcomes of a different research
+question. Eight are quantities the panel can already compute, such as an incidence rate per 1,000
+that is `new_infections` over population. The rest are single-year or near-empty service counts,
+including procured self-test kits, which covers 48 countries for 2019 alone.
+
+Two declared exports are the largest body of unread material left in this source and they are held
+back for a reason that is not technical. `Progress towards 95-95-95 targets` and `Testing and
+treatment cascade` use a two-row header, the first row naming the year and the second naming the
+indicator, which the parser in `unaids_aidsinfo` cannot read. The All-ages pair alone holds 3,532 and
+3,660 values across 176 and 185 countries from 2015 onwards. Writing a second parser is a small job.
+Deciding what the numbers are is not. The first bar of each cascade repeats `know_status_pct`, which
+the panel holds. The second and third bars are conditional percentages, the share on treatment among
+those who know their status and the share suppressed among those on treatment, and a conditional
+percentage is a different quantity from the unconditional `art_coverage_pct` and
+`community_viral_suppression_pct` already in the panel. Whether the conditional form earns three
+more canonicals is a question about the analysis, not about the parser.
+
+**What §9g asked for, applied.** `unaids_aidsinfo` now holds a `DECLARED_UNMAPPED` list pairing a
+filename substring with the reason the file stays out, `scripts/audit_coverage.py` subtracts declared
+files before reporting a gap, and the connector logs three numbers rather than two, read against
+declared against awaiting a decision. An export in the third number raises a warning naming the file,
+because an export in the third number is the only kind that needs anyone's attention.
+
+### 9i. The 66 unread PEPFAR indicator codes, and the ten canonicals already waiting for them
+
+Closing the AIDSinfo gap left the audit reporting `pepfar_panorama` at 5 of 71 MER codes mapped and
+`pepfar_agency` at 3 of 71, with nothing declared and everything else unexamined. The §9g rule had
+been applied to PEPFAR at the level of files, where the connector now names the archives it does not
+open, and not at the level of indicators inside the one archive it does.
+
+The expected job was to write 66 reasons for leaving 66 codes alone. Checking the codes against the
+canonical registry before writing any of them changed that. Ten of the largest already had a name in
+the panel, put there by UNAIDS, WHO and the Global Fund, with no PEPFAR measurement under it. Six
+could be paired on arithmetic alone and are now read.
+
+| MER code | canonical | what the pairing test showed |
+|---|---|---|
+| `TX_PVLS` | `viral_suppression_count` | 393 of 399 country-years are ones no other source in the panel covers |
+| `TB_PREV` | `tpt_completions` | 250 of 252 country-years are new |
+| `TB_STAT` | `tb_patients_hiv_tested` | median 0.58 of the WHO TME national figure over 201 overlaps, at or below it in 96% |
+| `TB_STAT_POS` | `tb_patients_hiv_positive` | median 0.77 over 197 overlaps, below in 93% |
+| `PMTCT_ART` | `pmtct_arv_count` | median 0.75 to 0.81 against three separate national sources, below each in 91 to 93% |
+| `VMMC_CIRC` | `circumcisions_performed` | median 0.91 over 98 overlaps |
+
+Exact agreement with the national series is 0.0% for five of the six and 1.0% for `VMMC_CIRC`, so
+none of them is a national series reprinted under a PEPFAR label, and every one sits at or below the
+national total in the large majority of country-years, which is the shape a programme footprint has
+to have. Applying §9f before writing the mappings, rather than after, is what these numbers are.
+
+**The one that would have been silently wrong.** `TX_PVLS` summed across its quarters reaches a
+median of 2.32 times `TX_CURR` and exceeds the treatment cohort in 70% of country-years, which
+cannot happen, because a person with a suppressed viral load result is a person on treatment. The
+code restates a rolling twelve months every quarter rather than adding a new period to it. Read at
+the latest quarter the median is 0.71 and the excess appears in 1%. Nothing in the file says which
+of the two collapses is right, and nothing in a clean run would have said the wrong one was wrong.
+
+**A second collapse the file does not announce.** `TB_PREV` and `KP_PREV` publish at Q2 and Q4 only,
+in 204 of 258 and 304 of 362 country-years, so two quarters is a complete year for them. The
+partial-year warning would otherwise have fired on every row of `tpt_completions` in the panel, and
+a warning that fires on everything is a warning nobody reads.
+
+**The refusal worth recording.** `KP_PREV` looks ready to map and is not. Summing its two half-years
+gives a median of 0.58 of the Global Fund national figure over 142 overlapping country-years, and
+taking the later half alone gives 0.29. Both readings are defensible, they differ by a factor of
+two, and PEPFAR's definition rather than this panel's arithmetic has to settle which. `TB_PREV` is
+mapped despite the same reporting pattern because completing a course of preventive therapy is an
+event and events add, while being reached is a status and the same person is reached in both halves
+of a year as a matter of course.
+
+**What the other 60 are.** Twenty-seven are a part of a code already read or of one left for a
+decision, and the parts were measured rather than assumed: `HTS_TST_POS` and `HTS_TST_NEG` sum to
+`HTS_TST` in 99% of 415 country-years, the `TX_CURR` dispensing legs sum to `TX_CURR` in 71% of 304
+and never exceed it, and the three `HTS_INDEX` outcome legs sum to their parent in only 33% of 332,
+so the parent and the parts there are not the same population. Sixteen need a canonical definition
+written before a dictionary entry means anything, `TX_ML`, `TX_RTT`, `TX_NET_NEW`, `TB_ART` and
+`PrEP_CURR` among them. Fourteen sit outside HIV testing and treatment, being cervical cancer
+screening, post-violence care and services for orphans and vulnerable children. Three pair with a
+canonical that is a percentage, and reading them needs the Denominator rows the connector currently
+filters out, which is a change to how the file is read rather than an entry in a dictionary.
+
+`pepfar_agency` still splits three indicators and now says why. Each added indicator becomes three
+series needing three canonical definitions, and the three chosen are the ones a cut moves first. The
+strongest candidate for a fourth is `TX_PVLS`, since a USAID arm losing viral suppression while the
+CDC arm holds would be the clearest harm this panel could show.
+
+Both connectors now log read against declared against awaiting a decision, and the audit reports 0
+unexamined for each.
+
+### 9j. How many quarters make a year, asked of the release instead of assumed
+
+Reading six more MER codes brought in the reporting patterns of six more indicators, and the rule
+deciding whether a year was complete could not hold them. That rule counted to four, with a
+hardcoded exemption for the two codes §9i had found publishing twice a year. Reporting frequency
+turned out to be a property of the indicator **and the year** rather than of the indicator alone.
+
+| MER code | quarterly | at Q2 and Q4 |
+|---|---|---|
+| `TB_STAT`, `TB_STAT_POS` | FY2019 onwards | FY2018 |
+| `PrEP_NEW` | FY2018, and FY2021 onwards | FY2019 and FY2020 |
+| `TB_PREV`, `KP_PREV` | never | throughout |
+
+No fixed list can hold a pattern that changes twice within one code. Counting to four put a
+partial-year warning on 93 operating-unit-years whose totals are complete, and a warning that fires
+on complete data is worse than no warning, because the rows it fires on are indistinguishable from
+the rows where a service really stopped. The connector now derives the cadence, taking the modal set
+of reported quarters over every country reporting that indicator in that year, and a country is
+short only against what its own indicator-year actually publishes.
+
+**Fewer quarters has two causes and they want opposite comparisons.** A year can report fewer
+quarters because the release stopped early, which is FY2025 carrying Q4 alone, or because PEPFAR
+changed how often the indicator reports. The two look identical in the quarter count and lead to
+contradictory advice. Under a truncated release the annual totals are not comparable and the shared
+quarters are. Under a change of frequency the annual totals **are** comparable and the shared
+quarters are not, because a semi-annual report covers six months and a quarterly one covers three,
+so comparing Q2 with Q2 across the change puts six months against three.
+
+Two measurements in the file settle which reading is right, and they were run because assuming
+either one would have been invisible in a clean run.
+
+| test | full-year ratio | like-quarter ratio |
+|---|---|---|
+| `TB_STAT` FY2018 (Q2, Q4) against FY2019 (quarterly) | 0.99 | 0.53 |
+| `TB_STAT_POS`, same change | 0.96 | 0.49 |
+| `PrEP_NEW` FY2018 (quarterly) against FY2019 (Q2, Q4) | 3.10 | 6.05 |
+
+`TB_STAT` is a service that neither grew nor shrank across that year, so the full-year ratio of 0.99
+is the true one and the like-quarter 0.53 is an artefact of comparing 12 months with six. `PrEP_NEW`
+grew steeply and no single ratio means anything on its own, but both of its ratios carry the same
+growth, so the factor between them does mean something. That factor is 1.95. Had a semi-annual
+report covered three months, the two ratios would have agreed.
+
+So a semi-annual figure covers six months, a two-quarter semi-annual year is a whole year, and the
+partial-year warning fires only when the newest year in the download publishes fewer quarters than
+the year before it, or when one country falls short of what its own indicator-year publishes. Across
+the TopLine file the warning count falls from 381 operating-unit-years to 288, and the 93 it stops
+firing on are exactly the four indicator-years above. Every FY2025 cumulative row still carries it.
+
+**What the rows now carry.** Every cumulative row keeps its four quarterly values in `extra`, so a
+like-quarter comparison can be rebuilt from the panel without returning to the archive. Rows either
+side of a truncated release carry `like_quarter_comparison` with its ratio, and rows either side of
+a frequency change carry `cadence_change`, which states that the annual totals are the comparison
+and a quarter-by-quarter reading is not. The FY2025 rows carry 228 of the 275 like-quarter
+comparisons in the file.
+
+`circumcisions_performed` has no FY2025 row at all. `VMMC_CIRC` reports `0000` for all 14 countries
+in the Q4 release, so the panel carries silence rather than a zero, which is the right behaviour and
+worth knowing before anyone reads the gap as a finding.
+
+The general rule, alongside §9f and §9g. **A connector must not assume the shape of a period from
+the shape of the file it happens to hold.** How many parts make a whole is a property of the release
+and has to be read off the release, and where two readings of the same missing data give opposite
+advice, the arithmetic that separates them has to be run before either is written down.
+
+### 9k. The one source that asks the country who paid, and the four traps inside it
+
+Every financing series in the panel before this one was a donor's account of the donor's own money.
+The OECD Creditor Reporting System holds what donors reported disbursing, ForeignAssistance.gov
+holds Washington's account of Washington's money, and the PEPFAR expenditure file holds PEPFAR's
+account of PEPFAR's. Nothing asked the country. The UNAIDS Global AIDS Monitoring expenditure
+database does, and it is the only near-global source that does: 59,947 rows, 121 countries, 541
+country-years, expenditure years 2011 to 2024, of which 41 country-years carry 2024, the last year
+before the cuts.
+
+**The pairing test decided which canonical each donor column takes, and the column name did not.**
+GAM's PEPFAR column against PEPFAR's own expenditure gives n=72, a median ratio of 0.995 and 35
+country-years within 10%. The same column against `external_hiv_oda_us` gives n=205, a median of
+1.031 and 54 within 10%. The wider overlap is coverage rather than agreement, so the column pairs
+with PEPFAR's own account, at 49% of country-years within 10% against 26%. GAM's GlobalFund column
+against the OECD CRS Global Fund series gives n=326, median 0.806, 47 within 10%. Both are emitted
+under the donor's canonical, so the reconciliation layer classifies the comparison rather than the
+panel holding two series that never meet. GAM's International column keeps a canonical of its own,
+because every external dollar a country received and what OECD members reported as aid under purpose
+code 13040 are differently scoped quantities, not two measurements of one.
+
+**The grand total is a republication and is emitted anyway.** `TOTAL GRAND` against AIDSinfo's
+country-reported expenditure gives n=469, median 1.0000, 420 within 1%, and the residual is
+AIDSinfo rounding to two significant figures. Withholding it would hide a `derived` verdict the
+reconciliation layer should reach from the data.
+
+**A zero is not a measurement, and here that costs something real.** In this database a blank and a
+zero both mean the country did not report. On the grand-total row the Households column is blank 13
+times and zero 375 times against 153 positive values, and PEPFAR is blank 14 times and zero 313
+times against 214. Neither is emitted, which means a programme defunded to nothing cannot be told
+apart from a programme nobody filed a return for. That is a limitation of the source and not a
+choice the connector can undo.
+
+**Programme numbers are not stable and labels are.** Line `3.11` is "Cash transfers to girls
+(high-prevalence countries)" from GAM 2017 to GAM 2023 and "Prevention programmes for vulnerable and
+accessible populations (excluding HIV testing)" from GAM 2024, and `3.12` moves from vulnerable
+populations to post-exposure prophylaxis at the same cycle. A map keyed on the number would splice
+cash transfers to girls onto a vulnerable-populations series at the 2024 boundary this project
+exists to measure. The map is keyed on the label text.
+
+**Two classification schemes, and the reporting cycle does not tell them apart.** The pre-2016
+scheme writes a full stop after the digit, `4. Universal access to treatment`, and the modern one
+does not, `4 Gender programmes`. 31 country-years use the old scheme, 484 the modern one, 26 report
+a grand total with no programme breakdown at all, and none mixes the two. Both GARPR 2016 and GAM
+2017 contain old-scheme returns, so the cycle is not the discriminator and the label is. The old
+scheme is declared out of scope for programme series: "8. Synergies with development sectors" spans
+four modern lines and the modern gender, children, social-protection and community lines have no old
+counterpart, so a mapped series would begin in 2016 with a definitional break wearing the appearance
+of a change in spending. The cost is nil, because every old-scheme country-year lies in expenditure
+years 2011 to 2015. Those country-years still contribute their financing split, which does not
+depend on the classification.
+
+**Two partitions that do not nest.** The ten modern top-level lines sum to `Total for key HIV
+programmes` for 461 of 467 country-years at a median ratio of 1.00000, and to the grand total for
+only 389 of 477, because the grand total also holds other essential programmes. Nothing may add a
+programme series to a financing series. Nor may anything derive one financing series by subtracting
+others: public plus private plus international equals the total for 532 of 540 country-years, the
+six international columns sum to International for 423 of 469, the four public columns sum to
+TotalPublic for 425 of 495, and the four private columns for 226 of 250.
+
+**The country code is not always ISO3.** Kazakhstan is filed as `KZK` in all 102 of its rows for
+expenditure year 2018, so a connector trusting `CountryID` loses Kazakhstan silently, while "Gambia
+(Republic of The)" defeats name resolution and its `GMB` code is fine. Code first, name second, and
+any disagreement logged. The 121 country-code pairs resolve to 120 countries, and the missing one is
+Kazakhstan appearing under two codes rather than a country dropped.
+
+The audit reports 17 of 299 programme labels read, 282 declared out of scope and none unexamined.
+The 282 are 252 dotted sub-lines that are parts of lines already read, 11 country-written free-text
+lines in Russian, Spanish and French, the 8 old-scheme lines, 4 lines a country filed under other
+essential programmes that repeat within a single country-year, 3 pre-2016 other-essential lines, 2
+aggregates and 2 residual buckets. A top-level line the map has never seen returns no reason on
+purpose, so an eleventh programme line in a future cycle surfaces as undecided instead of being
+filed away as free text nobody looks at.
+
+**What the panel gained, measured after the run of 7 September 2026.** Three pairs formed and the
+reconciliation layer classified all three from the arithmetic. AIDSinfo against GAM on
+`hiv_expenditure_total` is `derived` over 469 cells at a median relative difference of 0.13%, which
+is the republication finding recovered without being told. PEPFAR against GAM on
+`pepfar_expenditure` is `independent` over 72 cells at 11.8%, and OECD CRS against GAM on
+`global_fund_hiv_disbursements` is `independent` over 326 cells at 40.4%. The second and third are
+the first pairs in this panel where a donor's account of the donor's own money faces an account
+written by the country receiving it, so a difference between the two sides carries information
+instead of being an error in one of them.
+
+The PEPFAR pair agrees on the centre and disagrees case by case. Median ratio 1.005 over 30
+countries and expenditure years 2021 to 2024, 35 of 72 country-years within 10%, 26 where PEPFAR
+reports more and 11 where the country does, direction consistency 0.58. Neither side is
+systematically larger, so no constant correction exists. The extreme divergences are one-sided,
+Sierra Leone 2022 at 4.57m against 37k and Burkina Faso 2024 at 8.24m against 503k, and both sit in
+small programmes, but programme size explains little across the whole set, with a Spearman
+correlation of -0.187 between size and the ratio. The natural explanation, that a national AIDS
+spending assessment cannot see PEPFAR money spent through regional or centrally procured channels,
+has not been tested here and must not be written up as though it had been.
+
 ---
 
 ## Status of the claims here
@@ -1013,7 +1349,21 @@ note.**
 | WAHO is the sixth gated DHIS2 | `waho.dhis2.org`, probed 2026-08-17: all five unauthenticated paths redirect 302 to the login page |
 | WHO AFRO's observatory is dead, and its atlases are republications | `aho.afro.who.int` 404 at every path; the surviving country atlases are 2022 PDFs carrying GHO and UNAIDS figures the panel already holds |
 | Chad's INSEED publishes ten health statistics yearbooks, and its search hides them | Catalogue enumerated 2026-08-17: 135 publications in 15 series, including `ANNUAIRE-STATISTIQUES-SANITAIRES-2023` (published 2024). `q=sante` returns 0 and `q=VIH` returns 0; the endpoint matches title text and the titles read `SANITAIRES` |
-| WHO GHED carries an HIV line and is independent of GAM | `apps.who.int/nha/database/Home/IndicatorsDownload/en`, 38.9 MB, open. Built from national health accounts, not from the GAM submission. `dis11` splits into `_gghed`/`_ext`/`_pvtd`; `dis11_usd` is in **millions** of USD while its neighbours are not |
+| WHO GHED carries an HIV line and is independent of GAM | `apps.who.int/nha/database/Home/IndicatorsDownload/en`, 38.9 MB, open. Built from national health accounts, not from the GAM submission. `dis11` splits into `_gghed`/`_ext`/`_pvtd`. Release read from the Version sheet: 12 December 2025 |
+| Every `dis11` money variable is in millions, not `dis11_usd` alone | Corrects the second half of the row above, which claimed `dis11_usd` was in millions "while its neighbours are not". The codebook marks all eight `Millions`. Three checks agree: printed `dis11_che` equals `dis11 / che * 100` to the sixth decimal on all 359 country-years (ZMB 2019, 13,225.51 / 20,290.29 = 65.181457 against a printed 65.181458); `dis11_usd / dis11_usd_pc` implies populations of 109,821 to 223,150,896, median 15,895,315; the resulting totals sit alongside GAM's for the same country-years |
+| GHED's HIV line is HIV **and** other STDs, so it is not a second reading of the GAM series | `dis11` is "HIV/AIDS and Other Sexually Transmitted Diseases". Against GAM over the country-years both cover: total, 138 country-years / 44 countries, median ratio 1.14, 48 differing by 2× or more; government, 134 / 43, median 1.22, 68 differing by 2× or more; external, 129 / 39, median 1.002 with GHED larger in 65 of 129. Coinciding centres with coin-flip direction is not agreement. Mapped to seven `hiv_std_*` canonicals of its own |
+| The three GHED financing components are a true partition, unlike GAM's | Government plus external plus private equals the printed total on 328 of 328 country-years, median ratio 1.000000. GAM's printed parts fail to close on about a tenth. Every row carries `extra.partition_level` = `total` / `component` / `share` so nothing sums the two levels |
+| A zero means opposite things in GAM and in GHED, and the file decides which | GAM leaves an unfilled line at zero, so no zero is emitted there. GHED's seven zero component cells all sit in accounts whose remaining parts still close on the printed total (CRI 2020 and MKD 2019–2020 external, UZB 2016–2018 and HTI 2016 private), so each is an entry in a closed account and is emitted. Blank is how GHED says nothing is known |
+| GHED's HIV line stops before the event this project measures | The workbook runs to 2024; the HIV line covers 359 country-years over 60 countries, 2013–2023. Countries per year: 20, 29, 32, 46, 47, 51, 51, 32, 26, 15, 10. The last year present is not the current position, and this source cannot see the 2025 cuts at all |
+| HIV is a large fraction of the whole health system in the countries at issue | `dis11_che` reaches 65.2% in ZMB 2019, and 46 country-years exceed 20%, every one in Eastern or Southern Africa (ZMB, MWI, MOZ, ZWE, UGA, TZA, SWZ, BWA, KEN). A cut to HIV in these places is a cut to a large fraction of health spending, which is what makes the share an exposure measure rather than a descriptive one |
+| WHO publishes whether each GHED figure was documented or estimated, and the panel carries it | Metadata sheet, 32,664 rows, as text like "2013 - 2018: Documented; 2019: Estimated". All 59 country records for `dis11` parse, labelling 340 of the 359 country-years: 303 documented, 35 estimated, 2 partially documented. The private component is filed for 57 countries rather than 59, which leaves 43 of 1,381 money rows unlabelled. Carried as `extra.data_type`, because an estimation method read as a funding cut is the failure mode |
+| The GHED download carries no version in its filename | `Content-Disposition: attachment; filename=GHED_data.XLSX` for every release, unlike the GAM workbook whose filename carries its publication date. A cached copy cannot be told from a current one by name, so the connector reads the release off the Version sheet, logs it every run and writes it into every row. Deleting the cached file is how a new release is taken |
+| `run_all.py` defaults to the Southeast Asia slice, so a global connector run without `--countries all` silently returns a region | The GHED run of 7 September 2026 was launched as `--sources who_ghed` alone and landed 125 rows over KHM, MMR and PHL, against the 2,430 rows over 60 countries the workbook holds. Nothing in the log says the scope was narrowed, because the connector reports what it found inside the filter it was given. Every other aggregator in the panel is global (world_bank 216 countries, who_tme 215, who_gho 194, unaids_aidsinfo 193, oecd_crs 153, foreign_assistance 124, unaids_gam_expenditure 120, global_fund 107), so a two-figure country count on an aggregator is the tell |
+| The Philippines 2019 HIV line is 26 times its own series and reaches the panel unflagged | `dis11` reads 65,907.48 million pesos for 2019 against 1,122.41 in 2018 and 5,430.60 in 2020, so `dis11_usd` reads 1,272,448,707 USD between 21,313,702 and 109,434,836. The anomaly is in the source's own national-currency figure, not in the conversion, and `dis11_che` carries it too at 8.10% against 0.16 and 0.59, so WHO's published share is computed from the same number. WHO labels the year **Documented**, so the metadata does not warn either. Emitted as published, following the Gabon precedent |
+| `writers._unit_outliers` cannot see an outlier that is large enough to set its own reference | The Philippines series has 10 rows with a log10 median of 7.684 and a MAD of 0.563, above `SCALE_STABLE_MAD` (0.5), so the series is skipped whole as having no stable scale to depart from. Even without that gate the row survives, because the threshold is `max(log10 25 = 1.398, 4 × 0.563 = 2.252)` and the departure is 1.421. Both tests fail for one reason: a 26× spike inside a series that genuinely climbs an order of magnitude inflates the spread being used to judge it. The check is behaving as designed and the design has a blind spot for short, steeply growing money series |
+| The reconciliation table can never test whether GHED is a republication of an existing series | `hivimpact/reconcile.py` compares two sources only where both report the same `indicator_id`, and the seven `hiv_std_*` canonicals belong to `who_ghed` alone, so no pair can form at any scope. The 87 pairs from the global run of 7 September 2026 name `who_ghed` in none of them, and an empty result produced by construction is not evidence. The test has to be made by hand against `hiv_expenditure_total`, which is HIV alone. On the 164 overlapping country-years across 49 countries the ratio has a median of 1.141 and a middle half of 0.854 to 1.760, GHED is larger on 102 of 164, and only 4 pairs agree within 2% (29 within 10%). A republication would sit at 1.000 throughout, so the separate canonicals stand. Containment does not hold either, and should not, because the national health accounts count HIV and STD spending flowing through the health system while GAM counts the AIDS programme. The tails belong to the UNAIDS side, not to GHED: MDG 2019 reaches 2,647 because UNAIDS records 3,900 USD of total HIV spending that year against 12,000,000 in 2017, and AFG 2017 reaches 274 on a UNAIDS figure of 45,000 USD |
+| GHED's three flagged rows are small components inside accounts that close, not unit errors | `writers._unit_outliers` flags exactly three `who_ghed` rows out of 2,430, all on the low side: ARM 2021 external 198.50 USD, ARM 2021 external share 0.0013% (the same figure said twice) and BEN 2013 private 35,135 USD. Both country-years close on their printed total at a ratio of 1.000000, so a tiny component is what the account contains. 60 of the 1,381 money rows sit below 100,000 USD and 12 below 10,000, so small components are ordinary in the national health accounts rather than a symptom. The flag is worth reading as a prompt to check closure, not as a defect |
+| The GHED connector accounts for all 4,120 columns with none undecided | Verified offline 2026-09-07 against the cached workbook: 7 read, 4,113 with a written reason (3,372 health-system aggregates, 649 other disease categories, 47 `dis12` tuberculosis, 16 constant 2023 prices, 8 per capita, 5 identifiers, 5 GDP or government-spending denominators, 4 national currency, 4 purchasing-power parity, 3 recoverable component shares), 0 awaiting a decision. A future `dis11` variable matching no rule returns `None` and surfaces as undecided rather than being filed away |
 | ART initiations now have two independent instruments, and they agree without matching | WHO TME against the Global Fund, 75 country-years over 29 countries: within 1% in 24%, within 10% in 63%, more than 25% apart in 24%, median gap 3.5%. `tbhiv_on_art`: 571 country-years, 87 countries, 37% within 1%, 70% within 10%, median gap 2.8% |
 | Comparing two instruments needs the age group matched, not just country and year | WHO TME publishes `tbhiv_on_art` for all ages and for under-15s as separate rows, 226 of the latter. Keying on country and year alone sets a national figure against a paediatric one and moves the median gap from 2.8% to 6.1% |
 | Both instruments show ART initiations falling into 2024 | WHO TME, 88 countries reporting both 2023 and 2024: 46 fell, total −14.4%. Global Fund, 21 countries: 14 fell, total −29.6%. Of 45 consecutive-year changes both can see, 33 agree on direction and 12 do not |
@@ -1030,3 +1380,44 @@ note.**
 | The UNAIDS incident-TB export adds no point estimate anywhere | All 497 of its country-years beyond WHO TME are censored `<100` bounds, and it censors 2,934 cells WHO TME publishes as numbers. The deaths export is uncensored, so its 432 extra country-years are kept |
 | The Global Fund TPT count pairs with the currently-enrolled proportion, not the newly-enrolled one | Over `art_initiations`: within 1pp in 41 of 181 country-years, median gap 11.5pp, above 100% in 32, SWZ 2024 at 3,093% on 194,482 courses against 6,288 new enrolments. Over `on_art_count`: within 1pp in 48 of 111, within 5pp in 76, never above 100% |
 | The censoring check was labelling reporting ceilings as floors | AIDSinfo censors at both ends and `>98` is a ceiling. 148 WHO GHO `viral_suppression_pct` rows and 141 UNAIDS `pmtct_coverage_pct` rows sit at exactly 98, which is the largest value either series contains. The three cases separate on where the repeated value sits: series minimum, series maximum, or neither, the last being UNAIDS stacking `<100` and `<500` in one file |
+| `pepfar_panorama` was reading 2 of the 71 MER indicators in the file it opens | `Public_Partner_MER_TopLine.zip`, counted 2026-09-05 by [`scripts/audit_coverage.py`](../scripts/audit_coverage.py). The 69 unread codes included `TX_NEW`, `HTS_TST`, `PrEP_NEW`, `TX_ML` and `TX_RTT` |
+| PEPFAR `TX_NEW` is `art_initiations` measured by the funder being cut | 1,894 valued rows, 57 countries, FY2018–2025, one row per mechanism, `Total Numerator` only, no age or sex disaggregate to double count |
+| MER quarters are independent periods, not a running total | FY2024 `TX_NEW` reads Q1 390,160 / Q2 414,358 / Q3 383,029 / Q4 464,878, so the annual value is the sum. `TX_CURR` rises within each year, so it stays a snapshot at the latest quarter |
+| PEPFAR `TX_NEW` is a share of the WHO TME national total, not a rival estimate | 266 overlapping country-years: PEPFAR at or below the national total in 86%, median share 0.74, quartiles 0.38 and 0.98. Fifteen exceed 1.25, led by MLI 2020 at 5.19 and UGA 2019 at 1.98; PEPFAR's Oct–Sep fiscal year against WHO's calendar year explains part |
+| `TX_NEW` adds 88 country-years WHO TME does not cover | 38 countries, 2018–2024, where `who_tme` publishes no `art_initiations` figure |
+| `TX_ML` is the exact sum of its seven sub-codes | 312 country-years, agreement within 1% in 100%, so mapping the total alone is correct and mapping the parts as well would double count |
+| Three of 15 PEPFAR archives are read, and four Global Fund CSVs are read by nobody | Unopened: health workforce inventory, commodity procurements, partner performance, both site-level files, both age/sex cascade files, OU budgets, OU-by-fine-age-sex, modality results, VMMC. The Global Fund connector reads the OData API, so `data/raw/global_fund` is downloaded and unattached |
+| The province and national PrEP series are different grains, not duplicates | `pepfar_snu` sets `admin1` on 100% of its 2,096 `prep_recipients` rows; `pepfar_panorama` writes the national total with `admin1` empty, the same separation `on_art_count` already has |
+| Every one of the 146 AIDSinfo exports is now mapped or declared | `scripts/audit_coverage.py` reports 51 read, 95 declared out of scope with a reason, 0 unexamined. Before this pass the same script reported 32 read and 114 unexamined |
+| UNAIDS `HIV tests (volume)` is WHO GHO reprinted, not a second measurement | 323 overlapping country-years, exact agreement in 100.0%. Mapped only for the 92 country-years GHO does not carry, and never to be counted as corroboration |
+| UNAIDS `Pregnant women needing ARV for PMTCT` is a genuinely independent second measurement | 759 overlaps against WHO GHO, exact in 17.4%, median gap 6.8%, against the Global Fund–WHO TME independence benchmark of 8% exact and 3.5% median gap |
+| `pmtct_arv_count` and `hiv_test_positivity_pct` are largely republications | 1,515 overlaps at 76.7% exact with a median gap of 0.0%, and 289 overlaps at 22.5% exact with 65.1% within one percentage point, UNAIDS printing two decimals where GHO rounds |
+| The key-population exports are single points, not series | All 37 carry one column, `Most recent data as of 2024`. The two mapped supply a denominator (552 values) and a baseline (156 values), and the rows carry `extra["most_recent"]` so no analysis reads the 2024 stamp as a 2024 measurement |
+| The two-row-header cascade files are the largest unread body left in AIDSinfo | `Progress towards 95-95-95` and `Testing and treatment cascade`, All-ages pair holding 3,532 and 3,660 values across 176 and 185 countries from 2015. Held back because the conditional bars need a decision, not because the parser is hard |
+| Six of the 66 unread MER codes had a canonical already waiting in the registry | `TX_PVLS`, `TB_PREV`, `TB_STAT`, `TB_STAT_POS`, `PMTCT_ART`, `VMMC_CIRC`. Exact agreement with the national series is 0.0% for five and 1.0% for `VMMC_CIRC`, median share 0.58 to 0.91, at or below the national total in 82–96% |
+| `TX_PVLS` is a rolling twelve-month snapshot, not a sum of quarters | Summed it reaches a median of 2.32 times `TX_CURR` and exceeds the treatment cohort in 70% of 399 country-years. Read at the latest quarter, median 0.71 and excess in 1% |
+| `TB_PREV` and `KP_PREV` are semi-annual, so two quarters is a complete year | Q2 and Q4 in 204 of 258 and 304 of 362 country-years. Without the exception the partial-year warning fires on every `tpt_completions` row |
+| `KP_PREV` cannot be collapsed on arithmetic | Summing the half-years gives a median of 0.58 of the Global Fund national figure over 142 overlaps, taking the later half gives 0.29. A factor of two between two defensible readings |
+| Every one of the 71 MER codes is now mapped or declared | `scripts/audit_coverage.py` reports `pepfar_panorama` 11 read, 60 declared, 0 unexamined, and `pepfar_agency` 3 read, 68 declared, 0 unexamined. Before this pass the same script reported 5 and 3 read with 66 and 68 unexamined |
+| Reporting frequency changes within a code, so no fixed list can hold it | `TB_STAT` and `TB_STAT_POS` at Q2 and Q4 in FY2018 and quarterly after, `PrEP_NEW` quarterly in FY2018, at Q2 and Q4 in FY2019 and FY2020, quarterly from FY2021 |
+| A semi-annual PEPFAR figure covers six months, so a two-quarter year is whole | `TB_STAT` across its FY2019 change gives a full-year ratio of 0.99 against a like-quarter 0.53, and `TB_STAT_POS` 0.96 against 0.49. `PrEP_NEW` across its FY2019 change gives 3.10 and 6.05, a factor of 1.95, which growth cannot produce because both ratios carry it |
+| Deriving the cadence removes 93 false partial-year warnings and keeps every true one | Replayed over `Public_Partner_MER_TopLine` Total Numerator rows: 381 operating-unit-years flagged under the fixed count, 288 under the derived cadence, the 93 difference being `PrEP_NEW` FY2019 and FY2020 and `TB_STAT` and `TB_STAT_POS` FY2018. All 33 FY2025 `TX_NEW` operating units still flagged |
+| `circumcisions_performed` is absent from FY2025 rather than zero | `VMMC_CIRC` reports `0000` for all 14 countries in the Q4 release, so no row is emitted |
+| The GAM expenditure database is the only near-global source that asks the country who paid | `hivfinancial.unaids.org`, one workbook, 59,947 rows, 121 country codes resolving to 120 countries, 541 country-years, expenditure years 2011–2024, 41 of them 2024. Cycles GARPR 2016 to GAM 2025, and UNAIDS has already kept the latest return where a country reported one year twice: every country-year appears in exactly one cycle |
+| GAM's PEPFAR column pairs with PEPFAR's own account, and the arithmetic said so | Against `pepfar_expenditure` n=72, median 0.995, 35 within 10% (49%). Against `external_hiv_oda_us` n=205, median 1.031, 54 within 10% (26%). GAM's GlobalFund against OECD CRS n=326, median 0.806, 47 within 10% |
+| GAM's grand total is AIDSinfo's country-reported expenditure republished | n=469, median ratio 1.0000, 420 within 1%, the residual being AIDSinfo rounding to two significant figures. Emitted anyway so the reconciliation layer reaches the `derived` verdict from the data |
+| GAM programme numbers move between cycles and the labels do not | `3.11` is "Cash transfers to girls (high-prevalence countries)" from GAM 2017 to GAM 2023 and "Prevention programmes for vulnerable and accessible populations (excluding HIV testing)" from GAM 2024; `3.12` moves from vulnerable populations to post-exposure prophylaxis at the same cycle |
+| Two GAM classification schemes, separated by the label and not by the cycle | The old scheme writes `4. Universal access to treatment` and the modern one `4 Gender programmes`. 31 country-years old, 484 modern, 26 with no breakdown, none mixed. GARPR 2016 holds 23 old-scheme country-years and GAM 2017 holds 8. Every old-scheme country-year is in expenditure years 2011–2015 |
+| The ten GAM programme lines partition key programmes, not the grand total | Sum to `Total for key HIV programmes` in 461 of 467 country-years, median 1.00000; to the grand total in 389 of 477. The grid is complete: exactly one of each of the ten in all 484 modern country-years, no duplicates |
+| No GAM financing series may be derived by subtracting others | Public + private + international equals the total in 532 of 540 country-years, the six international columns sum to International in 423 of 469, the four public columns to TotalPublic in 425 of 495, the four private to TotalPrivate in 226 of 250 |
+| A GAM zero is indistinguishable from a GAM blank, and both mean not reported | On the grand-total row Households is blank 13 times and zero 375 against 153 positive, PEPFAR blank 14 and zero 313 against 214, TotalPrivate blank 11 and zero 278 against 252. 3,499 cells dropped on this rule across the file |
+| GAM files Kazakhstan under a code that is not ISO3 | `KZK` on all 102 of its expenditure-year-2018 rows, while "Gambia (Republic of The)" defeats name resolution and its `GMB` code does not. Code first and name second resolves all 121 pairs with no disagreement |
+| Every one of the 299 GAM programme labels is now mapped or declared | `scripts/audit_coverage.py` reports 17 read, 282 declared out of scope, 0 unexamined: 252 dotted sub-lines, 11 free-text lines, 8 old-scheme lines, 4 lines filed under other essential programmes that repeat within a country-year, 3 pre-2016 other-essential lines, 2 aggregates, 2 residual buckets |
+| The reconciliation layer reaches the republication verdict on its own | Run of 7 September 2026. `hiv_expenditure_total` AIDSinfo against GAM, 469 cells, median relative difference 0.13%, agreement within 2% on 96% of cells, classified `derived`, evidence "same underlying estimate, not corroboration" |
+| The panel now holds two independent accounts of PEPFAR money and two of Global Fund money | Same run. `pepfar_expenditure` PEPFAR against GAM, 72 cells, median relative difference 11.8%, classified `independent`. `global_fund_hiv_disbursements` OECD CRS against GAM, 326 cells, median relative difference 40.4%, classified `independent` |
+| Donor and recipient agree on the central tendency of PEPFAR money and disagree country by country | 72 country-years, 30 countries, expenditure years 2021 to 2024, median ratio 1.005, 35 within 10%, 26 where PEPFAR reports more and 11 where the country does, direction consistency 0.58 |
+| Programme size does not explain the PEPFAR divergence | Smallest quartile by PEPFAR-reported size has median ratio 1.19 and 8 of 18 within 10% against 11 of 18 in the largest, but the Spearman correlation of size with the ratio is -0.187. Sierra Leone 2022 is 4.57m against 37k and Burkina Faso 2024 is 8.24m against 503k, so the tail is one-sided while the body is not |
+| The GAM rows raise 44 validation warnings and none is a defect | All 44 lines in `data/panel/hiv_panel.validation.txt` naming `unaids_gam_expenditure` are `reporting countries` lines, which record voluntary participation changing between years. No GAM series tripped a scale, percent-range or censoring-floor warning |
+| The site was publishing reconciliation verdicts from a panel that no longer existed | `reconciliation_pairs.csv` and `reconciliation_cells.csv` were dated 20 July 2026 against a panel of 7 September 2026, because `run_all.py` never called `reconcile.run()` and no script wrapper existed. `run_all.py` now regenerates them after writing the panel, and `build_site.py` warns before building when the tables are the older file |
+| Six pairs in the panel are one source reprinting another | Regenerated tables give 87 source pairs, 61 independent, 11 subset, nine insufficient and six derived. The six are `hiv_expenditure_total` (AIDSinfo and GAM, 469 cells), `hiv_prevalence_15_49` (AIDSinfo and World Bank, 3,693), `tbhiv_deaths` (AIDSinfo and WHO TME, 4,302), `hiv_tests_performed` (AIDSinfo and WHO GHO, 323) and `know_status_pct` twice (Thembisa against AIDSinfo, 16, and against WHO GHO, 11). None may be counted as corroboration |
+| Four money indicators in the panel double if summed across their sources | `external_hiv_oda_us` has 3,194 rows sharing a country-year with a second source, `hiv_expenditure_total` 938, `global_fund_hiv_disbursements` 652 and `pepfar_expenditure` 144. The data page now states the count on every affected indicator, 30 of the 33 multi-source indicators in all |

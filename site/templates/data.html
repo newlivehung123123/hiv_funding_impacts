@@ -10,7 +10,10 @@
     All compiled, curated and harmonised datasets developed in this project are made publicly
     accessible. For each dataset, one row is one figure, from one source, for one country,
     indicator and year. Sources are not merged and duplicates are not removed, because the
-    differences between sources are part of what the project is measuring.
+    differences between sources are part of what the project is measuring. Where two sources
+    report the same country and year, the two rows are alternative readings of one quantity
+    rather than two amounts, so any total has to be built from one source at a time. The
+    indicator tables below say which indicators this affects and how many rows it touches.
   </p>
 </section>
 
@@ -69,7 +72,11 @@
           <td class="num">{{ i.n }}</td>
           <td class="num">{{ i.n_countries }}</td>
           <td class="num">{{ i.years }}</td>
-          <td class="muted">{{ i.sources }}</td>
+          <td class="muted">{{ i.sources }}
+            {% if i.overlap %}<span title="{{ i.overlap }}"
+              style="display:block;margin-top:3px;font-size:11px;color:var(--spec)">
+              {{ i.n_overlap }} rows overlap, do not add</span>{% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

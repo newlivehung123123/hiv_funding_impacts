@@ -31,6 +31,7 @@ from hivimpact.connectors import CONNECTORS
 from hivimpact.config.countries import resolve_country_set
 from hivimpact.writers import rows_to_frame, write_frame
 from hivimpact import mou_tracker
+from hivimpact import reconcile
 
 
 def _align_dtypes(a: pd.DataFrame, b: pd.DataFrame):
@@ -152,6 +153,19 @@ def main() -> int:
     except Exception as exc:
         log.warning("mou_tracker failed: %s", exc)
 
+    # The reconciliation tables are a reading of the panel, so a panel written without them
+    # rewritten leaves the two disagreeing and nothing says so. They sat at 20 July 2026 while
+    # the panel moved on through four connectors, and the site kept publishing the July verdicts
+    # beside a September panel. Regenerate here, where the panel has just been written, rather
+    # than trusting anyone to remember a second command. Failure must not invalidate the panel.
+    recon_stats = None
+    try:
+        log.info("=== reconcile : which sources measure the same thing, decided from the numbers ===")
+        recon_stats = reconcile.run(str(panel_csv), args.out)
+    except Exception as exc:
+        log.warning("reconcile failed, so the tables in %s are older than the panel: %s",
+                    args.out, exc)
+
     # -- summary ---------------------------------------------------------------
     print("\n================ RUN SUMMARY ================")
     print(f"countries : {args.countries}   years: {args.start}-{args.end}")
@@ -175,6 +189,21 @@ def main() -> int:
     print(f"\nwritten to: {args.out}/{args.basename}.[csv|parquet|sqlite]")
     if mou_path:
         print(f"policy exposure: {mou_path} (join to the panel on country_iso3)")
+    if recon_stats is not None:
+        pairs_df = recon_stats["pairs"]
+        counts = pairs_df["relationship"].value_counts().to_dict()
+        print("\nreconciliation: {} source pairs — {}".format(
+            len(pairs_df), ", ".join(f"{n} {rel}" for rel, n in sorted(counts.items(),
+                                                                      key=lambda x: -x[1]))))
+        # A `derived` pair is one source reprinting another, so counting it as agreement between
+        # two sources is the error this table exists to prevent.
+        der = pairs_df[pairs_df["relationship"] == "derived"]
+        for _, r in der.iterrows():
+            print(f"  derived, so NOT corroboration: {r['indicator_id']} "
+                  f"({r['source_a']} = {r['source_b']}, {int(r['n_cells'])} cells)")
+    else:
+        print("reconciliation: NOT regenerated this run, so the tables in "
+              f"{args.out} are older than the panel")
     print("validation: see {}/{}.validation.txt".format(args.out, args.basename))
     return 0
 

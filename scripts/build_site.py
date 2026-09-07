@@ -19,7 +19,7 @@ import math
 import re
 import shutil
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -114,6 +114,10 @@ SOURCE_META = {
     "unaids_aidsinfo": ("UNAIDS AIDSinfo",
                         "Epidemic estimates, treatment cascade, key-population indicators and "
                         "country-reported HIV expenditure."),
+    "unaids_gam_expenditure": ("UNAIDS Global AIDS Monitoring expenditure database",
+                               "What each country reports spending on HIV, split by who paid "
+                               "for it and by programme. The only near-global source for a "
+                               "country's own account of PEPFAR and Global Fund money."),
     "who_gho": ("WHO Global Health Observatory",
                 "Epidemic and cascade indicators from the WHO indicator catalogue."),
     "world_bank": ("World Bank Open Data",
@@ -341,11 +345,44 @@ def us_fiscal_year(d: date) -> int:
 OPEN_FY = us_fiscal_year(date.today())
 
 
+def instead_note(x, year) -> str:
+    """The comparison that does hold, for a row whose annual total does not.
+
+    Telling a reader that a number cannot be compared and stopping there leaves them holding
+    the uncomparable number, which is the one they will use. The connector keeps the four
+    quarterly values on every cumulative row precisely so the honest comparison can be stated
+    here rather than pointed at.
+    """
+    lq = x.get("like_quarter_comparison") or {}
+    ratio = lq.get("ratio")
+    if not ratio or not lq.get("quarters"):
+        return ""
+    qs = ", ".join(lq["quarters"])
+    move = ("unchanged" if 0.98 <= ratio <= 1.02 else
+            f"down {round((1 - ratio) * 100)}%" if ratio < 1 else
+            f"up {round((ratio - 1) * 100)}%")
+    return (f" Comparing {qs} in {int(year)} with {qs} in {int(year) - 1}, the same months a "
+            f"year apart, this measure is {move} ({fmt_int(lq['last_year'])} to "
+            f"{fmt_int(lq['this_year'])}).")
+
+
 def period_note(row) -> str | None:
     """Why this observation covers an incomplete reporting period, or None."""
     x = parse_extra(row.get("extra"))
     if x.get("partial_year"):
-        return str(x["partial_year"])
+        base = str(x["partial_year"]).replace(
+            " Use like_quarter_comparison instead.", "")
+        return base + instead_note(x, row["year"])
+    # A change of reporting frequency deliberately produces NO note here. The site charts
+    # annual values, a semi-annual year is a whole year, and the annual totals either side of
+    # such a change are comparable. Flagging those rows would mark correct data as suspect.
+    # The `cadence_change` field stays in the panel's extra column for anyone reading quarters.
+    # A connector that reports how many quarters the year is SUPPOSED to have has already
+    # decided whether this row is short, and its answer stands. Counting to four here would
+    # put the warning back on the semi-annual years the connector cleared, because PEPFAR
+    # publishes some indicators twice a year and a two-quarter year is then a whole year.
+    if x.get("quarters_expected") or x.get("release_quarters"):
+        return None
     q = x.get("quarters_reported", x.get("n_quarters"))
     try:
         if q is not None and float(q) < 4:
@@ -1155,9 +1192,24 @@ def main() -> int:
     df = pd.read_csv(args.panel)
     df = df[df["value"].notna()].copy()
     mou = pd.read_csv(panel_dir / "mou_agreements.csv")
-    pairs = pd.read_csv(panel_dir / "reconciliation_pairs.csv")
+    pairs_p = panel_dir / "reconciliation_pairs.csv"
+    pairs = pd.read_csv(pairs_p)
     cells_p = panel_dir / "reconciliation_cells.csv"
     cells = pd.read_csv(cells_p) if cells_p.exists() else pd.DataFrame()
+
+    # The reconciliation page states which sources agree, and those verdicts are a reading of one
+    # particular panel. A panel rewritten since the tables were built leaves the page publishing
+    # verdicts about rows that are no longer there, which is worse than publishing nothing, because
+    # a stale verdict looks exactly like a current one. This went unnoticed from 20 July 2026 until
+    # the GAM expenditure connector added three pairs that never appeared on the page.
+    stale_recon = pairs_p.stat().st_mtime < (panel_dir / "hiv_panel.csv").stat().st_mtime
+    if stale_recon:
+        print(f"  WARNING    {pairs_p.name} is older than the panel. The reconciliation page is "
+              f"about to publish\n             verdicts from "
+              f"{datetime.fromtimestamp(pairs_p.stat().st_mtime).date()} beside a panel from "
+              f"{datetime.fromtimestamp((panel_dir / 'hiv_panel.csv').stat().st_mtime).date()}. "
+              f"Rerun scripts/run_all.py,\n             or python3 -m hivimpact.reconcile, before "
+              f"deploying.")
 
     stats = build_stats(df, mou, pairs, cells)
     SITE["citation"] = SITE["citation"].format(built=stats["built_on"])
@@ -1348,13 +1400,33 @@ def main() -> int:
                          "what": SOURCE_META.get(sid, ("", ""))[1], "_n": len(g)})
     src_rows.sort(key=lambda s: -s["_n"])
 
+    # Two sources measuring one country-year are alternative readings, never two amounts to add
+    # together. The lede says sources are not merged, which a reader can take as an invitation to
+    # merge them, and on a money indicator the merge doubles the number. `global_fund_hiv_disbursements`
+    # carries OECD CRS beside the country's own GAM return over 652 colliding rows, and a groupby on
+    # country and year silently reports twice the money. So each indicator says how many of its rows
+    # sit on a country-year another source also measured.
+    overlap_key = [c for c in ("country_iso3", "population_group", "sex", "age_group", "year")
+                   if c in df.columns]
+
+    def overlapping_rows(g: pd.DataFrame) -> int:
+        if g["source_id"].nunique() < 2:
+            return 0
+        per_cell = g.groupby(overlap_key, dropna=False)["source_id"].transform("nunique")
+        return int((per_cell > 1).sum())
+
     groups = []
     for dom in DOMAIN_ORDER:
         rows = []
         for iid, g in df[df["indicator_id"].map(indicator_domain) == dom].groupby("indicator_id"):
+            n_over = overlapping_rows(g)
             rows.append({"name": indicator_name(iid), "id": iid, "unit": indicator_unit(iid),
                          "n": len(g), "n_countries": g["country_iso3"].nunique(),
                          "years": year_range(g["year"]),
+                         "n_overlap": n_over,
+                         "overlap": (f"{fmt_int(n_over)} rows share a country and year with another "
+                                     "source, so these are alternative measurements and must not be "
+                                     "added together") if n_over else "",
                          "sources": ", ".join(sorted(source_name(s)
                                                      for s in g["source_id"].unique()))})
         if rows:
@@ -1367,19 +1439,32 @@ def main() -> int:
     # ---- methods, about
     pep = df[(df["source_id"] == "pepfar_panorama")]
     pep_year = int(pep["year"].max()) if len(pep) else OPEN_FY - 1
-    pep_q = 1
+    # How much of the latest PEPFAR year the release covers, and how much a full year is.
+    # Both are taken from the release rather than fixed at four, because PEPFAR publishes
+    # some indicators twice a year and four would be the wrong denominator for those.
+    pep_q, pep_of = 1, 4
     if len(pep):
-        qs = [parse_extra(r.get("extra")).get("quarters_reported")
-              for _, r in pep[pep["year"] == pep_year].iterrows()]
-        qs = [q for q in qs if q is not None]
-        if qs:
-            pep_q = int(min(float(q) for q in qs))
+        latest = pep[pep["year"] == pep_year]
+        here, prev = [], []
+        for _, r in latest.iterrows():
+            x = parse_extra(r.get("extra"))
+            if x.get("release_quarters"):
+                here.append(len(x["release_quarters"]))
+            if x.get("comparison_year_quarters"):
+                prev.append(len(x["comparison_year_quarters"]))
+        if not here:
+            qs = [q for q in (parse_extra(r.get("extra")).get("quarters_reported")
+                              for _, r in latest.iterrows()) if q is not None]
+            here = [int(min(float(q) for q in qs))] if qs else []
+        pep_q = min(here) if here else 1
+        pep_of = max(prev) if prev else 4
     write(out / "methods/index.html", "methods.html", rel="../", nav="methods", paper=True,
           sources=src_rows,
           feasibility=[{"country": c, "source": s, "access": a, "status": st, "built": b}
                        for c, s, a, st, b in FEASIBILITY],
           flagpolicy={"open_fy": OPEN_FY, "pepfar_year": pep_year,
-                      "pepfar_quarters": {1: "one", 2: "two", 3: "three"}.get(pep_q, str(pep_q))})
+                      "pepfar_quarters": {1: "one", 2: "two", 3: "three"}.get(pep_q, str(pep_q)),
+                      "pepfar_of": {2: "two", 3: "three", 4: "four"}.get(pep_of, str(pep_of))})
     write(out / "about/index.html", "about.html", rel="../", nav="about", paper=True)
 
     n = sum(1 for _ in out.rglob("*.html"))
