@@ -76,21 +76,56 @@ from __future__ import annotations
 
 import logging
 import zipfile
+from collections import Counter
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, List, Optional, Tuple
+from typing import Dict, Iterable, Iterator, List, Optional
 
 import pandas as pd
 
+from . import pepfar_panorama as _panorama
 from ..connector_base import BaseConnector
 from ..normalize import to_iso3
 from ..schema import PanelRow, SourceType
 
 log = logging.getLogger("hivimpact")
 
-# the MER indicators worth splitting: the treatment cohort and the testing yield
-MER_INDICATORS = {"TX_CURR": "on_art_count", "HTS_TST_POS": "new_diagnoses"}
+# the MER indicators worth splitting: the treatment cohort, the testing yield and the count of
+# people newly started on treatment. TX_NEW was added on 2026-09-05 after the coverage audit
+# found the code sitting unread in the file this connector already opens. Splitting TX_NEW by
+# agency is the reason the split exists at all. The treatment cohort is slow, because people
+# already on ART keep collecting refills for months after the money stops, so on_art_count
+# moves late. Enrolment stops the week the clinic stops testing, so art_initiations_usaid
+# against art_initiations_cdc is the sharpest form of the within-country comparison.
+MER_INDICATORS = {"TX_CURR": "on_art_count", "HTS_TST_POS": "new_diagnoses",
+                  "TX_NEW": "art_initiations"}
 SNAPSHOT = {"TX_CURR"}  # annual = latest reported quarter, never a sum
 SNAPSHOT_CANON = {MER_INDICATORS[k] for k in SNAPSHOT}
+
+# Why this connector splits three indicators and not seventy-one.
+#
+# Every indicator added here becomes three series, one per agency, and each of the three needs
+# its own entry in the canonical registry, so the split is not a dictionary entry the way a
+# country-level mapping is. The three chosen are the ones where the USAID and CDC contrast
+# answers the question the project asks. A cut stops enrolment first, which is art_initiations,
+# and stops testing with it, which is new_diagnoses, while on_art_count moves late because people
+# already on treatment keep collecting refills for months. Splitting an indicator that a cut does
+# not move would add rows and no evidence.
+#
+# The strongest candidate for a fourth is TX_PVLS, viral suppression, which pepfar_panorama now
+# reads at country level. Suppression is the outcome the cascade exists to produce, so a USAID
+# arm losing suppression while the CDC arm holds would be the clearest harm this panel could
+# show. Adding it needs three canonical definitions written first, so it is left as a decision
+# rather than taken here.
+#
+# Everything else the TopLine file contains is declared where pepfar_panorama declares it. The
+# list is imported rather than copied, so a code appearing in a future download is unaccounted
+# for in one place instead of two.
+DECLARED_UNMAPPED: Dict[str, str] = dict(_panorama.DECLARED_UNMAPPED)
+DECLARED_UNMAPPED.update({
+    code: f"read at country level by pepfar_panorama as {canon}; the agency split is confined to "
+          f"the three indicators a funding cut moves first"
+    for code, canon in _panorama.MER_INDICATORS.items() if code not in MER_INDICATORS
+})
 
 # PEPFAR's agency labels -> the suffix the canonical id carries. Everything not named here
 # (DOD, HHS/HRSA, State/PRM, State/AF, Peace Corps, Default) is pooled into "other_agency",
@@ -175,6 +210,7 @@ class PEPFARAgencyConnector(BaseConnector):
         wanted,
         start_year: int,
         end_year: int,
+        seen: Optional[Counter] = None,
     ) -> bool:
         cols = list(chunk.columns)
         ind_c = _ci(cols, "indicator")
@@ -189,6 +225,11 @@ class PEPFARAgencyConnector(BaseConnector):
         # the agency column is the whole point — a MER file without it is not this connector's
         if not (ind_c and fy_c and dis_c and iso_c and ag_c and all(q_cs)):
             return False
+
+        # counted before the dictionary narrows anything, so this connector can report the codes
+        # it does not read as well as the codes it does
+        if seen is not None:
+            seen.update(chunk[ind_c].dropna().astype(str))
 
         sub = chunk[chunk[ind_c].isin(MER_INDICATORS.keys())]
         sub = sub[sub[dis_c].astype(str).str.contains("Total Numerator", case=False, na=False)]
@@ -253,11 +294,16 @@ class PEPFARAgencyConnector(BaseConnector):
         if not topline:
             log.warning("pepfar_agency: no TopLine MER file in %s — nothing to split", self.raw_dir)
             return
+        if len(topline) < len(files):
+            log.info("pepfar_agency: reading %d of %d file(s) in %s. Not read: %s",
+                     len(topline), len(files), self.raw_dir,
+                     [f.name for f in files if f not in topline])
         files = topline
 
         agg: Dict[tuple, List[Optional[float]]] = {}
         names: Dict[str, str] = {}
         partners: Dict[tuple, Dict[str, List[Optional[float]]]] = {}
+        seen: Counter = Counter()
 
         for path in files:
             used = False
@@ -269,7 +315,7 @@ class PEPFARAgencyConnector(BaseConnector):
                                 for chunk in pd.read_csv(fh, sep="\t", dtype=str, chunksize=200_000,
                                                          on_bad_lines="skip", low_memory=False):
                                     if self._process(chunk, agg, names, partners,
-                                                     wanted, start_year, end_year):
+                                                     wanted, start_year, end_year, seen):
                                         used = True
                                     else:
                                         break
@@ -278,7 +324,7 @@ class PEPFARAgencyConnector(BaseConnector):
                     for chunk in pd.read_csv(path, sep=sep, dtype=str, chunksize=200_000,
                                              on_bad_lines="skip", low_memory=False):
                         if self._process(chunk, agg, names, partners,
-                                         wanted, start_year, end_year):
+                                         wanted, start_year, end_year, seen):
                             used = True
                         else:
                             break
@@ -287,6 +333,18 @@ class PEPFARAgencyConnector(BaseConnector):
                 continue
             log.info("pepfar_agency: %s %s", path.name,
                      "(used)" if used else "(skipped — no Funding Agency column)")
+
+        if seen:
+            read = [c for c in seen if c in MER_INDICATORS]
+            declared = [c for c in seen if c in DECLARED_UNMAPPED and c not in MER_INDICATORS]
+            undecided = sorted(c for c in seen
+                               if c not in MER_INDICATORS and c not in DECLARED_UNMAPPED)
+            log.info("pepfar_agency: split %d of %d MER codes, %d deliberately left alone, "
+                     "%d awaiting a decision", len(read), len(seen), len(declared), len(undecided))
+            for code in undecided:
+                log.warning("pepfar_agency: no rule covers MER code %s (%s rows). Add it to "
+                            "MER_INDICATORS or to DECLARED_UNMAPPED with a reason.",
+                            code, f"{seen[code]:,}")
 
         yield from self._emit(agg, names, partners)
 
@@ -322,7 +380,15 @@ class PEPFARAgencyConnector(BaseConnector):
                 if nn:
                     values[key] = sum(nn)
 
+        # Cadence is a property of the indicator-year, not of one agency's slice, but the two
+        # agencies inside a country do not always report the same quarters, so each agency series
+        # is asked separately. Same helper as pepfar_panorama, so a change of reporting frequency
+        # cannot be caught in one connector and missed in the other.
+        cadence = _panorama.release_cadence(agg, lambda k: (k[1], k[2], k[3]))
+        latest_year = max((y for _, _, y in cadence), default=0)
+
         n = 0
+        like: Dict[tuple, List[float]] = {}
         for key, value in sorted(values.items()):
             iso3, base, suffix, year = key
             canonical = f"{base}_{suffix}"
@@ -348,10 +414,33 @@ class PEPFARAgencyConnector(BaseConnector):
                             f"between them is not an annual change.")
                     extra["snapshot_quarter_mismatch"] = warn
                     log.warning("pepfar_agency: %s %s %d — %s", iso3, canonical, year, warn)
-            elif 0 < nq < 4:
-                extra["partial_year"] = (
-                    f"only {nq}/4 quarters reported for FY{year} — this annual total is a "
-                    f"PARTIAL sum and must NOT be compared with full years or read as a decline.")
+            else:
+                # The quarters behind the sum, and the same quarters a year earlier. The agency
+                # split is the reason to keep them: FY2025 publishes Q4 alone, so a USAID series
+                # falling and a CDC series holding are both invisible under an annual total that
+                # compares one quarter with four. Same helpers as pepfar_panorama, so the two
+                # connectors cannot drift apart on what a year means.
+                here = cadence.get((base, suffix, year), [])
+                prev_cad = cadence.get((base, suffix, year - 1)) or here
+                truncated, same_span = _panorama.span_status(
+                    here, prev_cad, year, latest_year)
+                extra.update(_panorama.quarter_detail(
+                    vals, agg.get((iso3, base, suffix, year - 1)), year, same_span))
+                lq = (extra.get("like_quarter_comparison") or {}).get("ratio")
+                if lq:
+                    like.setdefault((canonical, year), []).append(lq)
+                extra["release_quarters"] = [f"Q{q}" for q in here]
+                extra["comparison_year_quarters"] = [f"Q{q}" for q in prev_cad]
+                if truncated or 0 < nq < len(here):
+                    why = (f"FY{year} is part-published, carrying "
+                           f"{', '.join('Q%d' % q for q in here)} where FY{year - 1} carries "
+                           f"{', '.join('Q%d' % q for q in prev_cad)}" if truncated else
+                           f"this agency series reported {nq} of the "
+                           f"{', '.join('Q%d' % q for q in here)} that FY{year} publishes")
+                    extra["partial_year"] = (
+                        f"{why}. This annual total covers less of the year than the total it "
+                        f"would be compared with, so it is a PARTIAL sum and must not be read "
+                        f"as a decline. Use like_quarter_comparison instead.")
 
             # the partners behind the number, largest first, so a move can be traced — read at
             # the same quarter the series itself is read at, so they add up to it
@@ -403,4 +492,14 @@ class PEPFARAgencyConnector(BaseConnector):
                 extra=extra,
             )
             n += 1
+        # The comparison that holds, one line per agency series whose quarters moved. Read these
+        # against each other rather than on their own: the same funding cut shows as one agency's
+        # ratio falling while another agency's holds, and neither ratio says that by itself.
+        for (canonical, year), ratios in sorted(like.items()):
+            ratios.sort()
+            med = ratios[len(ratios) // 2]
+            log.info("pepfar_agency: %s FY%d — quarters differ from FY%d, so the annual totals "
+                     "are not comparable. Like-quarter median %.2f over %d countries, below 1.0 "
+                     "in %d of them.", canonical, year, year - 1, med, len(ratios),
+                     len([r for r in ratios if r < 1.0]))
         log.info("pepfar_agency: emitted %d rows", n)

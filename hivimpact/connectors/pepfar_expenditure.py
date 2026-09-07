@@ -228,6 +228,10 @@ class PEPFARExpenditureConnector(BaseConnector):
             log.warning("pepfar_expenditure: no Public_Partner_Budgets_and_Expenditures file in %s",
                         self.raw_dir)
             return
+        if len(wanted_files) < len(files):
+            log.info("pepfar_expenditure: reading %d of %d file(s) in %s. Not read: %s",
+                     len(wanted_files), len(files), self.raw_dir,
+                     [f.name for f in files if f not in wanted_files])
 
         mech: Dict[tuple, Dict[str, float]] = {}
         names: Dict[str, str] = {}

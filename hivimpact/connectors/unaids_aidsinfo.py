@@ -44,6 +44,21 @@ KP_INDICATOR_MAP = {
     "hiv prevalence among": "kp_hiv_prevalence",
     "antiretroviral therapy coverage among": "art_coverage_pct",
     "hiv testing and status awareness among": "know_status_pct",
+
+    # Added 2026-09-05. Every key-population export carries one column, "Most recent data as
+    # of 2024", so none of these files is a time series and none can show a change after a
+    # funding cut. The two below earn a place anyway because a service count means nothing
+    # without a denominator. PEPFAR reports how many men who have sex with men its partners
+    # reached; only UNAIDS says how many there are to reach. The size estimate supplies the
+    # denominator for 552 country-population pairs and the coverage figure supplies the
+    # baseline the cut starts from, for 156.
+    #
+    # The year on these rows is 2024 because that is when UNAIDS last compiled the figure,
+    # not when the survey behind it ran, and the survey year differs by country. The rows
+    # carry extra["most_recent"] = True so a later analysis can hold them apart from the
+    # annual series rather than reading a 2024 stamp as a 2024 measurement.
+    "size estimate": "kp_size_estimate",
+    "coverage of hiv prevention programmes": "kp_prevention_coverage_pct",
 }
 
 # --- general (all-population) files: name substring -> canonical --------------
@@ -77,7 +92,149 @@ CORE_MAP: List[Tuple[str, str]] = [
     ("co-management of tb and hiv treatment", "tbhiv_comanagement_pct"),
     ("incident tb cases in people living with hiv", "tbhiv_incidence"),
     ("tb-related deaths among people living with hiv", "tbhiv_deaths"),
+
+    # The prevention and vertical-transmission exports, added 2026-09-05 after the coverage
+    # audit in scripts/audit_coverage.py reported this connector reading 32 of 146 files.
+    #
+    # Four of the ten land on canonicals another source already fills, so each was measured
+    # against the series already in the panel before being written here. Exact agreement
+    # between two sources means one instrument published twice, and a republication must not
+    # be counted as corroboration.
+    #
+    #   hiv_tests_performed        323 overlapping cells, 100.0% exact. This is WHO GHO's own
+    #                              series reprinted by UNAIDS, not a second measurement of the
+    #                              same quantity. Ingested for the 92 country-years GHO does
+    #                              not carry, and never to be read as agreement.
+    #   hiv_test_positivity_pct    289 overlaps, 22.5% exact, 65.1% within one percentage
+    #                              point, median gap 0.5%. The same instrument at finer
+    #                              precision, because UNAIDS prints two decimals where GHO
+    #                              rounds. Adds 83 country-years.
+    #   pmtct_arv_count            1,515 overlaps, 76.7% exact, median gap 0.0%. Largely a
+    #                              republication. Adds 339 cells across 34 countries.
+    #   pregnant_women_hiv         759 overlaps, 17.4% exact, median gap 6.8%. The one
+    #                              genuinely independent pairing of the four, close to the
+    #                              Global Fund against WHO TME benchmark of 8% exact and a
+    #                              3.5% median gap. 38% of the cells are censored.
+    #
+    # The male circumcision file covers 15 countries, which is the whole voluntary medical
+    # male circumcision programme, and PEPFAR paid for most of it.
+    ("late hiv diagnosis", "late_hiv_diagnosis_pct"),
+    ("hiv testing among pregnant women", "anc_hiv_testing_pct"),
+    ("early infant diagnosis", "early_infant_diagnosis_pct"),
+    ("vertical transmission rate", "vertical_transmission_pct"),
+    ("annual number of condoms distributed", "male_condoms_distributed"),
+    ("number of male circumcisions performed", "circumcisions_performed"),
+    ("hiv tests (volume)", "hiv_tests_performed"),
+    ("hiv positivity rate (%)", "hiv_test_positivity_pct"),
+    ("pregnant women who received arv for pmtct", "pmtct_arv_count"),
+    ("pregnant women needing arv for pmtct", "pregnant_women_hiv"),
 ]
+
+# The exports this connector is handed and deliberately does not read, with the reason.
+#
+# scripts/audit_coverage.py counts an unread file as a gap, which is the right default,
+# because a filter that returns quietly reports a clean run whether the filter matched
+# everything or nothing. A gap somebody has looked at and decided about is a different thing
+# from a gap nobody has seen, and the two should not appear in a report as the same number.
+# Naming the decision here is what turns the second into the first.
+#
+# Each entry is a filename substring and the reason the file stays out. Revisit any of them
+# by moving the substring into CORE_MAP or KP_INDICATOR_MAP and adding the canonical.
+DECLARED_UNMAPPED: List[Tuple[str, str]] = [
+    # The age-band exports. Every one is plhiv, new_infections or aids_deaths cut by age
+    # band, across 183 to 184 countries and 35 years, so mapping the set would add roughly
+    # 173,000 cells and more than double the panel. The panel has no age_group column, and
+    # adding one changes the grain of every table and every join downstream. Worth doing,
+    # not worth doing quietly, so the decision goes to the researcher rather than into a
+    # CORE_MAP entry nobody discussed.
+    ("adolescents (10-19)", "age band of an indicator already in the panel, needs an age_group column"),
+    ("adults (15+)", "age band of an indicator already in the panel, needs an age_group column"),
+    ("adults (15-49)", "age band of an indicator already in the panel, needs an age_group column"),
+    ("children (0-14)", "age band of an indicator already in the panel, needs an age_group column"),
+    ("people aged 50 and over", "age band of an indicator already in the panel, needs an age_group column"),
+    ("young people (15-24)", "age band of an indicator already in the panel, needs an age_group column"),
+
+    # 8 files, and the largest single body of unread material left. "Progress towards
+    # 95-95-95 targets" and "Testing and treatment cascade" both use a two-row header, the
+    # first row naming the year and the second naming the indicator, which the parser in
+    # this module cannot read. The All-ages pair alone holds 3,532 and 3,660 values across
+    # 176 and 185 countries from 2015 onwards.
+    #
+    # Reading the files needs a separate parser, and deciding what to do with the result
+    # needs a researcher. The first bar of each cascade repeats know_status_pct, which the
+    # panel already holds. The second and third bars are conditional percentages, the share
+    # on treatment among those who know their status and the share suppressed among those on
+    # treatment, and a conditional percentage is not the same quantity as the unconditional
+    # art_coverage_pct and community_viral_suppression_pct already in the panel. Whether the
+    # conditional form earns three more canonicals is a question about the analysis, not
+    # about the parser.
+    ("progress towards 95-95-95", "two-row header this parser cannot read, and the conditional bars need a decision"),
+    ("testing and treatment cascade", "two-row header this parser cannot read, and the conditional bars need a decision"),
+
+    # Three further treatment-cascade files with ordinary headers and almost no data.
+    # Differentiated service delivery is how a clinic keeps someone on treatment with fewer
+    # visits, so both DSD files would matter if either covered more than one year.
+    ("cryptococcal infection", "24 values over 17 countries and 2 years, too sparse"),
+    ("dsd art models", "one year (2023) across 23 and 14 countries, cannot show a change"),
+
+    # Quantities the panel can already compute from series it holds. An incidence rate per
+    # 1,000 is new_infections over population, an incidence to mortality ratio is two
+    # indicators already present, and storing the quotient invites a later analysis to treat
+    # a derived number as a measurement.
+    ("per 1000 uninfected population", "derivable from new_infections and population"),
+    ("aids mortality per 1000 population", "derivable from aids_deaths and population"),
+    ("incidence_mortality ratio", "derivable from two indicators already in the panel"),
+    ("incidence_prevalence ratio", "derivable from two indicators already in the panel"),
+    ("trend of aids-related deaths", "derivable from aids_deaths"),
+    ("trend of new hiv infections", "derivable from new_infections"),
+
+    # Service counts with no usable time dimension. Each one was inspected on 2026-09-05 and
+    # each holds a single year, so none can show a level before a funding cut and a level
+    # after. Procured self-test kits covers 48 countries for 2019 alone. The four cervical
+    # cancer files cover 43, 20, 10 and 8 countries, three of them for 2024 alone. Male
+    # circumcision prevalence holds 47 values spread over 35 countries and 11 years.
+    ("procured self-test kits", "one year only (2019), cannot show a change"),
+    ("cervical cancer and hiv_", "single-year or near-empty, cannot show a change"),
+    ("prevalence of male circumcision", "47 values over 35 countries and 11 years, too sparse"),
+
+    # Modelled counterfactuals and downstream consequences rather than services delivered.
+    # Infections averted is a model output, not something a clinic records.
+    ("infections averted due to pmtct", "modelled counterfactual, not a service count"),
+    ("hiv-exposed children who are uninfected", "modelled consequence, not a service count"),
+    ("aids orphans", "modelled consequence, not a service count"),
+
+    # Different diseases and different research questions. Congenital syphilis and hepatitis
+    # C sit beside HIV in the same antenatal and harm-reduction services, which makes them
+    # interesting, but neither belongs in a panel measuring HIV service delivery without a
+    # decision to widen the question.
+    ("syphilis", "different disease, would widen the research question"),
+    ("hcv treatment", "different disease, would widen the research question"),
+    ("gender_", "attitudes and partner violence, a different research question"),
+    ("knowledge about hiv prevention", "survey knowledge measure, a different research question"),
+
+    # The remaining key-population exports. All are single-point 2024 snapshots like the two
+    # that were mapped, but each needs a canonical of its own and none supplies a denominator
+    # or a baseline for a service PEPFAR funds. Stigma, violence, condom use, syphilis and
+    # viral hepatitis are outcomes of a different research question.
+    ("stigma and discrimination", "single-point 2024 snapshot, outcome of a different question"),
+    ("physical violence", "single-point 2024 snapshot, outcome of a different question"),
+    ("condom use ", "single-point 2024 snapshot, outcome of a different question"),
+    ("syphilis prevalence", "single-point 2024 snapshot, outcome of a different question"),
+    ("viral hepatitis", "single-point 2024 snapshot, outcome of a different question"),
+    ("opioid agonist maintenance therapy", "single-point 2024 snapshot, one population only"),
+    ("needles per person who injects drugs", "single-point 2024 snapshot, one population only"),
+    ("safe injecting practices", "single-point 2024 snapshot, one population only"),
+    ("hiv prevention programmes in prisons", "single-point 2024 snapshot, one population only"),
+]
+
+
+def _declared_reason(stem: str) -> Optional[str]:
+    """Why this connector leaves a file alone, or None if nobody has decided yet."""
+    low = stem.lower()
+    for sub, reason in DECLARED_UNMAPPED:
+        if sub in low:
+            return reason
+    return None
 
 
 def _parse_cell(cell) -> Tuple[Optional[float], Optional[str]]:
@@ -203,11 +360,15 @@ class UNAIDSAidsinfoConnector(BaseConnector):
             log.warning("unaids_aidsinfo: no CSV in %s", self.raw_dir)
             return
 
-        mapped = skipped = 0
+        mapped = declared = 0
+        undecided: List[str] = []
         for path in files:
             cls = _classify(path.stem)
             if cls is None:
-                skipped += 1
+                if _declared_reason(path.stem):
+                    declared += 1
+                else:
+                    undecided.append(path.name)
                 continue
             canonical, pop, sex = cls
             spec = CANONICAL_INDICATORS.get(canonical)
@@ -280,4 +441,13 @@ class UNAIDSAidsinfoConnector(BaseConnector):
                         n += 1
             log.info("unaids_aidsinfo: %-60s -> %d rows (%s / %s)", path.name[:60], n, canonical, pop)
 
-        log.info("unaids_aidsinfo: mapped %d files, skipped %d unmapped", mapped, skipped)
+        # A count of files read says nothing on its own, because a connector reporting a
+        # clean run reports the same clean run whether the connector matched everything or
+        # almost nothing. Reporting the three numbers together is what makes the difference
+        # visible, and an export in the third number is the only one that needs anyone's
+        # attention, because an export in the third number is a decision nobody has made.
+        log.info("unaids_aidsinfo: read %d of %d exports, %d deliberately left alone, "
+                 "%d awaiting a decision", mapped, len(files), declared, len(undecided))
+        for name in undecided:
+            log.warning("unaids_aidsinfo: no rule covers %s. Add the file to CORE_MAP, to "
+                        "KP_INDICATOR_MAP, or to DECLARED_UNMAPPED with a reason.", name)

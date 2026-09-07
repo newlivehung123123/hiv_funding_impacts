@@ -42,6 +42,21 @@ TWO DATA-QUALITY TRAPS this connector flags instead of hiding (both found 2026-0
    like a 70-90% collapse (MMR -93%, VNM -83%, IDN -76%, PHL -74%, LAO -70%). Read naively
    in a funding-cut study this is a catastrophic false positive.
 
+   How many quarters make a whole year is asked of the release (`release_cadence`) and not
+   assumed, because reporting frequency turned out to be a property of the indicator AND the
+   year rather than of the indicator alone. TB_STAT and TB_STAT_POS published at Q2 and Q4 in
+   FY2018 and quarterly from FY2019, PrEP_NEW at Q2 and Q4 through FY2020 and quarterly from
+   FY2021, and TB_PREV and KP_PREV at Q2 and Q4 throughout. Counting to a fixed four put a
+   false partial-year warning on 93 operating-unit-years whose totals are complete, being
+   PrEP_NEW in FY2019 and FY2020 and TB_STAT and TB_STAT_POS in FY2018.
+
+   A semi-annual report covers six months rather than three, so a two-quarter year is a WHOLE
+   year. Across the FY2018 to FY2019 change the full-year ratios are 0.99 for TB_STAT and 0.96
+   for TB_STAT_POS, while comparing FY2019's Q2 and Q4 alone against FY2018 gives 0.53 and
+   0.49. So a year publishing fewer quarters than the year before it is only short when the
+   release itself stopped early, which `span_status` decides and which can only be true of the
+   newest fiscal year in the download.
+
 2. **Reporting-scope discontinuities** (`extra.data_quality_flag`) — a >3x year-on-year jump.
    E.g. Thailand FY2025 `on_art_count` 53,330 -> 260,981: the SAME three partners, but the
    government ones (MOPH 25k->185k, BMA 11k->76k) began reporting their full national
@@ -51,6 +66,67 @@ TWO DATA-QUALITY TRAPS this connector flags instead of hiding (both found 2026-0
 
 Neither flag alters the source value — we surface the problem and let the analyst decide.
 
+THE THREE INDICATORS THIS CONNECTOR WAS NOT READING (found 2026-09-05)
+
+The TopLine file holds 71 MER indicators and this connector read two of them for eight
+months. Every log line stayed clean and the row count never fell, because a connector that
+never asks for an indicator has nothing to report about the indicator. The coverage audit in
+`scripts/audit_coverage.py` is what surfaced the gap, and the audit exists to be run again.
+
+One of the 69 unread codes was TX_NEW, the count of people newly started on antiretroviral
+therapy, which is the indicator this whole project was built to measure. TX_NEW carries the
+same coverage as TX_CURR in the same file, 57 countries and fiscal years 2018 to 2025, so the
+series cost one dictionary entry. Before the entry was written the pairing was tested against
+the WHO TME national totals already in the panel, because PEPFAR measures a programme
+footprint and a programme footprint that exceeded the national total would mean the pairing
+was wrong. Across the 266 overlapping country-years PEPFAR sits at or below the national
+total in 86 per cent of them and takes a median share of 0.74, which is the shape a
+programme footprint should have. The 15 country-years above 1.25 are led by Mali 2020 at 5.19
+and Uganda 2019 at 1.98, and PEPFAR's October to September fiscal year against WHO's calendar
+year explains part of the excess. TX_NEW also covers 88 country-years across 38 countries
+where WHO TME publishes no initiation figure at all.
+
+TX_NEW, HTS_TST and PrEP_NEW are all period flows, so each annual value is the sum of the
+quarters and each inherits the partial-year flag above. The quarters were checked and they
+are independent periods rather than a running total, because FY2024 TX_NEW reads 390,160 in
+Q1 and 464,878 in Q4 rather than roughly four times the first quarter.
+
+SIX MORE, MAPPED ONTO CANONICALS THAT WERE ALREADY WAITING (2026-09-05)
+
+Running the audit a second time showed that the 66 codes left over were not 66 codes needing new
+canonical indicators. Ten of the largest already had a canonical sitting in the registry, put
+there by other sources, so the panel had a name for the quantity and no PEPFAR measurement under
+it. Six of the ten could be paired on the arithmetic alone and are now read:
+
+    TX_PVLS     -> viral_suppression_count    393 of 399 country-years are ones no other source
+                                              in the panel covers at all
+    TB_PREV     -> tpt_completions            250 of 252 country-years are new
+    TB_STAT     -> tb_patients_hiv_tested     median 0.58 of the WHO TME national figure over
+                                              201 overlaps, at or below it in 96 per cent
+    TB_STAT_POS -> tb_patients_hiv_positive   median 0.77 over 197 overlaps, below in 93 per cent
+    PMTCT_ART   -> pmtct_arv_count            median 0.75 to 0.81 against three separate national
+                                              sources, below each in 91 to 93 per cent
+    VMMC_CIRC   -> circumcisions_performed    median 0.91 over 98 overlaps
+
+Exact agreement with the national series is 0.0 per cent for five of the six and 1.0 per cent for
+VMMC_CIRC, so none of them is a national series reprinted under a PEPFAR label. Every one sits at
+or below the national total in the large majority of country-years, which is the shape a
+programme footprint has to have, and the departures above 1.0 are concentrated where PEPFAR's
+October to September fiscal year straddles two calendar years.
+
+TX_PVLS is the one that would have been silently wrong. Summed across quarters it reaches a
+median of 2.32 times TX_CURR and exceeds the treatment cohort in 70 per cent of country-years,
+which cannot happen. TX_PVLS restates a rolling twelve months every quarter, so it is a snapshot,
+and read at the latest quarter the median is 0.71.
+
+The remaining codes are all named in DECLARED_UNMAPPED with the reason each is left alone. Most
+are parts of a code already read, and adding a part alongside its whole double counts. The rest
+need a canonical definition rather than a dictionary entry, TX_ML and TX_RTT among them, or sit
+outside HIV testing and treatment altogether, as cervical cancer screening and post-violence care
+do. KP_PREV is the interesting refusal: summing its two half-years and taking the later one
+differ by a factor of two against the Global Fund national figure, and no arithmetic decides
+which reading PEPFAR intends.
+
 TAGGING: PEPFAR MER measures the PEPFAR program footprint, NOT national totals.
 source_type = routine_programme_record.
 """
@@ -58,6 +134,7 @@ from __future__ import annotations
 
 import logging
 import zipfile
+from collections import Counter
 from pathlib import Path
 from typing import Dict, Iterable, Iterator, List, Optional
 
@@ -69,11 +146,148 @@ from ..schema import PanelRow, SourceType
 
 log = logging.getLogger("hivimpact")
 
-MER_INDICATORS = {"TX_CURR": "on_art_count", "HTS_TST_POS": "new_diagnoses"}
-SNAPSHOT = {"TX_CURR"}  # annual = latest quarter, not a sum
+MER_INDICATORS = {
+    "TX_CURR": "on_art_count",
+    "HTS_TST_POS": "new_diagnoses",
+    "TX_NEW": "art_initiations",
+    "HTS_TST": "hiv_tests_performed",
+    "PrEP_NEW": "prep_recipients",
+    "TX_PVLS": "viral_suppression_count",
+    "TB_PREV": "tpt_completions",
+    "TB_STAT": "tb_patients_hiv_tested",
+    "TB_STAT_POS": "tb_patients_hiv_positive",
+    "PMTCT_ART": "pmtct_arv_count",
+    "VMMC_CIRC": "circumcisions_performed",
+}
+# annual = the latest quarter reported, never a sum. TX_PVLS belongs here and the arithmetic is
+# what says so. TX_PVLS counts people on ART with a suppressed viral load result documented in
+# the preceding twelve months, so each quarter restates a rolling year rather than adding a new
+# period to it. Summed across quarters TX_PVLS reaches a median of 2.32 times TX_CURR and exceeds
+# the treatment cohort in 70 per cent of country-years, which cannot happen, because a person
+# with a suppressed result is by definition a person on treatment. Read at the latest quarter the
+# median is 0.71 and the excess appears in 1 per cent.
+SNAPSHOT = {"TX_CURR", "TX_PVLS"}
 # canonicals whose annual value is a SUM of quarters — for these a part-reported year yields a
 # PARTIAL total that must never be read as a real decline (e.g. FY2025 has only 1 of 4 quarters).
 CUMULATIVE_CANON = {MER_INDICATORS[k] for k in MER_INDICATORS if k not in SNAPSHOT}
+
+# Codes PEPFAR publishes twice a year rather than four times. TB_PREV reports Q2 and Q4 in 204 of
+# its 258 country-years and KP_PREV in 304 of 362, so two quarters is a COMPLETE year for these
+# and not a partial one. Kept as a record of the finding and as a check on the derived cadence,
+# but NOT used to decide whether a year is complete. Frequency turned out to be a property of the
+# code AND the year rather than of the code alone: TB_STAT and TB_STAT_POS published at Q2 and Q4
+# in FY2018 and quarterly from FY2019, PrEP_NEW at Q2 and Q4 through FY2020 and quarterly from
+# FY2021, and no fixed list can hold that. release_cadence() asks the release instead.
+SEMI_ANNUAL = {"TB_PREV", "KP_PREV"}
+SEMI_ANNUAL_CANON = {MER_INDICATORS[k] for k in SEMI_ANNUAL if k in MER_INDICATORS}
+
+# Every other code in the TopLine file, with the reason this connector leaves the code alone.
+# The audit in scripts/audit_coverage.py subtracts this list before reporting a gap, so a code
+# named here is a decision on the record and a code named nowhere is a decision nobody has made.
+# The reason matters more than the entry: "not mapped" invites the same code to be looked at
+# again every few months, while "the parts sum to a whole this connector already reads" ends it.
+DECLARED_UNMAPPED: Dict[str, str] = {
+    # A part of something this connector already reads. Adding the part alongside the whole
+    # counts the same people twice. Each share below was measured on this download.
+    "HTS_TST_NEG": "part of HTS_TST, which this connector reads (POS + NEG sum to HTS_TST in "
+                   "99% of 415 country-years)",
+    "TB_STAT_POS_NewlyIdentified_Positive": "part of TB_STAT_POS, which this connector reads "
+                                            "(the two positive legs sum to it in 100% of 189)",
+    "TB_STAT_POS_KnownAtEntry_Positive": "part of TB_STAT_POS, which this connector reads",
+    "TB_STAT_NEG_NewlyIdentified_Negative": "part of TB_STAT, which this connector reads (the "
+                                            "positive and negative legs sum to it in 100% of 43)",
+    "TB_STAT_NEG_Recent_Negative": "part of TB_STAT, which this connector reads",
+    "TX_CURR_ARVDisp_less_three_mo": "multi-month dispensing split of TX_CURR, which this "
+                                     "connector reads (the three legs sum to TX_CURR in 71% of "
+                                     "304 country-years and never exceed it)",
+    "TX_CURR_ARVDisp_three_five_mo": "multi-month dispensing split of TX_CURR",
+    "TX_CURR_ARVDisp_six_more_mo": "multi-month dispensing split of TX_CURR",
+
+    # A part of something this connector does NOT read. A fragment carrying a whole-sounding
+    # name is worse than a gap, because a gap is visible and a fragment is not.
+    "TX_ML_died": "part of TX_ML, which is itself left for a decision below",
+    "TX_ML_transferred_out": "part of TX_ML, which is itself left for a decision below",
+    "TX_ML_refused_stopped": "part of TX_ML, which is itself left for a decision below",
+    "TX_ML_IIT_less_three_mo": "part of TX_ML, which is itself left for a decision below",
+    "TX_ML_IIT_three_five_mo": "part of TX_ML, which is itself left for a decision below",
+    "TX_ML_IIT_six_more_mo": "part of TX_ML, which is itself left for a decision below",
+    "TX_ML_IIT_more_three_mo": "part of TX_ML, which is itself left for a decision below",
+    "PMTCT_EID_Less_Equal_Two_Months": "age split of PMTCT_EID, which is left for a decision",
+    "PMTCT_EID_Two_Twelve_Months": "age split of PMTCT_EID, which is left for a decision",
+    "HTS_INDEX_NEWPOS": "outcome split of HTS_INDEX, which is left for a decision",
+    "HTS_INDEX_NEWNEG": "outcome split of HTS_INDEX, which is left for a decision",
+    "HTS_INDEX_KNOWNPOS": "outcome split of HTS_INDEX, which is left for a decision",
+    "PMTCT_STAT_POS": "positive leg of PMTCT_STAT, which is left for a decision",
+    "PMTCT_HEI_POS": "outcome split of PMTCT_HEI, which is left for a decision",
+    "PMTCT_HEI_NEG": "outcome split of PMTCT_HEI, which is left for a decision",
+    "PMTCT_HEI_POS_ART": "outcome split of PMTCT_HEI, which is left for a decision",
+    "PMTCT_HEI_POS_2MO": "outcome split of PMTCT_HEI, which is left for a decision",
+    "TX_TB_D_POS": "denominator leg of TX_TB, which is left for a decision",
+    "TX_TB_D_NEG": "denominator leg of TX_TB, which is left for a decision",
+
+    # The canonical exists but is a PERCENTAGE, and this connector reads Total Numerator rows
+    # only. Pairing these needs the Denominator leg of the same code, which is a change to how
+    # the file is read rather than a dictionary entry, so the change is not made in passing.
+    "PMTCT_STAT": "pairs with anc_hiv_testing_pct, a percentage; needs the Denominator rows this "
+                  "connector filters out",
+    "PMTCT_EID": "pairs with early_infant_diagnosis_pct, a percentage; needs the Denominator rows",
+    "TX_TB": "pairs with plhiv_new_tb_diagnosed_pct, a percentage; needs the Denominator rows",
+
+    # No canonical exists, and writing one is a definition rather than a dictionary entry. Each
+    # of these measures something the panel has no name for yet.
+    "TX_ML": "people who left treatment. Equals the sum of its seven sub-codes to within 1% "
+             "across 177 country-years, so mapping TX_ML alone would be correct. Needs a "
+             "canonical definition first",
+    "TX_RTT": "people who returned to treatment after an interruption. Needs a canonical",
+    "TX_NET_NEW": "change in the treatment cohort between quarters, a derived difference rather "
+                  "than a count of people. Needs a canonical and a decision about signs",
+    "TX_RET": "retention on treatment at a fixed interval. Needs a canonical",
+    "TB_ART": "TB patients already on antiretroviral therapy. Distinct from "
+              "tb_patients_hiv_positive, which counts status not treatment. Needs a canonical",
+    "PMTCT_FO": "final outcome of exposed infants. Needs a canonical",
+    "PMTCT_HEI": "HIV-exposed infants. Needs a canonical",
+    "HTS_INDEX": "contacts of a diagnosed person offered testing. Needs a canonical, and the "
+                 "three outcome legs sum to it in only 33% of 332 country-years, so the parent "
+                 "and the parts are not the same population",
+    "HTS_SELF": "self-test kits distributed. Needs a canonical",
+    "HTS_RECENT": "tests classified as recent infection. Needs a canonical",
+    "PrEP_CURR": "people currently on pre-exposure prophylaxis. Distinct from PrEP_NEW, which "
+                 "this connector reads as prep_recipients. Needs its own canonical",
+    "PrEP_CT": "PrEP continuation. Needs a canonical",
+    "KP_MAT": "medication-assisted therapy for opioid dependence. Needs a canonical",
+    "AGYW_PREV": "adolescent girls and young women reached by DREAMS. Needs a canonical",
+    "PP_PREV": "priority populations reached with prevention. Needs a canonical",
+    # KP_PREV is the one candidate that failed on arithmetic rather than on vocabulary, and the
+    # failure is worth recording because the code otherwise looks ready to map. KP_PREV reports
+    # Q2 and Q4 and counts individuals reached within each half-year, deduplicated inside the
+    # half and not across it. Summing the halves gives a median of 0.58 of the Global Fund
+    # national figure over 142 overlapping country-years; taking the later half alone gives 0.29.
+    # A factor of two between two defensible readings is not something arithmetic can settle, and
+    # PEPFAR's own guidance has to. TB_PREV is mapped despite the same reporting pattern because
+    # completing a course of preventive therapy is an event and events add, while being reached
+    # is a status and the same person is reached in both halves of a year as a matter of course.
+    "KP_PREV": "key populations reached with prevention. Summing the two half-years and taking "
+               "the later one differ by a factor of two and both are defensible; the choice "
+               "needs PEPFAR's definition, not this connector's arithmetic",
+
+    # Services PEPFAR funds that sit outside the HIV testing and treatment cascade this panel
+    # measures. A funding cut reaches them too, and a panel that measured them would be a
+    # different panel with a different denominator for every comparison in it.
+    "CXCA_SCRN": "cervical cancer screening, outside the HIV cascade this panel measures",
+    "CXCA_SCRN_POS": "cervical cancer screening, outside the HIV cascade",
+    "CXCA_TX": "cervical cancer treatment, outside the HIV cascade",
+    "POST_RESP": "post-violence care, outside the HIV cascade",
+    "POST_RESP_SexualViolence": "post-violence care, outside the HIV cascade",
+    "POST_RESP_PhysicalEmotionalViolence": "post-violence care, outside the HIV cascade",
+    "OVC_SERV": "orphans and vulnerable children services, outside the HIV cascade",
+    "OVC_SERV_UNDER_18": "orphans and vulnerable children services, outside the HIV cascade",
+    "OVC_SERV_OVER_18": "orphans and vulnerable children services, outside the HIV cascade",
+    "OVC_SERV_ACTIVE": "orphans and vulnerable children services, outside the HIV cascade",
+    "OVC_SERV_GRADUATED": "orphans and vulnerable children services, outside the HIV cascade",
+    "OVC_HIVSTAT": "HIV status of children in OVC programmes, outside the HIV cascade",
+    "OVC_HIVSTAT_POS": "HIV status of children in OVC programmes, outside the HIV cascade",
+    "OVC_HIVSTAT_NEG": "HIV status of children in OVC programmes, outside the HIV cascade",
+}
 
 
 def _ci(cols: List[str], *names: str) -> Optional[str]:
@@ -100,6 +314,131 @@ def _last_q(vals: List[Optional[float]]) -> Optional[int]:
     """The latest quarter (1-4) that carries a number, or None if the year is empty."""
     reported = [i for i, v in enumerate(vals) if v is not None]
     return reported[-1] + 1 if reported else None
+
+
+def _reported_quarters(vals: List[Optional[float]]) -> List[int]:
+    """The quarters (1-4) that carry a number."""
+    return [i + 1 for i, v in enumerate(vals) if v is not None]
+
+
+def release_cadence(agg: Dict[tuple, List[Optional[float]]], group) -> Dict[tuple, List[int]]:
+    """The quarters an indicator-year is published at, taken from the release rather than assumed.
+
+    PEPFAR changes how often an indicator reports. TB_STAT and TB_STAT_POS published at Q2 and
+    Q4 in FY2018 and quarterly from FY2019, PrEP_NEW published at Q2 and Q4 through FY2020 and
+    quarterly from FY2021, and the whole FY2025 download carries Q4 alone. A rule that expects
+    four quarters calls every one of those a part-reported year, which put a warning on 101
+    country-years whose totals are in fact complete, and a rule that expects two for a named
+    list of codes only moves the same mistake elsewhere.
+
+    So the release is asked. The quarter set most countries report for an indicator-year is what
+    that indicator-year publishes at. Ties go to the fuller pattern, because expecting more
+    quarters than a year publishes only ever adds a caution and never removes one.
+    """
+    counts: Dict[tuple, Counter] = {}
+    for key, vals in agg.items():
+        qs = tuple(_reported_quarters(vals))
+        if qs:
+            counts.setdefault(group(key), Counter())[qs] += 1
+    return {g: list(max(c.items(), key=lambda kv: (kv[1], len(kv[0])))[0]) for g, c in counts.items()}
+
+
+def span_status(here: List[int], prev_cad: List[int], year: int,
+                latest_year: int) -> tuple:
+    """Whether an indicator-year is a part-published release, and whether each of its
+    quarterly reports covers the same months as the comparison year's.
+
+    A year publishing fewer quarters than the year before it has two possible causes, and
+    telling them apart decides which comparison is honest.
+
+    The year is TRUNCATED when the rest of it has not been released yet, which can only be
+    true of the newest fiscal year in the download. Each report still covers three months,
+    so the year is genuinely short and only the shared quarters can be compared.
+
+    Otherwise PEPFAR changed how often the indicator reports. A semi-annual report covers
+    six months rather than three, so a two-quarter year is a WHOLE year and the annual
+    totals stay comparable while a quarter-by-quarter comparison does not.
+
+    A cadence change in the newest year cannot be separated from truncation by arithmetic,
+    since both look like fewer quarters with no later year to check against. Truncation is
+    the reading taken, because a download collected part-way through a fiscal year meets it
+    far more often.
+    """
+    truncated = year == latest_year and 0 < len(here) < len(prev_cad)
+    return truncated, truncated or set(here) == set(prev_cad)
+
+
+def quarter_detail(vals: List[Optional[float]], prev_vals: Optional[List[Optional[float]]],
+                   year: int, same_span: bool) -> Dict[str, object]:
+    """The quarters behind one cumulative annual total, and the honest comparison with the
+    year before.
+
+    Summing quarters into a year throws the quarters away, and a reader holding only the annual
+    total cannot tell a year that published four quarters from a year that published one. So the
+    quarters are kept on the row, and the comparison that holds is named.
+
+    WHICH comparison holds depends on whether a report in this year covers the same months as
+    a report in the year before, which span_status decides and passes in as same_span.
+
+    When the two years report at the same frequency, one quarter means three months in both,
+    so the shared quarters are twelve months apart and comparing them is right. FY2025 in this
+    download carries Q4 alone, and that Q4 is the same three months FY2024's Q4 covered.
+
+    When PEPFAR changed the frequency, a semi-annual report covers six months rather than
+    three, the two-quarter year is a WHOLE year, and the annual totals are what compare. Two
+    independent measurements in this download say so.
+
+    TB_STAT and TB_STAT_POS moved from Q2 and Q4 to quarterly at FY2019. Their full-year
+    ratios across that change are 0.99 and 0.96, which is a flat service holding flat, while
+    comparing FY2019's Q2 and Q4 alone against FY2018 gives 0.53 and 0.49, which is the same
+    service apparently halving.
+
+    PrEP_NEW moved the other way at FY2019, from quarterly to Q2 and Q4, and grew steeply
+    throughout, so a raw ratio says nothing on its own. The two ratios share that growth and
+    the comparison between them still does: the full-year ratio is 3.10 and the Q2+Q4 ratio is
+    6.05, a factor of 1.95. Six months against three. Had a semi-annual report covered three
+    months, the two ratios would have agreed.
+
+    That reading is inferred from the arithmetic in this download rather than read off PEPFAR
+    documentation, so it is stated on the row.
+    """
+    qs = _reported_quarters(vals)
+    detail: Dict[str, object] = {"quarters": {f"Q{q}": vals[q - 1] for q in qs}}
+    if prev_vals is None:
+        return detail
+    prev_qs = _reported_quarters(prev_vals)
+    if not prev_qs or set(qs) == set(prev_qs):
+        return detail
+    if not same_span:
+        detail["cadence_change"] = (
+            f"FY{year} reports {', '.join('Q%d' % q for q in qs)} where FY{year - 1} reports "
+            f"{', '.join('Q%d' % q for q in prev_qs)}. This is a change of reporting frequency "
+            f"and not a short year: a semi-annual report covers six months rather than three, so "
+            f"both annual totals cover a whole year and can be compared. Do NOT compare the two "
+            f"years quarter by quarter, which would put 12 months against six."
+        )
+        return detail
+    shared = [q for q in qs if q in prev_qs]
+    if not shared:
+        detail["like_quarter_comparison"] = {
+            "note": (f"FY{year} reports {', '.join('Q%d' % q for q in qs)} and FY{year - 1} "
+                     f"reports {', '.join('Q%d' % q for q in prev_qs)}. The two years share no "
+                     f"quarter, so no like-for-like comparison can be made between them."),
+        }
+        return detail
+    now = sum(vals[q - 1] for q in shared)
+    then = sum(prev_vals[q - 1] for q in shared)
+    detail["like_quarter_comparison"] = {
+        "quarters": [f"Q{q}" for q in shared],
+        "this_year": now,
+        "last_year": then,
+        "ratio": round(now / then, 4) if then else None,
+        "note": (f"FY{year} and FY{year - 1} do not report the same quarters at the same "
+                 f"frequency, so their annual totals cover different spans and are not "
+                 f"comparable. These figures cover {', '.join('Q%d' % q for q in shared)} in "
+                 f"both years, which is the comparison to use instead."),
+    }
+    return detail
 
 
 def _unit_id(row, pn_c: Optional[str], mc_c: Optional[str]):
@@ -132,7 +471,8 @@ class PEPFARPanoramaConnector(BaseConnector):
 
     def _process(self, chunk: pd.DataFrame, agg: Dict[tuple, List[Optional[float]]],
                  names: Dict[str, str], partner_q: Dict[tuple, Dict[str, List[Optional[float]]]],
-                 wanted, start_year: int, end_year: int) -> bool:
+                 wanted, start_year: int, end_year: int,
+                 seen: Optional[Counter] = None) -> bool:
         cols = list(chunk.columns)
         ind_c = _ci(cols, "indicator")
         fy_c = _ci(cols, "fiscal year")
@@ -144,6 +484,12 @@ class PEPFARPanoramaConnector(BaseConnector):
         q_cs = [_ci(cols, f"quarter {i}") for i in (1, 2, 3, 4)]
         if not (ind_c and fy_c and dis_c and iso_c and all(q_cs)):
             return False  # not the long MER format -> signal skip
+
+        # Every code the file contains, counted before the dictionary narrows the rows. A
+        # connector that only ever looks at the codes it already knows cannot report the codes
+        # it does not, which is the whole of how 69 of these sat unread for eight months.
+        if seen is not None:
+            seen.update(chunk[ind_c].dropna().astype(str))
 
         sub = chunk[chunk[ind_c].isin(MER_INDICATORS.keys())]
         sub = sub[sub[dis_c].astype(str).str.contains("Total Numerator", case=False, na=False)]
@@ -201,14 +547,22 @@ class PEPFARPanoramaConnector(BaseConnector):
             return
         # avoid double-counting: TopLine already holds the country totals, so if it is
         # present use it exclusively (skip AgeSex / other granular MER files).
+        # Name the discarded files rather than only the kept one. A log line that reports what a
+        # connector used tells a reader nothing about what the connector threw away, which is
+        # how 12 PEPFAR archives sat unopened for eight months without a single warning.
         topline = [f for f in files if "topline" in f.name.lower()]
         if topline:
+            dropped = [f.name for f in files if f not in topline]
             log.info("pepfar_panorama: using TopLine totals file(s) only: %s", [f.name for f in topline])
+            if dropped:
+                log.info("pepfar_panorama: %d other file(s) in %s not read by this connector: %s",
+                         len(dropped), self.raw_dir, dropped)
             files = topline
 
         agg: Dict[tuple, List[Optional[float]]] = {}
         names: Dict[str, str] = {}
         partner_q: Dict[tuple, Dict[str, List[Optional[float]]]] = {}
+        seen: Counter = Counter()
         for path in files:
             used = False
             try:
@@ -219,7 +573,7 @@ class PEPFARPanoramaConnector(BaseConnector):
                                 for chunk in pd.read_csv(fh, sep="\t", dtype=str, chunksize=200_000,
                                                          on_bad_lines="skip", low_memory=False):
                                     if self._process(chunk, agg, names, partner_q, wanted,
-                                                     start_year, end_year):
+                                                     start_year, end_year, seen):
                                         used = True
                                     else:
                                         break
@@ -228,7 +582,7 @@ class PEPFARPanoramaConnector(BaseConnector):
                     for chunk in pd.read_csv(path, sep=sep, dtype=str, chunksize=200_000,
                                              on_bad_lines="skip", low_memory=False):
                         if self._process(chunk, agg, names, partner_q, wanted,
-                                         start_year, end_year):
+                                         start_year, end_year, seen):
                             used = True
                         else:
                             break
@@ -236,6 +590,21 @@ class PEPFARPanoramaConnector(BaseConnector):
                 log.warning("pepfar_panorama: error reading %s: %s", path.name, exc)
                 continue
             log.info("pepfar_panorama: %s %s", path.name, "(used)" if used else "(skipped — not long MER format)")
+
+        # What was read, what was left alone on purpose, and what nobody has decided about. The
+        # third number is the only one that needs anyone's attention, and a code reaching it is
+        # new in the download rather than overlooked, because the other 71 are all accounted for.
+        if seen:
+            read = sorted(c for c in seen if c in MER_INDICATORS)
+            declared = sorted(c for c in seen if c in DECLARED_UNMAPPED and c not in MER_INDICATORS)
+            undecided = sorted(c for c in seen
+                               if c not in MER_INDICATORS and c not in DECLARED_UNMAPPED)
+            log.info("pepfar_panorama: read %d of %d MER codes, %d deliberately left alone, "
+                     "%d awaiting a decision", len(read), len(seen), len(declared), len(undecided))
+            for code in undecided:
+                log.warning("pepfar_panorama: no rule covers MER code %s (%s rows). Add it to "
+                            "MER_INDICATORS or to DECLARED_UNMAPPED with a reason.",
+                            code, f"{seen[code]:,}")
 
         # One collapse from quarters to a year, done for every country-year before any row is
         # emitted, so a year can be compared with the one before it on the same rule.
@@ -252,7 +621,33 @@ class PEPFARPanoramaConnector(BaseConnector):
                     values[key] = vals[q - 1]
                     snap_q[key] = q
 
+        # How often each indicator reported in each year, read off the release. A change of
+        # cadence is announced, because a year that publishes twice sitting next to a year that
+        # publishes four times is the single easiest way to read a cut that did not happen.
+        cadence = release_cadence(agg, lambda k: (k[1], k[2]))
+        # The newest fiscal year in the download, which is the only year whose missing
+        # quarters can be a release that has not finished rather than a change of frequency.
+        latest_year = max((y for _, y in cadence), default=0)
+        for (canonical, year), qs in sorted(cadence.items()):
+            was = cadence.get((canonical, year - 1))
+            if not was or was == qs:
+                continue
+            if year == latest_year and len(qs) < len(was):
+                log.warning("pepfar_panorama: %s FY%d is PART-PUBLISHED, carrying %s where "
+                            "FY%d carries %s. Every cumulative total for FY%d is a partial "
+                            "sum and a fall against FY%d is an artefact of the release.",
+                            canonical, year, ", ".join(f"Q{q}" for q in qs), year - 1,
+                            ", ".join(f"Q{q}" for q in was), year, year - 1)
+            else:
+                log.info("pepfar_panorama: %s changed reporting frequency at FY%d, from %s in "
+                         "FY%d to %s. A semi-annual report covers six months rather than "
+                         "three, so the annual totals stay comparable across that year while "
+                         "a quarter-by-quarter comparison does not.", canonical, year,
+                         ", ".join(f"Q{q}" for q in was), year - 1,
+                         ", ".join(f"Q{q}" for q in qs))
+
         n = 0
+        like: Dict[tuple, List[float]] = {}
         for (iso3, canonical, year), value in sorted(values.items()):
             key = (iso3, canonical, year)
             extra = {"note": "PEPFAR MER — PROGRAM FOOTPRINT, not national totals"}
@@ -301,16 +696,42 @@ class PEPFARPanoramaConnector(BaseConnector):
                     log.info("pepfar_panorama: %s %s %d — %d partner(s) absent from Q%d "
                              "(%s between them at their own last quarter); not carried forward",
                              iso3, canonical, year, len(absent), q_now, f"{total:,.0f}")
-            # A cumulative indicator in a part-reported year is a PARTIAL total, NOT a decline.
-            # FY2025 currently publishes only 1 of 4 quarters, which makes every country's
-            # new_diagnoses look like a 70-90% collapse. Flag it so nobody reads it as a cut.
-            if canonical in CUMULATIVE_CANON and 0 < nq < 4:
+            # What this indicator-year publishes at, and what the year before it published at.
+            # Both come from the release rather than from a fixed count of four, which is what
+            # stops the warning firing on TB_STAT in FY2018 and PrEP_NEW in FY2019 and FY2020,
+            # where two quarters was the whole year those indicators then published.
+            here = cadence.get((canonical, year), [])
+            prev_cad = cadence.get((canonical, year - 1)) or here
+            truncated, same_span = span_status(here, prev_cad, year, latest_year)
+            extra["release_quarters"] = [f"Q{q}" for q in here]
+            extra["quarters_expected"] = len(here)
+            extra["comparison_year_quarters"] = [f"Q{q}" for q in prev_cad]
+            if canonical in CUMULATIVE_CANON:
+                extra.update(quarter_detail(
+                    agg[key], agg.get((iso3, canonical, year - 1)), year, same_span))
+                lq = (extra.get("like_quarter_comparison") or {}).get("ratio")
+                if lq:
+                    like.setdefault((canonical, year), []).append(lq)
+            # A cumulative total is PARTIAL, and must never be read as a decline, in two
+            # situations. Either the release itself stops early, which is FY2025 carrying Q4
+            # alone and making new_diagnoses look like a 70-90% collapse in every country, or
+            # this one country reported fewer quarters than its indicator-year publishes while
+            # the countries around it reported all of them.
+            if canonical in CUMULATIVE_CANON and (truncated or 0 < nq < len(here)):
+                against = len(prev_cad) if truncated else len(here)
+                why = (f"FY{year} is part-published, carrying "
+                       f"{', '.join('Q%d' % q for q in here)} where FY{year - 1} carries "
+                       f"{', '.join('Q%d' % q for q in prev_cad)}" if truncated else
+                       f"this country reported {nq} of the "
+                       f"{', '.join('Q%d' % q for q in here)} that FY{year} publishes")
                 extra["partial_year"] = (
-                    f"only {nq}/4 quarters reported for FY{year} — this annual total is a PARTIAL "
-                    f"sum and must NOT be compared with full years or read as a decline."
+                    f"{why}. This annual total covers less of the year than the total it "
+                    f"would be compared with, so it is a PARTIAL sum and must not be read as "
+                    f"a decline. Use like_quarter_comparison instead."
                 )
-                log.warning("pepfar_panorama: %s %s %d — PARTIAL YEAR (%d/4 quarters reported); "
-                            "annual total is a partial sum, not a decline", iso3, canonical, year, nq)
+                log.warning("pepfar_panorama: %s %s %d — PARTIAL YEAR (%d quarter(s) against "
+                            "%d); annual total is a partial sum, not a decline",
+                            iso3, canonical, year, nq, against)
             # Surface (never silently "fix") year-on-year discontinuities. PEPFAR partner
             # reporting scope can change: e.g. Thailand FY2025, where the government partners
             # (MOPH/BMA) began reporting their full national caseload (25k -> 185k) while the
@@ -331,4 +752,14 @@ class PEPFARPanoramaConnector(BaseConnector):
                 extra=extra,
             )
             n += 1
+        # One line per indicator-year where the quarters do not match the year before, carrying
+        # the comparison that holds. A part-reported year produces a warning on every country,
+        # which tells a reader what not to do and leaves them without the number they wanted.
+        for (canonical, year), ratios in sorted(like.items()):
+            ratios.sort()
+            med = ratios[len(ratios) // 2]
+            log.info("pepfar_panorama: %s FY%d — quarters differ from FY%d, so the annual totals "
+                     "are not comparable. Like-quarter median %.2f over %d countries, below 1.0 "
+                     "in %d of them.", canonical, year, year - 1, med, len(ratios),
+                     len([r for r in ratios if r < 1.0]))
         log.info("pepfar_panorama: emitted %d rows", n)

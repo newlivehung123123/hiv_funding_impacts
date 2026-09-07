@@ -68,6 +68,10 @@ import pandas as pd
 from ..connector_base import BaseConnector
 from ..normalize import to_iso3
 from ..schema import PanelRow, SourceType
+# Reporting cadence and the quarters behind a cumulative total are decided in one place for
+# every connector reading this file, so a province and its country cannot disagree about
+# which years are short.
+from . import pepfar_panorama as _panorama
 
 log = logging.getLogger("hivimpact")
 
@@ -123,10 +127,20 @@ class PEPFARSNUConnector(BaseConnector):
 
     # -- reading ---------------------------------------------------------------
     def _files(self) -> List[Path]:
+        """The archives whose names carry FILE_HINT, and a count of everything else.
+
+        A filter that returns quietly reports a clean run whether it matched everything or
+        nothing, so the count of what FILE_HINT excluded is logged beside the count it kept.
+        """
         if not self.raw_dir.exists():
             return []
-        return sorted(p for p in list(self.raw_dir.glob("*.zip")) + list(self.raw_dir.glob("*.txt"))
-                      if FILE_HINT in p.name.lower())
+        candidates = sorted(list(self.raw_dir.glob("*.zip")) + list(self.raw_dir.glob("*.txt")))
+        kept = [p for p in candidates if FILE_HINT in p.name.lower()]
+        if len(kept) < len(candidates):
+            log.info("pepfar_snu: reading %d of %d archive(s) in %s, the ones named %r. "
+                     "Not read: %s", len(kept), len(candidates), self.raw_dir, FILE_HINT,
+                     [p.name for p in candidates if p not in kept])
+        return kept
 
     def _chunks(self, path: Path):
         read = dict(sep="\t", dtype=str, chunksize=100_000, on_bad_lines="skip",
@@ -242,6 +256,15 @@ class PEPFARSNUConnector(BaseConnector):
                 k = (iso3, ind, year)
                 common_q[k] = max(common_q.get(k, 0), q)
 
+        # How many quarters make a whole year, asked of the release rather than fixed at four.
+        # PrEP_NEW is read here and published at Q2 and Q4 through FY2020, so counting to four
+        # would put a partial-year warning on every province in a year that is complete. Same
+        # helper as pepfar_panorama, so the national and provincial connectors cannot disagree
+        # about which years are short.
+        cadence = _panorama.release_cadence(
+            {k: v for k, v in agg.items() if k[3] == "N"}, lambda k: (k[2], k[4]))
+        latest_year = max((y for _, y in cadence), default=0)
+
         n = 0
         emitted_units: set = set()
         off_quarter: Dict[tuple, int] = {}
@@ -276,10 +299,22 @@ class PEPFARSNUConnector(BaseConnector):
                 value = sum(nn) if nn else None
                 # Same trap as the national connector, and it bites harder here: a province
                 # whose partner stopped reporting looks like a province whose programme stopped.
-                if value is not None and 0 < nq < 4:
+                here = cadence.get((ind, year), [])
+                prev_cad = cadence.get((ind, year - 1)) or here
+                truncated, same_span = _panorama.span_status(
+                    here, prev_cad, year, latest_year)
+                extra["release_quarters"] = [f"Q{q}" for q in here]
+                extra.update(_panorama.quarter_detail(
+                    vals, agg.get((iso3, admin1, ind, nd, year - 1)), year, same_span))
+                if value is not None and (truncated or 0 < nq < len(here)):
+                    why = (f"FY{year} is part-published, carrying "
+                           f"{', '.join('Q%d' % q for q in here)} where FY{year - 1} carries "
+                           f"{', '.join('Q%d' % q for q in prev_cad)}" if truncated else
+                           f"this province reported {nq} of the "
+                           f"{', '.join('Q%d' % q for q in here)} that FY{year} publishes")
                     extra["partial_year"] = (
-                        f"only {nq}/4 quarters reported for FY{year} — this annual total is a "
-                        f"PARTIAL sum and must NOT be compared with full years or read as a decline.")
+                        f"{why}. This annual total is a PARTIAL sum and must NOT be compared "
+                        f"with full years or read as a decline.")
             if value is None:
                 continue
 

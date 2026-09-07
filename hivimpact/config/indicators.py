@@ -88,6 +88,24 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   SourceType.ROUTINE_PROGRAMME, "cascade"),
     IndicatorSpec("new_diagnoses_other_agency", "Newly diagnosed at other US-agency partners (MER HTS_TST_POS)", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade"),
+    # The same partition applied to the count of people newly started on treatment. This is the
+    # sharpest of the three, because the treatment cohort is slow and enrolment is not. Someone
+    # already on ART keeps collecting refills for months after the money stops, so
+    # on_art_count_usaid falls late and gently. A clinic that stops testing stops enrolling in
+    # the same week, so art_initiations_usaid falls at once. A cut shows here first.
+    IndicatorSpec("art_initiations_usaid", "Newly enrolled on ART at USAID-funded partners (MER TX_NEW)", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "USAID's share of PEPFAR treatment enrolment. The arm that was dismantled."),
+    IndicatorSpec("art_initiations_cdc", "Newly enrolled on ART at HHS/CDC-funded partners (MER TX_NEW)", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "CDC's share, and the comparison arm. CDC continued while USAID was cut, so a "
+                  "divergence between the two series holds the country's epidemic, season and "
+                  "reporting calendar constant. It does not hold constant patients moving "
+                  "between the two agencies' partners, which moves both series at once."),
+    IndicatorSpec("art_initiations_other_agency", "Newly enrolled on ART at other US-agency partners (MER TX_NEW)", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "DOD, HRSA, Peace Corps, State. Pooled so the three series still sum to the "
+                  "PEPFAR country total."),
     IndicatorSpec("viral_suppression_pct", "% of people on ART who are virally suppressed (3rd 95)", "percent",
                   SourceType.MODELLED_ESTIMATE, "cascade",
                   "The strict third 95 (denominator = people on treatment)."),
@@ -107,7 +125,13 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "Count (not %) — national programme figure."),
     IndicatorSpec("prep_recipients", "People receiving PrEP", "count",
-                  SourceType.ROUTINE_PROGRAMME, "prevention"),
+                  SourceType.ROUTINE_PROGRAMME, "prevention",
+                  "Carried at two grains and the grain decides whether two rows may be added. "
+                  "pepfar_snu writes a province in admin1 and pepfar_panorama writes the "
+                  "national PEPFAR total with admin1 empty, so the province rows sum to roughly "
+                  "the national row rather than adding to it. UNAIDS, Global Fund and the "
+                  "country sources are national and count whoever they fund, so a country with "
+                  "several of them has several partial counts and no total."),
 
     # -- testing throughput (WHO GHO, reported by countries) ---------------------
     # Testing is the first service to feel a funding cut and the first to show it. A
@@ -127,7 +151,10 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   "anything that totals the panel must use one level or the other and never "
                   "both, the same rule as the agency split above. The 11 per cent that are more "
                   "than five per cent apart are countries whose disaggregated reporting is "
-                  "incomplete, which is worth knowing in its own right."),
+                  "incomplete, which is worth knowing in its own right. PEPFAR MER HTS_TST is a "
+                  "second source, added on 2026-09-05, and counts tests the PEPFAR programme "
+                  "paid for rather than tests the country ran, so the PEPFAR figure is a share "
+                  "of the WHO GHO figure and not a rival estimate of it."),
     IndicatorSpec("hiv_test_positivity_pct", "% of returned HIV test results that were positive", "percent",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "The yield of the testing programme (WHO GHO HIV_POSITIVITY). Read next to "
@@ -151,7 +178,13 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   "is absent; the two agree in 94 per cent of the country-years that have both, "
                   "and source_indicator_code records which column each row came from. DR Congo "
                   "runs 96,516 in 2022 to 65,651 in 2024 and Cameroon 75,954 in 2021 to 38,059 "
-                  "in 2024, which is the kind of movement this project exists to measure."),
+                  "in 2024, which is the kind of movement this project exists to measure. "
+                  "PEPFAR MER TX_NEW is a third source, added on 2026-09-05 after a coverage "
+                  "audit found the code unread in a file already on disk. PEPFAR measures its "
+                  "own programme rather than the country, so the PEPFAR figure sits at or below "
+                  "the WHO TME national total in 86 per cent of the 266 overlapping "
+                  "country-years and takes a median share of 0.74. Read the two as a national "
+                  "total and a funder's share of it, never as rival estimates of one quantity."),
 
     # -- TB/HIV integrated services, as a three-step cascade --------------------
     # A distinct service line, and one donors fund as a line item, so it can be cut on its
@@ -317,7 +350,74 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
     IndicatorSpec("pregnant_women_hiv", "Estimated pregnant women with HIV needing ARVs for PMTCT", "count",
                   SourceType.MODELLED_ESTIMATE, "denominator",
                   "Denominator of pmtct_coverage_pct (WHO GHO HIV_0000000021). Modelled, so it "
-                  "moves for reasons that have nothing to do with the programme."),
+                  "moves for reasons that have nothing to do with the programme. UNAIDS "
+                  "AIDSinfo publishes the same quantity and the two agree exactly in 17.4% of "
+                  "overlapping country-years with a median gap of 6.8%, which is close to the "
+                  "Global Fund against WHO TME benchmark and marks the pair as two "
+                  "measurements rather than one reprinted twice."),
+
+    # -- the rest of the vertical transmission chain, from UNAIDS AIDSinfo ------------
+    # pmtct_coverage_pct measures whether a pregnant woman with HIV received treatment. The
+    # four below measure the steps either side of it, and each step is a separate place for a
+    # funding cut to show. A country can hold PMTCT coverage steady while testing in antenatal
+    # care collapses, because coverage is computed among women already known to have HIV.
+    IndicatorSpec("anc_hiv_testing_pct", "Pregnant women tested for HIV in antenatal care", "percent",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "The step before PMTCT. A woman never tested is never counted as needing "
+                  "treatment, so this falling while pmtct_coverage_pct holds is the signature "
+                  "of a programme shrinking its own denominator. 139 countries, 15 years. The "
+                  "test works on most of them and not on all: AIDSinfo censors this series at "
+                  "the top, and 344 of its 1,070 values sit at exactly 98 across 84 countries. "
+                  "In 18 of the 139 every reported year is 98, so those series cannot visibly "
+                  "fall and the shrinking-denominator test cannot be run on them at all. The "
+                  "median across the series is 91 and the remaining 121 countries do move."),
+    IndicatorSpec("early_infant_diagnosis_pct", "HIV-exposed infants tested within two months of birth", "percent",
+                  SourceType.MODELLED_ESTIMATE, "cascade",
+                  "The step after PMTCT, and the one that needs a functioning laboratory "
+                  "network rather than a clinic visit. 154 countries, 15 years."),
+    IndicatorSpec("vertical_transmission_pct", "Share of HIV-exposed infants who acquire HIV", "percent",
+                  SourceType.MODELLED_ESTIMATE, "epidemiology",
+                  "The outcome the whole PMTCT chain exists to prevent. Modelled, so it moves "
+                  "slowly and late, and a rise here confirms a service failure years after the "
+                  "service data showed it. 185 countries, 15 years."),
+    IndicatorSpec("late_hiv_diagnosis_pct", "New HIV diagnoses with a CD4 count below 200", "percent",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "The share of people whose HIV is found only once their immune system has "
+                  "already collapsed. Testing that stops does not lower the number of people "
+                  "with HIV, it delays the moment each one is found, so this rises when "
+                  "hiv_tests_performed falls. 193 countries, 7 years."),
+
+    # -- prevention commodities and procedures ----------------------------------------
+    # A commodity count is the closest thing in the panel to a purchase order, and a purchase
+    # order is the first thing an agency cancels. Neither series depends on a model.
+    IndicatorSpec("male_condoms_distributed", "Male condoms distributed in a year", "count",
+                  SourceType.ROUTINE_PROGRAMME, "prevention",
+                  "UNAIDS publishes male condoms separately from female condoms and this is "
+                  "the male series alone. 125 countries but only 5 years."),
+    IndicatorSpec("circumcisions_performed", "Voluntary medical male circumcisions performed", "count",
+                  SourceType.ROUTINE_PROGRAMME, "prevention",
+                  "A one-off surgical procedure delivered in campaigns, which makes it the most "
+                  "cancellable service in the panel. PEPFAR paid for most of the global "
+                  "programme. Only 15 countries report it, which is close to the whole "
+                  "programme rather than a sample of it, across 17 years."),
+
+    # -- key-population denominators and baselines, from UNAIDS AIDSinfo ---------------
+    # PEPFAR reports how many men who have sex with men its partners reached. Only UNAIDS says
+    # how many there are to reach. Both series below carry one value per country, stamped 2024
+    # because that is when UNAIDS last compiled the figure rather than when the survey behind
+    # it ran, and the rows carry extra["most_recent"] so an analysis can hold them apart from
+    # the annual series.
+    IndicatorSpec("kp_size_estimate", "Estimated size of a key population", "count",
+                  SourceType.SURVEY, "denominator",
+                  "The denominator kp_reached and kp_tested have never had (population_group "
+                  "says which key population). 552 country-population values across men who "
+                  "have sex with men, people who inject drugs, sex workers, transgender people "
+                  "and prisoners. Single point, not a series."),
+    IndicatorSpec("kp_prevention_coverage_pct", "Key-population members reached by prevention programmes", "percent",
+                  SourceType.SURVEY, "prevention",
+                  "The baseline a funding cut starts from (population_group says which key "
+                  "population). 156 values. Single point, not a series, so it sets the level "
+                  "rather than showing a change."),
 
     # -- key-population programme flows (population_group carries WHICH key population) ---
     # NCHADS Cambodia "Boosted CoPCT" quarterly report. These are PERIOD FLOWS (activity
@@ -369,10 +469,148 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
 
     # -- financing (section 3) -------------------------------------------------
     IndicatorSpec("domestic_hiv_spend", "Domestic public HIV expenditure", "USD",
-                  SourceType.EXPENDITURE_ACCOUNT, "financing"),
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "The country's own public money, from the GAM expenditure return's "
+                  "TotalPublic column. The series that has to rise if a government "
+                  "replaces withdrawn donor funding."),
     IndicatorSpec("hiv_expenditure_total", "Country-reported HIV expenditure, all sources", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
-                  "UNAIDS country-reported HIV spending across all funding sources."),
+                  "UNAIDS country-reported HIV spending across all funding sources. "
+                  "Published twice, by AIDSinfo and by the GAM expenditure database, and "
+                  "the two are the same exercise, so filter on source_id before summing."),
+
+    # -- the country's own account of who paid (UNAIDS GAM expenditure database) --------
+    # The financing columns of the GAM return, read off the grand-total row. The three
+    # donor series matter because they are the COUNTRY's account of donor money, while
+    # pepfar_expenditure and global_fund_hiv_disbursements are the DONOR's account of the
+    # same money. Two accounts of one flow are two measurements, and where they diverge
+    # the divergence is information about reporting, not an error to be reconciled away.
+    #
+    # A zero in this database means "not reported" and is indistinguishable from a real
+    # zero, so no zero is emitted. An absent series therefore means the country filed
+    # nothing on that line, never that the country spent nothing.
+    IndicatorSpec("hiv_expenditure_domestic_private", "Private HIV expenditure (country-reported)", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Insurance, households, corporations and non-profit institutions "
+                  "combined. Reported by only 252 of 541 country-years."),
+    IndicatorSpec("hiv_expenditure_households", "Out-of-pocket HIV expenditure by households", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "What patients pay themselves. The series that rises when a programme "
+                  "stops paying, so a rise here beside a fall in donor funding is the "
+                  "cost-shifting signal. Reported by 153 of 541 country-years."),
+    IndicatorSpec("hiv_expenditure_international", "International HIV expenditure (country-reported)", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "All external money as the country accounts for it. The parent of the "
+                  "three donor series below, which do not always sum to it."),
+    IndicatorSpec("hiv_expenditure_other_bilateral", "Other bilateral HIV expenditure (country-reported)", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Bilateral donors other than the United States. The place any backfill "
+                  "by other governments would appear."),
+
+    # -- what the money was spent on (UNAIDS GAM expenditure database) ------------------
+    # The ten top-level lines of the modern GAM classification, all funding sources
+    # combined. They partition `Total for key HIV programmes`, NOT the grand total, so
+    # they must never be added to the financing series above or to hiv_expenditure_total.
+    # Available for 484 of 541 country-years; the rest either use the pre-2016
+    # classification (2011-2015 only) or report no programme breakdown at all.
+    IndicatorSpec("hiv_spend_treatment", "HIV spending on treatment, care and support", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "GAM line 1. The largest line almost everywhere, and the one that keeps "
+                  "paying for patients already enrolled after enrolment stops."),
+    IndicatorSpec("hiv_spend_pmtct", "HIV spending on prevention of vertical transmission", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing", "GAM line 2."),
+    IndicatorSpec("hiv_spend_prevention", "HIV spending on prevention", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "GAM line 3, including testing, condoms, PrEP and key-population "
+                  "programmes. The discretionary line, so the first to move when funding "
+                  "is cut."),
+    IndicatorSpec("hiv_spend_gender", "HIV spending on gender programmes", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing", "GAM line 4."),
+    IndicatorSpec("hiv_spend_children", "HIV spending on programmes for children and adolescents", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing", "GAM line 5."),
+    IndicatorSpec("hiv_spend_social_protection", "HIV spending on social protection and economic support", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing", "GAM line 6."),
+    IndicatorSpec("hiv_spend_community", "HIV spending on community mobilisation and system strengthening", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "GAM line 7. The money behind community-led services, which the "
+                  "community-led monitoring indicators measure the delivery of."),
+    IndicatorSpec("hiv_spend_governance", "HIV spending on governance and sustainability", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing", "GAM line 8."),
+    IndicatorSpec("hiv_spend_enablers", "HIV spending on critical enablers", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing", "GAM line 9."),
+    IndicatorSpec("hiv_spend_tb_hiv", "HIV spending on TB/HIV co-infection", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "GAM line 10, against tbhiv_expenditure from the WHO TB dataset, which "
+                  "measures the same activities from the TB programme's side."),
+    # -- the same money as the national health accounts record it (WHO GHED) ------------
+    # A second expenditure system, compiled by WHO with each country's statistical office
+    # under the System of Health Accounts 2011, from different ledgers and by different
+    # people from the AIDS spending assessment that feeds the GAM series above. Two
+    # accounting systems reading one country's HIV budget are two measurements, which is
+    # the reason to carry both.
+    #
+    # WHO's dis11 family is "HIV/AIDS and Other Sexually Transmitted Diseases" and every
+    # GAM series is HIV alone, so these are differently scoped rather than two readings of
+    # one quantity, and they keep their own canonical ids. The arithmetic backs the
+    # separation. Over the country-years both sources cover, the totals sit at a median
+    # ratio of 1.14 with 48 of 138 country-years differing by a factor of two or more, and
+    # the government line at 1.22 with 68 of 134 differing that far. Reading a WHO total as
+    # though it answered the GAM question would import the STD component and the accounting
+    # difference together, with no way afterwards to tell which of the two moved.
+    #
+    # The three financing components are a true partition of the total, closing on all 328
+    # country-years where the four are printed together, so anything totalling the panel
+    # must take the total or the three components and never both. Every row records which
+    # of the two levels it belongs to in extra.partition_level.
+    #
+    # A zero here is a measurement and is carried, the opposite of the GAM rule, because
+    # every zero component sits in an account whose remaining parts still close on the
+    # printed total. A blank is how this source says nothing is known.
+    #
+    # The HIV line runs 2013 to 2023 over 60 countries and thins to 10 countries in its
+    # last year, so this source cannot see the 2025 funding cuts and stands as an
+    # independent account of the years before them.
+    IndicatorSpec("hiv_std_expenditure_total", "HIV and STD spending, national health accounts", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "WHO GHED dis11_usd, converted from the millions the source publishes. "
+                  "Wider in scope than hiv_expenditure_total, which is HIV alone, so the "
+                  "two are never pooled. The parent of the three components below."),
+    IndicatorSpec("hiv_std_expenditure_government", "Government HIV and STD spending, national health accounts", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "WHO GHED dis11_gghed_usd. The health accounts and the AIDS spending "
+                  "assessment disagree about this line more than about any other, at a "
+                  "median ratio of 1.22, which is a finding about what each system counts "
+                  "as government money rather than an error to reconcile away."),
+    IndicatorSpec("hiv_std_expenditure_external", "External HIV and STD spending, national health accounts", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "WHO GHED dis11_ext_usd. The line a donor withdrawal empties. Its median "
+                  "ratio against the GAM international series is 1.002, so the two centres "
+                  "coincide while the direction of the country-level disagreement is a coin "
+                  "flip, and neither can stand in for the other."),
+    IndicatorSpec("hiv_std_expenditure_private", "Private HIV and STD spending, national health accounts", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "WHO GHED dis11_pvtd_usd. Domestic private money, including what "
+                  "households pay themselves, so a rise here beside a fall in the external "
+                  "line is the cost-shifting signal in health-accounts form."),
+    IndicatorSpec("hiv_std_share_of_health_spend", "HIV and STD spending as a share of all health spending", "percent",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "WHO GHED dis11_che. How much of everything a country spends on health "
+                  "goes to HIV and STDs, which says how large a hole an HIV funding cut "
+                  "leaves in the health system as a whole."),
+    IndicatorSpec("hiv_std_share_of_external_health_spend",
+                  "HIV and STD spending as a share of all external health spending", "percent",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "WHO GHED dis11_ext_ext. How much of the donor health money reaching a "
+                  "country is HIV money, and therefore how much of that country's donor "
+                  "health financing an HIV withdrawal takes with it. The exposure measure "
+                  "in this group."),
+    IndicatorSpec("hiv_std_govt_share_of_govt_health_spend",
+                  "Government HIV and STD spending as a share of government health spending", "percent",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "WHO GHED dis11_g_gghed. The country's own commitment measured against "
+                  "its own health budget, so a government replacing withdrawn donor money "
+                  "raises this even when its total health budget does not move."),
+
     IndicatorSpec("external_hiv_oda_total", "External HIV financing (all donors, ODA)", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
                   "OECD CRS purpose code 13040 (STD control incl. HIV/AIDS), all donors."),
@@ -412,9 +650,11 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
 
     IndicatorSpec("global_fund_hiv_disbursements", "Global Fund HIV disbursements to the country", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
-                  "From OECD CRS (donor 9OTH012 = the Global Fund). A subset of "
-                  "external_hiv_oda_total; key for the backfill/substitution question (does the "
-                  "Global Fund rise as US/PEPFAR funding is cut?)."),
+                  "Two independent measures of the same money, so filter on source_id before "
+                  "summing. OECD CRS (donor 9OTH012) is the Global Fund's disbursement as the "
+                  "donor community records it, and unaids_gam_expenditure is what the country's "
+                  "own expenditure return attributes to the Global Fund. Key for the "
+                  "backfill question (does the Global Fund rise as US/PEPFAR funding is cut?)."),
 
     # -- PEPFAR budget vs spend, and the same split by US funding agency ----------------
     # The money-side counterpart of on_art_count_usaid / _cdc. A budget is intent stated a year
@@ -444,8 +684,13 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   "DOD, HRSA, State, Peace Corps — pooled so the series still sum to the country total."),
     IndicatorSpec("pepfar_expenditure", "PEPFAR expenditure, all US agencies", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
-                  "Reported spend for the implementation year. A FLOOR where reporting is "
-                  "incomplete — see extra.expenditure_ceiling."),
+                  "Two independent measures of the same money, so filter on source_id before "
+                  "summing, and note that the three agency series below partition only the "
+                  "pepfar_expenditure source. PEPFAR's own figure is reported spend for the "
+                  "implementation year, and a FLOOR where reporting is incomplete (see "
+                  "extra.expenditure_ceiling); unaids_gam_expenditure is what the country's "
+                  "own expenditure return attributes to PEPFAR, over the country's "
+                  "expenditure year rather than the US fiscal year."),
     IndicatorSpec("pepfar_expenditure_usaid", "PEPFAR expenditure, USAID", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
                   "The arm that was dismantled. FY2025 is not comparable with FY2024 without "
