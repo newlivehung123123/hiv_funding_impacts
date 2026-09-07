@@ -3,6 +3,8 @@ from .world_bank import WorldBankConnector
 from .who_gho import WHOGHOConnector
 from .who_tme import WHOTMEConnector  # the HIV columns of WHO's TB dataset
 from .unaids_aidsinfo import UNAIDSAidsinfoConnector
+from .unaids_gam_expenditure import UNAIDSGAMExpenditureConnector  # who paid, and for what
+from .who_ghed import WHOGHEDConnector  # the same money as the national health accounts see it
 from .oecd_crs import OECDCRSConnector
 from .dhs import DHSConnector
 from .foreign_assistance import ForeignAssistanceConnector
@@ -34,6 +36,8 @@ CONNECTORS = {
         WHOGHOConnector,          # HIV epi + cascade estimates (API)
         WHOTMEConnector,          # ART totals and initiations, TB/HIV cascade and money (CSV API)
         UNAIDSAidsinfoConnector,  # UNAIDS modules (CSV export ingest)
+        UNAIDSGAMExpenditureConnector,  # country-reported HIV expenditure by source and programme
+        WHOGHEDConnector,         # HIV and STD spending from the national health accounts (workbook)
         OECDCRSConnector,         # external HIV financing: total + US + Global Fund (SDMX API)
         DHSConnector,             # survey HIV prevalence (API)
         ForeignAssistanceConnector,  # US self-reported HIV disbursements (CSV ingest)
@@ -49,7 +53,8 @@ CONNECTORS = {
 CONNECTORS.update(COUNTRY_CONNECTORS)
 
 __all__ = [
-    "WorldBankConnector", "WHOGHOConnector", "WHOTMEConnector", "UNAIDSAidsinfoConnector", "OECDCRSConnector",
+    "WorldBankConnector", "WHOGHOConnector", "WHOTMEConnector", "UNAIDSAidsinfoConnector",
+    "UNAIDSGAMExpenditureConnector", "WHOGHEDConnector", "OECDCRSConnector",
     "DHSConnector", "ForeignAssistanceConnector", "PEPFARPanoramaConnector",
     "PEPFARAgencyConnector", "PEPFARExpenditureConnector", "PEPFARSNUConnector",
     "CLMAsiaConnector", "GlobalFundConnector",
