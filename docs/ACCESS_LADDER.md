@@ -1510,6 +1510,177 @@ PEPFAR's file, so a country total that PEPFAR held at exactly the same figure ca
 apart, as Mozambique does at 337,075,908 against 337,075,909. At half a dollar the check missed
 Indonesia, Ghana, Cote d'Ivoire and Mozambique.
 
+### §9s. A zero can record who pays, a sum can arrive as an average, and a net count can hide who left
+
+`PEPFAR_OU_Commodities_Procurements`, the third of the four files §7b named as additive, is read
+by connector 22, `pepfar_commodities`. The file lists every commodity a Country Operational Plan
+from COP18 to COP24 sets out to buy, one line per item with a planned budget and a planned
+quantity, 8,902 lines and 5,537,274,918 dollars over the implementation years 2019 to 2025. The
+connector was run into the panel twice, and the second run, on 19 September 2026, emitted 1,116
+rows over 54 countries, 279 for each of four series, the like-for-like total and the ARV, rapid
+test kit and laboratory categories. Every plan in the file was written before the January 2025
+freeze, so the file cannot show the cut. The file shows the trend going into 2025. Over the 23
+countries with a plan in both 2019 and 2025, planned ARV procurement falls from 506.7m dollars to
+220.2m and the like-for-like total from 861.8m to 542.3m. The file cannot separate fewer people
+supplied from a cheaper regimen or from another funder taking over the purchase.
+
+A budget of zero beside a stated quantity records where the cost sits. In 2019 every one of the
+40 condom lines carries a budget of zero against 422.7 million condoms over 14 countries,
+103,662,024 of the condoms for Zambia. Seven later country-years in 2021 and 2022 also list
+condoms at a budget of zero, which makes 21 country-years and 462,389,641 condoms planned with no
+money attached. Lesotho 2024 lists 907,443 laboratory units, 1,510 rapid test kit units and
+30,200 male circumcision units, every line at a budget of zero, between a like-for-like total of
+5.94m dollars in 2023 and 5.80m in 2025. Read as spending, each zero would show a supply
+collapsing in a year when the plan lists the goods. A plan can list goods whose cost another plan
+or another funder carries, so a zero budget beside a quantity says who pays and says nothing
+about what was bought. Condoms enter no indicator, and Lesotho 2024 is withheld from every series
+and named in the log. **The general rule. A budget of zero beside a stated quantity is a
+statement about who pays, not a measurement of zero, and an analysis of funding cuts has to be
+kept from reading the zero as a cut.**
+
+A figure in a second file can be aggregated with the wrong function. The partner file,
+`Public_Partner_Budgets_and_Expenditures`, carries a `Condoms: Commodities` column, and the
+column agrees with the commodities file's condom category to within half of one per cent in 103
+of the 118 country-years both files fill. The partner file and the commodities file disagree in
+15 country-years, all in 2021 or 2022, and the partner file carries the smaller figure in all 15
+disagreements. In eight of the 15 disagreements the partner figure is the condom total divided by
+the number of condom lines. Cote d'Ivoire 2022 has three condom lines summing to 749,967 dollars
+in the commodities file, and the partner file gives 249,989. Seven disagreements fit no rule
+either file settles, the Democratic Republic of the Congo 2021, Lesotho 2022, Sierra Leone 2021,
+Eswatini 2022, Ukraine 2022, Zambia 2021 and Zimbabwe 2021. A mean written where a sum belongs
+does not look like an error. The mean looks like a smaller plan, and a comparison of the partner
+file with the commodities file would report PEPFAR's own publications disagreeing about money
+when one publication has averaged. The panel does not read the partner file's condom column, so
+no indicator is affected through the condom column.
+
+The averaging does not reach the partner file's `Total Planned Funding`, which the panel reads as
+`pepfar_planned_funding`. The test was run offline on 19 September 2026. In all eight averaged
+country-years the partner file books the condom money on a single GHSC-PSM row under PREV,
+Condom & Lubricant Programming, and the row's `Total Planned Funding` is at least the full condom
+total in the commodities file. Cote d'Ivoire 2022 carries 750,000 dollars of planned funding on
+the row whose condom column reads 249,989, against a condom total of 749,967 in the commodities
+file. None of the 145 partner rows carrying condom commodities shows a condom figure larger than
+the row's own `Total Planned Funding`. The partner file's `Total Planned Funding` also equals the
+budget in `PEPFAR_OU_Budgets_and_Program_Expenditures`, summed over the OU file's detail rows, to
+within two dollars in all 277 country-years from 2021 to 2025, the eight averaged country-years
+included, once the Peace Corps rows described in §9t are placed in the countries the rows name.
+The partner file and the OU file are both PEPFAR publications and may be built from one
+database, so the agreement rules out an error made in writing the partner file and cannot rule
+out an error in a database behind both files. The two files split each country's total across
+programme areas differently, so the agreement holds for the country-year total and cannot be
+tested programme by programme. The partner file's 14 other cross-cutting columns, among them
+`Food and Nutrition: Commodities`, `Human Resources for Health` and `Construction`, cannot be
+tested for averaging, because no file on disk lists those amounts line by line. The panel reads none of the 14 columns. **The general
+rule. When two files disagree on the same quantity and one file is always smaller, divide the
+larger figure by the number of lines behind the larger figure before looking for any other cause.
+An average found in one column of a file has to be looked for in every column the panel reads
+from the same file.**
+
+The quantity column changes unit across the whole file, not in Nigeria alone. §7g records
+Nigeria's Determine test kit at 85.60 dollars a unit in FY2024 and 0.80 in FY2025 under an
+identical item string. Across the whole file, 260 of the 1,694 pairs of the same item in the same
+country in consecutive years change price per unit more than tenfold, including 161 of 630
+laboratory pairs, 66 of 272 rapid test kit pairs and two of 329 ARV pairs. A quantity series
+would record changes of unit as changes of supply, so the connector emits budget only and counts
+the jumps on every run. The description in §7b of a file carrying planned ARV and test-kit
+quantities stands for what the file holds and is withdrawn for what the panel can use.
+
+A category the plan does not list is a zero, and a country-year the file does not hold is not.
+The connector's first run left a hole wherever a plan carried a like-for-like total and no line
+in a category. The validator read the holes as countries leaving, and flagged ARV at 32 reporting
+countries in 2023 against 26 in 2024, laboratory at 37 in 2021 against 29 in 2022 and rapid test
+kits at 42 in 2021 against 33 in 2022. None of the flagged countries left the file. A procurement
+plan lists what the plan buys, so a plan with a total and no ARV line plans to buy no ARVs, and
+the file settles the zero. Mali 2024 carries 489,495 dollars of essential medicines, laboratory
+goods and rapid test kits and no ARV line, between about 29,000 dollars of ARVs in 2023 and about
+98,000 in 2025. The second run writes the zero, marked `category_not_in_plan`, on 84 ARV rows, 65
+laboratory rows and 31 rapid test kit rows, and all three validator flags are gone. A country-year
+the file does not hold, or holds only as a withheld plan, still carries no row, because nothing in
+the file says what a missing plan contained. A zero ARV plan can also mean another funder buys the
+country's ARVs, and the file does not name the other funder. **The general rule. Whether an empty
+cell is zero or unknown depends on what the file lists. A file that lists what a plan buys
+settles a zero inside a plan that exists and settles nothing about a plan the file does not
+hold.**
+
+A net count of countries can hide the countries that left. The like-for-like total covers 44
+countries in 2023 and 43 in 2024, a fall of one country. Underneath the fall of one, Guatemala,
+Honduras, Panama and El Salvador leave, Lesotho is withheld, and Colombia, Peru, Senegal and
+South Sudan return from gaps. The validator's reporting-drop check compares net counts against a
+threshold of 15 per cent (`REPORTER_DROP_SHARE` in `hivimpact/writers.py`), so a year in which
+countries return as fast as other countries leave passes silently. Guatemala, Honduras, Panama
+and El Salvador all sit under the Central and South America Region. In 2024 the Central and
+South America Region carries no line for any of the four Central American countries and one line
+naming `Western Hemisphere Region (pre-FY24)` in place of a country, 436,870 dollars of PrEP
+tablets. The file does not settle whether PEPFAR stopped planning commodities for the four
+Central American countries or began planning the countries' commodities at regional level. The
+connector now names every entry and every exit on every run, and the series of 12 countries end
+before 2025 in the current file. Where a country's series ends in the year before the country's
+operating unit carries a line naming a region, the country's rows say so in `coverage_warning`.
+The rises in the count in 2020 and 2021 repeat §9q, with 15 of the 16 countries entering in 2020
+sitting under a regional operating unit that first appears in the file in 2020. **The general
+rule. A count of units compared year on year measures net change. Entries and exits have to be
+listed by name, because a year in which units return as fast as other units leave shows no change
+at all.**
+
+Two rules from §9r held again. The file books In-Country Logistics and Quality Assurance from
+2023 and Procurement Management from 2024, and together with the 2019 `Not Specified` lines the
+cost categories hold 223,952,936 dollars, 4.04 per cent of the file. Every indicator excludes the
+cost categories, and the total row carries the amounts in `cost_categories`. PrEP enters the ARV
+category in 2020 at 2.9m dollars, so ARV rows carry `prep_budget`, and ARV rows before 2020 name
+the absent minor category in `categories_absent`.
+
+### §9t. A code column can contradict the name written beside the code
+
+The partner file, `Public_Partner_Budgets_and_Expenditures`, carries an `ISO3` column and a
+`Country` column on every row. On 106 rows the `ISO3` column reads USA while the `Country` column
+names one of 13 countries in which PEPFAR works, Botswana, Cameroon, Eswatini, Kenya, Lesotho,
+Malawi, Mozambique, Namibia, South Africa, Tanzania, Uganda, Ukraine and Zambia. Every one of the
+106 rows belongs to a Peace Corps mechanism named Management and Operations (Funding Agency `PC`),
+and every one of the 106 rows falls in the implementation years 2022 to 2025. The 106 rows hold
+101,663,836 dollars of planned funding and 30,336,352 dollars of expenditure. No row in the
+partner file names the United States in the `Country` column. The Peace Corps rows of 2021 carry
+the code of the country each row names, and so do the Peace Corps rows booked to `All for OU` in
+later years, which hold the Peace Corps expenditure of 2025 and Lesotho's Peace Corps plan for
+2024 and 2025. The test of the condom averaging in §9s found the mislabel on 19 September 2026.
+
+`pepfar_expenditure` takes a partner row's country from the `ISO3` column alone, so the panel
+holds four rows for the United States in each of `pepfar_planned_funding`,
+`pepfar_planned_funding_other_agency`, `pepfar_expenditure` and `pepfar_expenditure_other_agency`,
+one row for each year from 2022 to 2025, and the 13 countries' series for the same years lack the
+Peace Corps money. Over the 50 affected country-years the missing money is a median 0.85 per cent
+of a country's corrected planned funding and at most 6.04 per cent, in Botswana 2022, and at most
+4.12 per cent of corrected expenditure, in Botswana 2024. The other-agency series, which holds
+every agency other than USAID and HHS/CDC, loses far more. The missing money is a median 19.2 per
+cent of a country's corrected other-agency planned funding and 75.2 per cent in Botswana 2024.
+The panel reads other-agency expenditure of zero in Botswana 2024, Namibia 2023 and Namibia 2024,
+where the Peace Corps spent 1,675,092, 528,167 and 646,038 dollars. The mislabel starts in
+2022, so a country's other-agency series falls between 2021 and 2022 partly because the Peace
+Corps money leaves the country's rows. Botswana's other-agency planned funding reads 6,943,294
+dollars in 2021 and 2,564,110 in 2022 in the panel, a fall of 63 per cent, and 6,279,181 in 2022
+with the Peace Corps money restored, a fall of 9.6 per cent. The mechanism counts on the affected
+rows leave out the Peace Corps mechanism, which the United States rows count instead, 13
+mechanisms in 2022 and 2023 and 12 in 2024 and 2025.
+
+`PEPFAR_OU_Budgets_and_Program_Expenditures` places the Peace Corps money in the 13 countries, and
+settles which column is wrong. Keyed on the partner file's `Country` column, the partner file's
+planned funding equals the OU file's budget to within two dollars in all 277 country-years from
+2021 to 2025, and the partner file's expenditure equals the OU file's expenditure to within two
+dollars in 271 of 278 country-years and to within four dollars in all 278. Keyed on the `ISO3`
+column, as the panel is keyed now, planned funding agrees in 227 of 281 country-years and
+expenditure in 238 of 281. The same key moves one figure in connector 22's check against the
+partner file (§9s). Keyed on `Country`, the full commodity plan is 15.8 to 17.9 per cent of
+planned funding by year, against 15.9 to 17.9 keyed on `ISO3`, and the highest share stays 0.408,
+in the Democratic Republic of the Congo in 2023.
+
+The panel as it stood on 19 September 2026 still holds the mislabel. A fix in
+`pepfar_expenditure`, taking a partner row's country from the `Country` column wherever `Country`
+and `ISO3` name different countries and counting the reassigned rows and money in the log, has
+not been made, and the panel changes only when `pepfar_expenditure` is run again. **The general
+rule. A file that gives a code and a name for the same unit can let the code and the name
+disagree, and a connector keyed on the code alone moves money between countries without any
+warning. Where a file carries both columns, the connector has to derive the code from the name as
+well and name every row on which the two columns disagree.**
+
 ---
 
 ## Status of the claims here
@@ -1569,7 +1740,7 @@ Indonesia, Ghana, Cote d'Ivoire and Mozambique.
 | Every DHS row for DR Congo was being dropped | `to_iso3("Congo Democratic Republic")` returned `None` — the DHS Program's own spelling, absent from `_OVERRIDES` while four others were present. Fixed at `hivimpact/normalize.py:48`; all 92 DHS country names re-resolved, one still unmapped ("Nigeria (Ondo State)", correctly) |
 | The additive test has to be applied per table | DR Congo PNMLS GAM 2024 report, read 2026-08-15: 7 tables sourced "Données DHIS2", 4 to the PNLS 2023 report, provincial PrEP to PEPFAR, Tableau LVI to REDES — four classifications in one document |
 | PEPFAR Spotlight publishes 15 datasets and the pipeline reads 3 | Dataset paths taken from `data.pepfar.gov/static/js/main.9f74f1e6.js` 2026-08-15; all 15 return 200 unauthenticated from `data.pepfar.gov/media/`; connectors read `Enhanced_Geographical_Analysis`, `Public_Partner_Budgets_and_Expenditures`, `Public_Partner_MER_TopLine` |
-| Four of the unread files are additive | `PEPFAR_OU_Budgets_and_Program_Expenditures` (budget from 2004, by Program/Sub Program/Beneficiary, against the partner file's FY2021 start), `PEPFAR_OU_Commodities_Procurements` (planned ARV/RTK quantity and budget, COP18–COP24), `Country_Level_Results_by_Modality_Coarse_Age_and_Sex` (28 modalities, `TX_RTT`, loss-to-follow-up reasons), `HRH_Inventory_Public_Dataset` (FY2025 workforce) |
+| Four of the unread files are additive | `PEPFAR_OU_Budgets_and_Program_Expenditures` (budget from 2004, by Program/Sub Program/Beneficiary, against the partner file's FY2021 start), `PEPFAR_OU_Commodities_Procurements` (planned budget by commodity item, COP18 to COP24, with a quantity column that changes unit between years, so the budget alone is usable. *Corrected 2026-09-19* from "planned ARV/RTK quantity and budget", §9s), `Country_Level_Results_by_Modality_Coarse_Age_and_Sex` (28 modalities, `TX_RTT`, loss-to-follow-up reasons), `HRH_Inventory_Public_Dataset` (FY2025 workforce) |
 | Community case-finding falls harder than facility case-finding | `Country_Level_Results_by_Modality`, Q4 FY2024 → Q4 FY2025, modalities grouped by PEPFAR's own `Mod`/`Active`/`SNS` convention: 10 of 12 WCA countries with PEPFAR data; NGA −15.1% vs −4.6%, CIV −33.3% vs −3.4%, CMR −100% vs −10.0%, COD −52.0% vs −12.2%, BFA −86.7% vs +7.0% |
 | Nigeria's PEPFAR first-line ARV line is zeroed, not missing | COP24/FY2025 carries *DTG/3TC/TDF 50/300/300 mg, 90 Tablets* as a present row at quantity 0 and budget 0, against 2,550,449 units and 31,153,224 USD in COP23/FY2024; adult ARV 4,667,649 → 863,629 units overall |
 | A commodity quantity column changes unit between years | NGA *HIV-1/2, Determine, 100 Tests*: 75,757 units at 6,484,799 USD (85.60 each, a pack) in FY2024; 5,965,515 units at 4,772,412 USD (0.80 each, a test) in FY2025 — identical item string |
@@ -1711,3 +1882,19 @@ Indonesia, Ghana, Cote d'Ivoire and Mozambique.
 | The 2004 budget column is an allocation rule, not a year's budget | 22 rows, 11 countries, 68,991,569 USD, only testing and care and treatment. Testing takes exactly 70% and care and treatment 30% in all 11, TZA 14,693,227 down to CIV 2,709,900. The same 11 carry 783,034,013 in 2005, 11.3× (4.6× to 33.3× by country). Found by following the validator's only outlier flag on the source, UGA 2004. Read, logged with the split measured on every run, not emitted |
 | Management and Operations and Applied Pipeline begin in 2014 | Nothing under either before 2014; 295,636,956 and 1,180,230,636 over the emitted countries in 2014. The budget total goes 3,213,039,728 (2013) → 4,780,573,818 (2014) over the same 32 countries, and 1,475,867,592 of the 1,567,534,090 rise is the two categories. The 244 budget rows for 2005–2013 carry `categories_absent` |
 | A repeated budget is not a held budget | 2010 repeats 2009 to the dollar in every programme area in all 28 countries present in both years; the 2010 total rises 32,775,394, all of it CHN, GUY and THA entering. 24 further country-years in 2016–2018 (5, 12, 7) hold the total while the split moves: AGO at 17,700,000 from 2015 to 2018, MOZ's Total row 337,075,909 in 2016 and 2017 while budget net of pipeline falls 330,523,501 → 310,403,040. Tolerance two dollars, because detail and pipeline round separately. Carried in `repeats_previous_year` with the kind named |
+| The commodities file is read into the panel, budget only | The run of 2026-09-19 emitted 1,116 rows over 54 countries, 279 each for `pepfar_commodity_budget`, `pepfar_arv_budget`, `pepfar_rtk_budget` and `pepfar_lab_budget`. Used 7,736 of 8,902 lines and 5,243,853,783 of 5,537,274,918 USD (94.70%). Discarded cost categories 4.04%, condoms 1.25%, one line with no ISO3 0.01%, and 25 withheld lines carrying no money. Panel 182,989 to 184,105 over two runs, the 182,989 rows of every other source identical, reconciliation unchanged at 95 pairs, no row of the source flagged by `writers._unit_outliers` (384 flags before and after) |
+| Planned ARV procurement was falling before the freeze | COP24, the plan for 2025, was written in 2024, so no figure shows the 2025 cut. Over the 23 countries planned in both 2019 and 2025, ARV 506.7m to 220.2m and the like-for-like total 861.8m to 542.3m. Over the 34 countries planned in both 2020 and 2025, ARV 487.9m to 223.6m and the total 827.8m to 549.5m. The file cannot separate price, volume and a second funder taking over the purchase |
+| A budget of zero beside a quantity records who pays | All 40 condom lines in 2019 carry zero against 422.7 million condoms over 14 countries (ZMB 103,662,024). 21 country-years and 462,389,641 condoms at zero budget in all, 14 in 2019, five in 2021 and two in 2022. LSO 2024 lists 907,443 laboratory, 1,510 RTK and 30,200 VMMC units at zero, between totals of 5.94m (2023) and 5.80m (2025), and is withheld from every series (§9s) |
+| The partner file averages condom lines where the sum belongs | `Condoms: Commodities` agrees with the commodities file within 0.5% in 103 of 118 country-years. 15 disagreements, all 2021 or 2022, the partner file smaller in all 15. Eight equal the sum divided by the number of condom lines (CIV 2022, 749,967 against 249,989). Seven fit no rule (COD 2021, LSO 2022, SLE 2021, SWZ 2022, UKR 2022, ZMB 2021, ZWE 2021). Five country-years carry condoms in the commodities file only. The panel reads no condom column. *Tested 2026-09-19*, the averaging does not reach `Total Planned Funding`. Each of the eight country-years books the condoms on one GHSC-PSM PREV row whose planned funding is at least the full condom sum (CIV 2022, 750,000 against 749,967), no one of the 145 condom rows exceeds the row's planned funding, and partner planned funding equals the OU file's budget within 2 USD in all 277 country-years 2021 to 2025 once the Peace Corps rows are placed by `Country` (§9t). Two PEPFAR publications agreeing, not two instruments. The 14 other cross-cutting columns are untestable and unread |
+| The commodity quantity column changes unit across the file, not in Nigeria alone | 260 of 1,694 pairs of the same item in the same country in consecutive years change price per unit more than tenfold (Laboratory 161 of 630, RTKs 66 of 272, Essential Meds 17 of 261, VMMC 14 of 146, ARV 2 of 329, TB 0 of 56). Quantities are not emitted, and the count is logged on every run |
+| Four cost categories are booked in some years only | In-Country Logistics from 2023 (42.6m, 41.5m, 46.7m), Quality Assurance from 2023 (8.3m, 7.3m, 6.0m), Procurement Management from 2024 (32.2m, 37.2m), `Not Specified` in 2019 only (2.2m). 794 lines, 223,952,936 USD, 4.04% of the file. Excluded from every indicator and carried in `cost_categories` on the total row |
+| A category the plan does not list is zero, and the first run's three drop flags were the missing zeros | The 936-row first run was flagged on `pepfar_arv_budget` 32 (2023) to 26 (2024), `pepfar_lab_budget` 37 (2021) to 29 (2022) and `pepfar_rtk_budget` 42 (2021) to 33 (2022), all plans with a total and no line in the category. The second run writes zeros marked `category_not_in_plan`, ARV 84, Laboratory 65 and RTKs 31, and no commodity series is flagged. MLI 2024 carries 489,495 USD and no ARV line. A country-year absent or withheld still carries no row |
+| A net country count hid four exits | Like-for-like total 44 countries (2023) to 43 (2024). GTM, HND, PAN and SLV leave and LSO is withheld, while COL, PER, SEN and SSD return from gaps. `writers._reporter_drops` compares net counts against `REPORTER_DROP_SHARE` = 0.15, so nothing fired. In 2024 the Central and South America Region carries one line naming `Western Hemisphere Region (pre-FY24)`, 436,870 USD of PrEP tablets. The series of 12 countries end before 2025. The four Central American countries carry the regional sentence in `coverage_warning`, 60 rows |
+| The 2020 rise in the commodity country count is regional plans entering the file | 23 countries (2019) to 38 (2020), 15 of the 16 entering under a regional operating unit and no regional operating unit in the file for 2019. 38 to 47 in 2021, ten of the 12 entering regional. Seven regional operating units cover 29 countries. The §9q pattern in a second PEPFAR file |
+| The full commodity plan sits between 15.9% and 17.9% of planned funding | All categories against the partner file's `Total Planned Funding`, 228 country-years over 2021 to 2025, by year 17.9%, 16.4%, 17.7%, 16.4% and 15.9%. Highest share 0.408 in COD 2023, and no commodity plan exceeds the country's planned funding. Keyed on the partner file's `ISO3`, as the connector keys the check. Keyed on `Country` the range is 15.8% to 17.9% (§9t) |
+| Exact duplicate commodity lines are kept | 326 lines, 22,420,358 USD, 0.40% of the file and 1.51% in 2020. UGA 2020 holds one Roche viral-load line of 4,064,808 USD twice. The file has no mechanism column to separate two mechanisms planning the same purchase from a line entered twice. Carried in `duplicate_lines` and `duplicate_usd` |
+| The partner file labels 106 Peace Corps rows USA | Funding Agency `PC`, mechanism Management and Operations, `ISO3` USA and `Country` naming BWA, CMR, SWZ, KEN, LSO, MWI, MOZ, NAM, ZAF, TZA, UGA, UKR or ZMB. 28 rows in 2022, 30 in 2023, 25 in 2024 and 23 in 2025, none in 2021. 101,663,836 USD planned and 30,336,352 spent. No partner row names the United States in `Country`. Found 2026-09-19 by the averaging test of §9s |
+| The panel carries the Peace Corps money under the United States | Four USA rows each of `pepfar_planned_funding`, `pepfar_planned_funding_other_agency`, `pepfar_expenditure` and `pepfar_expenditure_other_agency`, 2022 to 2025, equal to the mislabelled rows by year (planned 27,687,491, 25,330,412, 24,353,794 and 24,292,139). USA `mechanisms_budgeted` 13, 13, 12 and 12, the Peace Corps mechanisms. **Not fixed**, the panel changes only when `pepfar_expenditure` is run again |
+| The mislabel is small in country totals and large in the other-agency series | 50 affected country-years. Missing share of corrected planned funding median 0.85%, largest 6.04% (BWA 2022), of corrected expenditure largest 4.12% (BWA 2024). Missing share of corrected other-agency planned funding median 19.2%, largest 75.2% (BWA 2024). Other-agency expenditure reads zero in BWA 2024, NAM 2023 and NAM 2024 against Peace Corps spending of 1,675,092, 528,167 and 646,038 USD |
+| The 2021 to 2022 fall in the other-agency series is partly the mislabel | Peace Corps rows carry the right code in 2021 (40 of 40). BWA other-agency planned funding 6,943,294 (2021) and 2,564,110 (2022) in the panel, a fall of 63%, and 6,279,181 in 2022 with the Peace Corps money restored, a fall of 9.6% |
+| The OU file settles which partner column is wrong | Keyed on `Country`, partner planned funding equals the budget of `PEPFAR_OU_Budgets_and_Program_Expenditures` (detail rows) within 2 USD in 277 of 277 country-years 2021 to 2025, and expenditure within 2 USD in 271 of 278 and within 4 USD in 278 of 278. Keyed on `ISO3`, 227 of 281 and 238 of 281. The two files split totals across programme areas differently, so the agreement holds at country-year only |

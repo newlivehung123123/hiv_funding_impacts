@@ -741,6 +741,33 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   "makes it a usable control for the USAID series."),
     IndicatorSpec("pepfar_expenditure_other_agency", "PEPFAR expenditure, other US agencies", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing"),
+
+    # -- what PEPFAR planned to buy (PEPFAR_OU_Commodities_Procurements, COP18 to COP24) --------
+    # Planned budget for commodities in the implementation years 2019 to 2025, from plans written
+    # a year ahead, so every figure predates the January 2025 freeze and none shows the 2025 cut.
+    # The three category series are parts of the total and must never be added to the total.
+    # A category series is zero, marked category_not_in_plan, where the plan has a total and
+    # lists nothing in the category.
+    # Quantities are not emitted, because the unit a quantity counts changes between years.
+    IndicatorSpec("pepfar_commodity_budget", "PEPFAR planned commodity procurement, like for like", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "ARVs, rapid test kits, laboratory goods, essential medicines, VMMC kits and TB "
+                  "drugs. Excludes logistics, quality assurance and procurement management, which "
+                  "the file books in some years only, and condoms, whose budget records which plan "
+                  "carries the cost rather than what was bought. A plan, not spending."),
+    IndicatorSpec("pepfar_arv_budget", "PEPFAR planned procurement of antiretroviral drugs", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Treatment, infant prophylaxis and, from 2020, PrEP, whose amount is in "
+                  "extra.prep_budget. Part of pepfar_commodity_budget. Zero where the plan lists "
+                  "no ARV."),
+    IndicatorSpec("pepfar_rtk_budget", "PEPFAR planned procurement of rapid test kits", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "HIV tests, self-tests, recency tests and tests for conditions other than HIV. "
+                  "Part of pepfar_commodity_budget."),
+    IndicatorSpec("pepfar_lab_budget", "PEPFAR planned procurement of laboratory commodities", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Viral load, early infant diagnosis, CD4 and TB reagents, sample collection, "
+                  "equipment and servicing. Part of pepfar_commodity_budget."),
 ]}
 
 

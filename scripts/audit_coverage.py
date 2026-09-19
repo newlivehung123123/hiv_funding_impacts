@@ -191,8 +191,11 @@ def main() -> int:
         "pepfar_*", "pepfar",
         used=["Public_Partner_MER_TopLine.zip",           # pepfar_panorama, pepfar_agency
               "Public_Partner_Budgets_and_Expenditures.zip",  # pepfar_expenditure
-              "Enhanced_Geographical_Analysis.zip"],      # pepfar_snu
-        note="four connectors share one directory")
+              "Enhanced_Geographical_Analysis.zip",       # pepfar_snu
+              "Country_Level_Results_by_Modality_Coarse_Age_and_Sex.zip",  # pepfar_modality
+              "PEPFAR_OU_Budgets_and_Expenditures.zip",   # pepfar_ou_budgets
+              "PEPFAR_OU_Commodities_Procurements.zip"],  # pepfar_commodities
+        note="seven connectors share one directory")
 
     audit_directory("foreign_assistance", "foreign_assistance",
                     used=["us_foreign_aid_complete.csv"], note="reads every CSV present")
