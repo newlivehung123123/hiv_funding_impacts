@@ -768,6 +768,27 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
                   "Viral load, early infant diagnosis, CD4 and TB reagents, sample collection, "
                   "equipment and servicing. Part of pepfar_commodity_budget."),
+
+    # -- the staff PEPFAR paid for (HRH_Inventory_Public_Dataset, fiscal year 2025) ------------
+    # One year only, and the year runs from October 2024 to September 2025, so the series give
+    # the level of PEPFAR-funded staffing in the year of the cut and cannot show a change.
+    # PEPFAR-funded staff only, never the national health workforce. The headcount column is
+    # not emitted, because one person split between programmes may sit on several rows.
+    IndicatorSpec("pepfar_hrh_spend", "PEPFAR spend on staff, human resources for health inventory",
+                  "USD", SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Pay of clinical, ancillary and other staff reported by implementing partners. "
+                  "Not the partner file's Human Resources for Health column, which is above-site "
+                  "workforce strengthening and not staff pay."),
+    IndicatorSpec("pepfar_hrh_fte", "PEPFAR-funded staff, full-time equivalents", "count",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Every staff category and interaction type. The headcount is in "
+                  "extra.individual_count and may count one person more than once."),
+    IndicatorSpec("pepfar_hrh_fte_service_delivery",
+                  "PEPFAR-funded staff delivering services, full-time equivalents", "count",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Rows whose interaction type is Service Delivery. Part of pepfar_hrh_fte, never "
+                  "to be added to pepfar_hrh_fte. Zero, marked no_service_delivery_rows, where "
+                  "the inventory lists staff and no service-delivery staff."),
 ]}
 
 

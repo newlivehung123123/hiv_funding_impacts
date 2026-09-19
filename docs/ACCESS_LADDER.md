@@ -1753,6 +1753,130 @@ unit, the connector has to carry the money on the placeholder beside every compl
 and has to call the completeness figure a lower bound wherever the placeholder's money sits
 beside a silent unit.**
 
+### §9v. A headcount split across rows can count one person twice, and a country with one row is not a country with no staff
+
+`HRH_Inventory_Public_Dataset`, the fourth of the four files §7b named as additive, is read by
+connector 23, `pepfar_hrh`. The file is PEPFAR's human resources for health inventory, in which
+PEPFAR's implementing partners report the staff whose pay PEPFAR funds, one row for each
+combination of operating unit, country, staff category, cadre, programme area, sub-programme and
+interaction type. The file holds 2,974 rows over 33 operating units and 57 names in the `Country`
+column, with 1,223,427,353 dollars of spend, 274,456 in the `Individual Count` column and
+175,844.14 full-time equivalents. §7b called the file a health-workforce inventory. The inventory
+lists PEPFAR-funded staff only and does not describe a country's national health workforce. The
+connector emits three series for each country, `pepfar_hrh_spend`, the spend summed over the
+country's rows, `pepfar_hrh_fte`, the full-time equivalents summed over the country's rows, and
+`pepfar_hrh_fte_service_delivery`, the full-time equivalents on the rows whose `Interaction Type`
+is `Service Delivery`. The service-delivery series is part of `pepfar_hrh_fte` and must never be
+added to `pepfar_hrh_fte`. No other source in the panel counts PEPFAR-funded staff. Every row
+carries fiscal year 2025, which runs from October 2024 to September 2025 and contains the freeze
+of January 2025. A file holding one year cannot show a change, and the inventory cannot separate
+staff paid before the freeze from staff paid after the freeze, so `pepfar_hrh_spend`,
+`pepfar_hrh_fte` and `pepfar_hrh_fte_service_delivery` give the level of PEPFAR-funded staffing in
+the year of the cut.
+
+The file sorts staff into clinical health workers, ancillary health workers and other staff, and
+classifies a post by the employment terms of the PEPFAR-funded position and not by the worker's
+qualification, so a qualified nurse employed as a manager counts as other staff (Financial
+Classifications Reference Guide of 16 April 2025, page 65). Other staff hold 63.9 per cent of the
+spend, clinical health workers 22.7 per cent and ancillary health workers 13.4 per cent. Counted
+in full-time equivalents, ancillary health workers come first with 82,262, against 47,634 for
+other staff and 45,948 for clinical health workers. A full-time equivalent costs 16,416 dollars
+among other staff, 6,046 dollars among clinical health workers and 1,990 dollars among ancillary
+health workers. The same number of posts cut among other staff therefore lowers
+`pepfar_hrh_spend` about eight times as much as the same number of posts cut among ancillary
+health workers, while `pepfar_hrh_fte` falls by the same amount. Rows marked `Service Delivery`
+hold 36.2 per cent of the spend and 128,306 of the 175,844.14 full-time equivalents. Every row
+under Above Site Programs (ASP) and Program Management (PM) is marked `Non Service Delivery`, and
+so are 1,730 of the 1,756 rows of other staff.
+
+The `Individual Count` column cannot be summed into a count of people. The file splits every
+country's staff by cadre, programme area, sub-programme and interaction type, and the guide refers
+the rules of the inventory to an HRH Inventory Handbook that is not on disk (page 66), so nothing
+on disk says whether a person whose time is split between two programme areas appears on two rows.
+On every row the full-time equivalents are at most the row's `Individual Count`, and the ratio of
+full-time equivalents to `Individual Count` has a median of 0.664 and a tenth percentile of 0.11.
+A person split over several rows would produce low ratios, and so would part-time staff, and the
+file cannot tell a split person from a part-time worker. A sum of full-time equivalents is right
+in either case. A sum of `Individual Count` is right only if no person sits on two rows. The
+headcount therefore rides in `extra.individual_count`, with a warning in
+`extra.individual_count_warning`, and enters no series. **The general rule. A count of people
+split across several dimensions adds up to a count of people only if the file guarantees that no
+person sits on two rows. Where the file does not say, the connector has to emit the measure that
+adds correctly either way and keep the count out of every series.**
+
+Ukraine's inventory is one row, `IM Program Management` under other staff, with 766,678.95 dollars
+of spend, 11 in the `Individual Count` column and 0.21 full-time equivalents. The partner file,
+`Public_Partner_Budgets_and_Expenditures`, records 40,722,026 dollars of PEPFAR expenditure in
+Ukraine in 2025, so Ukraine's inventory holds 1.9 per cent of Ukraine's expenditure. Among the
+other 54 countries the lowest share is Nigeria's at 27.5 per cent, followed by the Democratic
+Republic of the Congo at 28.9 per cent and Rwanda at 31.3 per cent. Emitted, Ukraine's rows would
+read as PEPFAR paying almost no staff in Ukraine, when the file lists a single row of programme
+managers. The connector withholds a country-year from every series when the country's inventory
+spend falls below 10 per cent of the partner file's `Total Expenditure` for the same country and
+year, and the log names every withheld country-year with the share, as Lesotho 2024 is withheld
+from the commodity series in §9s. Any threshold from two to 27 per cent withholds Ukraine alone in
+the current file. A rule withholding every country with no `Service Delivery` row would have been
+the wrong rule. Cambodia's inventory carries 13 rows and 73.14 full-time equivalents, every one of the
+13 rows other staff under ASP and PM, and Cambodia's inventory spend is 54.9 per cent of Cambodia's
+expenditure. An inventory that lists staff and lists no service-delivery staff settles the zero,
+so Cambodia's service-delivery series is emitted as zero and marked
+`extra.no_service_delivery_rows`. **The general rule. Whether a record is too thin to read has to
+be judged against an outside measure of the same country's activity, and not against the kinds of
+row the record lacks, because a country can lack a kind of row for a reason the record itself
+shows.**
+
+The file carries 40 rows that name no country. Under the Central Asia Region, 31 rows write
+`Central Asia Region` in the `Country` column, and nine rows write `Data not provided at this
+geographic level`, one under the Central and South America Region, five under West Africa Region
+1 and three under West Africa Region 2. The 40 rows hold 738,825 dollars, 282 in the `Individual
+Count` column and 73.64 full-time equivalents, and are dropped and counted in the log, as the
+regional rows of §9q and §9s are dropped, and not spread over a region's countries. Seven operating
+units cover more than one country in the file, the Caribbean Region, the Central Asia Region, the
+Central and South America Region, the Pacific Region, the South and Southeast Asia Region, West
+Africa Region 1 and West Africa Region 2, holding 788 rows and 74,572,975 dollars with the 40
+dropped rows included. The 29 countries under the seven regional operating units carry
+`extra.funded_through_regional_ou`, and the 19 of the 29 countries that sit under an operating
+unit with a dropped row carry an `extra.coverage_warning` that the country's figures may be a
+floor, because the staff on the dropped rows may work in the country.
+
+Every country-year's inventory spend is compared with the partner file's `Total Expenditure`, with
+partner rows placed by the `Country` column as §9t requires. Over the 54 countries emitted,
+inventory spend is a median 51.5 per cent of PEPFAR expenditure and 44.4 per cent overall,
+highest in Jamaica at 76.2 per cent and lowest in Nigeria at 27.5 per cent. No country's inventory
+spend exceeds the country's expenditure, and every country with PEPFAR expenditure in the partner
+file for 2025 has rows in the inventory, Ukraine aside. The partner file and the inventory come
+from the same implementing partners, so comparing inventory spend with `Total Expenditure` can
+catch an inventory larger than the country's whole expenditure and cannot confirm the inventory's
+figures. The partner
+file's `Human Resources for Health` column looks like the same quantity and is a different
+quantity. The guide defines Human Resources for Health as a programme area for above-site work to
+strengthen the health workforce, such as pre-service training and national workforce planning
+(pages 50 and 51). Over the partner rows placed in a country, the `Human Resources for Health`
+column totals 19,829,631 dollars in 2025 and is filled for 39 of the 54 countries emitted, and a
+country's inventory spend is a median 40 times the column's value for the same country. Compared
+with the inventory, the column would read as partners reporting a fortieth of the staff pay the
+inventory lists. The connector logs the ratio on every run and never compares the column with the
+inventory. **The general rule. A column named after a quantity can hold a programme area of the
+same name. Before columns sharing a name are compared, the classification guide has to be read for
+what each column measures.**
+
+The file carries 30 rows with no full-time equivalents and 23,580 dollars of spend, and eight rows
+with more than 500,000 dollars per full-time equivalent, 1,179,430 dollars in all, with no more
+than 0.38 full-time equivalents on any one row. Ukraine's single row is among the rows above
+500,000 dollars per full-time equivalent. The rows are kept, because a small fraction of a post
+can carry a stipend or a contract the file does not break down, and the log counts the rows with no
+full-time equivalents and the rows above 500,000 dollars per full-time equivalent on every run.
+
+The offline dry run of 19 September 2026 emitted 162 rows over 54 countries, 54 in each series,
+with 1,221,921,849 dollars of spend (99.88 per cent of the file), 175,770.29 full-time equivalents
+and 128,250.50 service-delivery full-time equivalents. Merged into the panel of 184,089 rows, the
+162 rows give 184,251, the validator's 142 warnings are unchanged, and the reconciliation stays at
+95 pairs, none involving `pepfar_hrh`, because no other source counts PEPFAR-funded staff.
+`scripts/audit_coverage.py` now counts seven of the 15 Spotlight files as read. Jason's run of the
+same day wrote the 162 rows into the panel. Checked offline, the 162 rows on disk match the dry run
+in every column, the 184,089 rows of the other sources match `hiv_panel.prev.csv` in every column,
+and the validator and the reconciliation give the same counts as the dry run.
+
 ---
 
 ## Status of the claims here
@@ -1811,8 +1935,8 @@ beside a silent unit.**
 | DHS covers WCA far better than it was being used | `surveyCharacteristicIds=23`: 18 of 24 WCA countries have a survey with HIV biomarkers; the API serves `breakdown=subnational` and the connector never asks for it |
 | Every DHS row for DR Congo was being dropped | `to_iso3("Congo Democratic Republic")` returned `None` — the DHS Program's own spelling, absent from `_OVERRIDES` while four others were present. Fixed at `hivimpact/normalize.py:48`; all 92 DHS country names re-resolved, one still unmapped ("Nigeria (Ondo State)", correctly) |
 | The additive test has to be applied per table | DR Congo PNMLS GAM 2024 report, read 2026-08-15: 7 tables sourced "Données DHIS2", 4 to the PNLS 2023 report, provincial PrEP to PEPFAR, Tableau LVI to REDES — four classifications in one document |
-| PEPFAR Spotlight publishes 15 datasets and the pipeline reads 3 | Dataset paths taken from `data.pepfar.gov/static/js/main.9f74f1e6.js` 2026-08-15; all 15 return 200 unauthenticated from `data.pepfar.gov/media/`; connectors read `Enhanced_Geographical_Analysis`, `Public_Partner_Budgets_and_Expenditures`, `Public_Partner_MER_TopLine` |
-| Four of the unread files are additive | `PEPFAR_OU_Budgets_and_Program_Expenditures` (budget from 2004, by Program/Sub Program/Beneficiary, against the partner file's FY2021 start), `PEPFAR_OU_Commodities_Procurements` (planned budget by commodity item, COP18 to COP24, with a quantity column that changes unit between years, so the budget alone is usable. *Corrected 2026-09-19* from "planned ARV/RTK quantity and budget", §9s), `Country_Level_Results_by_Modality_Coarse_Age_and_Sex` (28 modalities, `TX_RTT`, loss-to-follow-up reasons), `HRH_Inventory_Public_Dataset` (FY2025 workforce) |
+| PEPFAR Spotlight publishes 15 datasets and the pipeline reads 3 | Dataset paths taken from `data.pepfar.gov/static/js/main.9f74f1e6.js` 2026-08-15; all 15 return 200 unauthenticated from `data.pepfar.gov/media/`; connectors read `Enhanced_Geographical_Analysis`, `Public_Partner_Budgets_and_Expenditures`, `Public_Partner_MER_TopLine`. *Seven read as of 2026-09-19*, the four additive files added by `pepfar_modality`, `pepfar_ou_budgets`, `pepfar_commodities` and `pepfar_hrh` (§9v) |
+| Four of the unread files are additive | `PEPFAR_OU_Budgets_and_Program_Expenditures` (budget from 2004, by Program/Sub Program/Beneficiary, against the partner file's FY2021 start), `PEPFAR_OU_Commodities_Procurements` (planned budget by commodity item, COP18 to COP24, with a quantity column that changes unit between years, so the budget alone is usable. *Corrected 2026-09-19* from "planned ARV/RTK quantity and budget", §9s), `Country_Level_Results_by_Modality_Coarse_Age_and_Sex` (28 modalities, `TX_RTT`, loss-to-follow-up reasons), `HRH_Inventory_Public_Dataset` (FY2025 workforce, meaning the spend, full-time equivalents and headcount of PEPFAR-funded staff by category, cadre, programme and interaction type, one year only and not the national health workforce. *Read 2026-09-19* by `pepfar_hrh`, §9v) |
 | Community case-finding falls harder than facility case-finding | `Country_Level_Results_by_Modality`, Q4 FY2024 → Q4 FY2025, modalities grouped by PEPFAR's own `Mod`/`Active`/`SNS` convention: 10 of 12 WCA countries with PEPFAR data; NGA −15.1% vs −4.6%, CIV −33.3% vs −3.4%, CMR −100% vs −10.0%, COD −52.0% vs −12.2%, BFA −86.7% vs +7.0% |
 | Nigeria's PEPFAR first-line ARV line is zeroed, not missing | COP24/FY2025 carries *DTG/3TC/TDF 50/300/300 mg, 90 Tablets* as a present row at quantity 0 and budget 0, against 2,550,449 units and 31,153,224 USD in COP23/FY2024; adult ARV 4,667,649 → 863,629 units overall |
 | A commodity quantity column changes unit between years | NGA *HIV-1/2, Determine, 100 Tests*: 75,757 units at 6,484,799 USD (85.60 each, a pack) in FY2024; 5,965,515 units at 4,772,412 USD (0.80 each, a test) in FY2025 — identical item string |
@@ -1974,3 +2098,12 @@ beside a silent unit.**
 | The Peace Corps moved the 2025 spending off the Management and Operations mechanism | Management and Operations spending 7,435,672 (2022), 10,556,066 (2023), 12,344,614 (2024) and 0 (2025) against 24,292,139 USD planned in 2025. PC `All for OU` 2025 976,618 planned (LSO alone) and 12,385,194 spent, 11,544,602 USD of the PC spending on lines with no budget in 12 countries (ZMB 2,462,597, BWA 2,019,855). The partner file does not say why the PC spending moved (§9u) |
 | The five warnings the Peace Corps fix added come from the `All for OU` booking | MOZ, MWI, SWZ, UGA and ZMB other-agency 2025. Crediting each spending-only `All for OU` line to one silent mechanism of the same agency, against the uncredited rate of the year before, clears 11 of the 33 lower-bound warnings, the five added warnings among the cleared (MOZ 3/8 in 2024, 2/8 in 2025, 4/8 credited). 22 lower-bound warnings still fire, among them ZAF USAID 2025 (29/36 to 7/34, 8/34 credited) and SEN USAID 2025 (3/6 to 1/6, 2/6 credited), so the booking does not explain the USAID fall of 2025. One mechanism per line is a reading, not a bound (§9u) |
 | The `All for OU` booking is marked and not corrected | `ou_level_unbudgeted_expenditure` on all 970 expenditure rows, above zero on 79. The lower-bound sentence on 33 of 214 completeness warnings. No value and no reporting rate changed, checked row by row against the dry run without the field. *Written and run 2026-09-19* (§9u) |
+| The staff inventory is read into the panel, fiscal year 2025 only | The run of 2026-09-19 emitted 162 rows over 54 countries, 54 each for `pepfar_hrh_spend`, `pepfar_hrh_fte` and `pepfar_hrh_fte_service_delivery`. Used 2,933 of 2,974 rows and 1,221,921,849 of 1,223,427,353 USD (99.88%), 175,770.29 FTE and 128,250.50 service-delivery FTE. Panel 184,089 to 184,251, the validator's 142 warnings and the reconciliation's 95 pairs unchanged, no pair involving `pepfar_hrh`. The 162 rows on disk match the offline dry run in every column, and the 184,089 rows of the other sources match `hiv_panel.prev.csv` in every column (§9v) |
+| The inventory's headcount may count one person twice | `Individual Count` sums to 274,456 against 175,844.14 FTE. FTE per head median 0.664, tenth percentile 0.11, no row with more FTE than heads. The guide refers the inventory's rules to an HRH Inventory Handbook not on disk (page 66). Carried in `extra.individual_count` with a warning and in no series (§9v) |
+| Spend and FTE weight the staff categories differently | Other staff 63.9% of spend and 47,634 FTE, clinical 22.7% and 45,948, ancillary 13.4% and 82,262. Spend per FTE 16,416 USD for other staff, 6,046 for clinical and 1,990 for ancillary. A post is classified by the employment terms of the position and not by qualification (guide page 65) |
+| Ukraine's inventory is one row and is withheld | `IM Program Management`, other staff, 766,678.95 USD, 11 in `Individual Count`, 0.21 FTE, against 40,722,026 USD of 2025 expenditure in the partner file, a share of 0.019. Next lowest NGA 0.275, COD 0.289 and RWA 0.313. Withheld below 0.10, and any threshold from 0.02 to 0.27 withholds UKR alone (§9v) |
+| A country with no service-delivery row is not an incomplete inventory | KHM 2025, 13 rows and 73.14 FTE, every row other staff under ASP or PM, inventory spend 54.9% of the country's expenditure. The service-delivery series is emitted as zero with `no_service_delivery_rows` |
+| Forty inventory rows name no country | 31 rows `Central Asia Region` (656,618 USD, 72.88 FTE) and nine `Data not provided at this geographic level`, one under CSA, five under WAR1 and three under WAR2. 738,825 USD, 282 in `Individual Count` and 73.64 FTE in all, dropped and counted. Seven regional operating units hold 788 rows and 74,572,975 USD. 29 countries carry `funded_through_regional_ou`, and 19 of the 29 carry a `coverage_warning` |
+| Inventory spend is about half of PEPFAR expenditure | Against the partner file's `Total Expenditure`, partner rows placed by `Country` (§9t), over 54 countries the median share is 0.515 and the overall share 0.444, highest JAM 0.762 and lowest NGA 0.275. No country above 1, and every country with 2025 expenditure has inventory rows, withheld UKR aside |
+| The partner file's `Human Resources for Health` column is not staff pay | The guide defines the programme area as above-site work to strengthen the health workforce, pre-service training and national workforce planning among the examples (pages 50 and 51). The column totals 19,829,631 USD in 2025 over placed rows and is filled for 39 of the 54 countries, and inventory spend is a median 40 times the column. Logged and never compared with the inventory (§9v) |
+| Inventory rows with no FTE, and rows above 500,000 USD per FTE, are kept | 30 rows with no FTE and 23,580 USD. Eight rows above 500,000 USD per FTE, 1,179,430 USD in all and at most 0.38 FTE on a row, UKR's single row among the rows above 500,000 USD per FTE. Counted in the log on every run |

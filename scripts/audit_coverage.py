@@ -194,7 +194,8 @@ def main() -> int:
               "Enhanced_Geographical_Analysis.zip",       # pepfar_snu
               "Country_Level_Results_by_Modality_Coarse_Age_and_Sex.zip",  # pepfar_modality
               "PEPFAR_OU_Budgets_and_Expenditures.zip",   # pepfar_ou_budgets
-              "PEPFAR_OU_Commodities_Procurements.zip"],  # pepfar_commodities
+              "PEPFAR_OU_Commodities_Procurements.zip",   # pepfar_commodities
+              "HRH_Inventory_Public_Dataset.zip"],        # pepfar_hrh
         note="seven connectors share one directory")
 
     audit_directory("foreign_assistance", "foreign_assistance",
