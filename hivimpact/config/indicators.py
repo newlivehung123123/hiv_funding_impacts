@@ -154,12 +154,52 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   "incomplete, which is worth knowing in its own right. PEPFAR MER HTS_TST is a "
                   "second source, added on 2026-09-05, and counts tests the PEPFAR programme "
                   "paid for rather than tests the country ran, so the PEPFAR figure is a share "
-                  "of the WHO GHO figure and not a rival estimate of it."),
+                  "of the WHO GHO figure and not a rival estimate of it. PEPFAR publishes the "
+                  "same count twice, once as a partner sum and once as a country row, and "
+                  "pepfar_modality reads the country row — see the community and facility "
+                  "series below for why the two disagree in the regional operating units."),
     IndicatorSpec("hiv_test_positivity_pct", "% of returned HIV test results that were positive", "percent",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "The yield of the testing programme (WHO GHO HIV_POSITIVITY). Read next to "
                   "hiv_tests_performed: falling volume with rising positivity is a programme "
                   "narrowing to its highest-yield sites, which is what retrenchment looks like."),
+
+    # -- the same two counts, split by HOW the person was reached ------------------------
+    # Facility testing is a nurse offering a test to somebody who already walked into a clinic,
+    # and it costs almost nothing extra once the clinic is open. Community testing is a van, a
+    # fuel budget, an outreach team and a per-diem, and it is a line item that can be cancelled
+    # in a week without closing anything. The two arms therefore respond to the same cut by
+    # different amounts, which makes the contrast between them a mechanism and not a total.
+    #
+    # Between Q4 FY2024 and Q4 FY2025, over the 52 countries whose modality labels are complete,
+    # community testing fell 65.0 per cent and facility testing fell 15.6 per cent, and
+    # community testing fell further than facility testing in 21 of the 26 countries doing more
+    # than twenty thousand tests in Q4 FY2024 with both arms running. Community positivity rose
+    # from 1.67 to 3.26 per cent over the same year while facility positivity held at roughly
+    # 1.8 per cent.
+    #
+    # The two arms are a partition of the PEPFAR country total EXCEPT where PEPFAR labels a
+    # modality "Not Specified", which happens in seven countries in FY2025 alone. Those rows are
+    # counted into the total and into neither arm, and every affected row says so in
+    # extra.unclassified_tests.
+    IndicatorSpec("hiv_tests_performed_community", "HIV tests performed through community outreach", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "PEPFAR MER HTS_TST at the modality PEPFAR marks as community-based, being "
+                  "IndexMod, MobileMod, VCTMod, OtherMod, SNSMod and HomeMod. The cancellable "
+                  "arm of the testing programme, and the earliest visible effect of a cut."),
+    IndicatorSpec("hiv_tests_performed_facility", "HIV tests performed at a health facility", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "PEPFAR MER HTS_TST at every modality delivered inside a facility. The "
+                  "comparison arm for hiv_tests_performed_community, being the same country, the "
+                  "same year and the same indicator definition at a different cost structure."),
+    IndicatorSpec("new_diagnoses_community", "People newly diagnosed through community outreach", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "PEPFAR MER HTS_TST_POS at the community modalities. Divided by "
+                  "hiv_tests_performed_community it gives the yield of outreach testing, which "
+                  "rises as a shrinking programme keeps only its highest-yield contacts."),
+    IndicatorSpec("new_diagnoses_facility", "People newly diagnosed at a health facility", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "PEPFAR MER HTS_TST_POS at the facility modalities."),
 
     # -- ART initiations: the flow the panel was missing ------------------------
     # Almost everything else here is a stock, and a stock is the wrong instrument for

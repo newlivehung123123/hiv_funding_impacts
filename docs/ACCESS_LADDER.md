@@ -1244,6 +1244,272 @@ correlation of -0.187 between size and the ratio. The natural explanation, that 
 spending assessment cannot see PEPFAR money spent through regional or centrally procured channels,
 has not been tested here and must not be written up as though it had been.
 
+### 9l. The file that measures the mechanism, and the defect it found in two connectors already built
+
+§7b said to enumerate the family before declaring a source read, and the PEPFAR Spotlight catalogue
+had 12 zips nobody had opened. The first of the four §7b named as additive is
+`Country_Level_Results_by_Modality_Coarse_Age_and_Sex`, 14,033 rows over 59 countries, one row per
+country, indicator, coarse age, sex and modality.
+
+Modality is how the person was reached. Every other PEPFAR series in this panel counts services
+delivered. This one counts the route, and the route is the part of a programme a funding cut
+removes first. Facility testing is a nurse offering a test to somebody who already walked into a
+clinic, and it costs almost nothing extra once the clinic is open. Community testing is a van, a
+fuel budget, an outreach team and a per-diem, and it is a line item that can be cancelled in a
+week without closing anything.
+
+The §9f test ran first, because a new file naming a quantity the panel already holds is a
+hypothesis and not a finding. Summing this file's HTS_TST across modality, age and sex gives 415
+overlapping country-years over 58 countries against `pepfar_panorama`, with a median ratio of
+exactly 1.000000 and 349 cells inside half a per cent. HTS_TST_POS against `new_diagnoses` gives
+the same 415 country-years and the same median. This file is a decomposition of a total already in
+the panel, so its rows must never be read as corroboration of that total.
+
+**The defect this exposed.** `pepfar_panorama` and `pepfar_agency` build country totals by adding
+up the partners named in `Public_Partner_MER_TopLine`. This file reports the country directly.
+Where PEPFAR runs a country through a REGIONAL operating unit it names very few partners, so the
+partner sum is a fraction of the country figure. Thailand FY2018 publishes exactly one partner,
+Bangkok Metropolitan Administration, with 1,308 tests, against 75,944 in this file. Thailand FY2019
+is 1,752 against 136,227. From FY2020 Thailand publishes three partners and the two agree to
+1.000000. Every country-year where the partner sum falls more than five per cent short belongs to
+South and Southeast Asia Region, Central Asia Region or Central and South America Region, the sole
+exception being Kenya FY2018 at 5.8 per cent. The connector therefore also emits country totals
+under the same canonical ids, so the reconciliation table forms a pair and names the divergence
+rather than the panel carrying a silent undercount.
+
+Eleven country-years run the other way, this file three to 54 per cent BELOW the partner sum, worst
+at Malawi FY2018 at 0.462 and Namibia FY2020 to FY2022. The shortfall is spread evenly across all
+four quarters and no modality is missing, so it is neither a missing quarter nor a missing
+modality. The obvious explanation, that results reported without an age breakdown are dropped
+rather than filed under Unknown Age, is contradicted by Namibia, whose Unknown Age share is 28 per
+cent in exactly the years it falls short. Recorded as unexplained rather than described as
+understood.
+
+**A category that arrives with the finding has to be kept out of the finding.** The modality
+`Not Specified` carries no HTS_TST at all before FY2025 and 784,344 tests in Q4 FY2025, the one
+quarter the community share collapses. It is confined to seven countries, Thailand, Mozambique,
+Haiti, the Dominican Republic, Botswana, Jamaica and Zambia, and 727,005 of the 784,344 belongs to
+Thailand alone. Thailand's own classified testing in Q4 FY2024 was 45,211 tests across both arms,
+so putting the unclassified rows into either arm would have moved that arm by more than 16 times
+the whole of Thailand's previous quarter. Those rows are counted into the country total, put in
+neither arm, flagged in `extra.unclassified_tests`, and the seven countries are held out of the
+headline. None of the countries driving the community collapse carries a single unclassified test.
+
+**What the split shows**, Q4 FY2024 against Q4 FY2025, over the 52 countries whose modality labels
+are complete. Both quarters are the fourth quarter of their fiscal year, so the comparison is 12
+months apart and like for like.
+
+| | Q4 FY2024 | Q4 FY2025 | change |
+|---|---|---|---|
+| community testing | 3,056,545 | 1,068,854 | -65.0% |
+| facility testing | 16,021,304 | 13,517,748 | -15.6% |
+| community share | 16.0% | 7.3% | |
+| community positives | 51,185 | 34,825 | -32.0% |
+| facility positives | 294,968 | 241,411 | -18.2% |
+
+Community testing fell further than facility testing in 21 of the 26 countries doing more than
+20,000 tests in Q4 FY2024 with both arms running, including Uganda at -93.5 per cent community
+against -10.3 per cent facility and Nigeria at -83.4 against -15.8. Community positivity rose from
+1.67 to 3.26 per cent while facility positivity barely moved, 1.84 to 1.79, which is what a
+programme looks like when it stops going out to find people and keeps only its highest-yield
+contacts.
+
+### 9m. Two pairs of the same two sources, the same 415 cells, opposite verdicts
+
+Running the connector put a second defect in plain view, and this one belongs to `reconcile.py`
+rather than to any connector. The classifier calls a pair `derived` only when the median relative
+difference is at or below one per cent AND the share of cells agreeing within two per cent is at or
+above 0.90. The two conditions are joined by AND, and the second is a hard cut.
+
+`pepfar_modality` against `pepfar_panorama` produced two pairs over the identical 415 country-years,
+both with a median relative difference of exactly 0.000000 and a median ratio of exactly 1.000000.
+`hiv_tests_performed` agrees within two per cent on 374 of 415 cells and is classified `derived`.
+`new_diagnoses` agrees on 372 and is classified `independent`, carrying the evidence string
+"separate measurement systems, divergence is informative". Two cells decide it. The very defect
+§9l documents, the regional operating units, is what puts a tail of cells outside the band, so the
+tail that the derived test punishes is the thing the pair was created to expose.
+
+The problem is general, not local to the new connector. Eight of the 64 independent pairs, holding
+8,567 of the 28,625 independent cells, have a median relative difference at or below one per cent,
+meaning the typical cell is identical while the pair is labelled two separate measurement systems.
+The clearest case is UNAIDS AIDSinfo against WHO GHO, where `hiv_tests_performed` is `derived` on
+323 cells while `aids_deaths` (3,264 cells), `pmtct_arv_count` (1,515), `on_art_count` (2,030) and
+`hiv_test_positivity_pct` (321) are all `independent` at a median relative difference at or below
+one per cent. WHO GHO republishes UNAIDS estimates for HIV, and the reconciliation table currently
+says otherwise on four indicators out of five.
+
+The shape of those pairs is bimodal rather than noisy. `aids_deaths` has a median difference of
+exactly zero and only 56 per cent of cells within two per cent, which is identical on most
+country-years and far apart on the rest, the signature of one estimate republished at two vintages
+and not of two instruments measuring the same world. Calling it `derived` overstates the agreement
+and calling it `independent` inverts the meaning, so the honest repair is a fourth category rather
+than a moved threshold. **Unfixed, and left unfixed deliberately**, because changing the rule
+changes the verdict on all 94 pairs and that is a decision for Jason, not a tuning exercise to be
+run after seeing which side of the line the new connector landed on.
+
+### §9n. A file excluded for the right reason, and the sixteen years the exclusion cost
+
+`pepfar_expenditure` reads `Public_Partner_Budgets_and_Expenditures` and its code excludes the
+operating-unit budgets file by name, on the reasoning that the operating-unit file "covers the
+same money at a coarser grain with no agency column, so reading both would double count". The
+§9f test confirms that reasoning completely. Restricted to rows carrying an ISO3 code and with
+the aggregate rows removed, the operating-unit file reproduces the panel to the dollar in every
+year the two files share: FY2021 budget 5,036,285,258 in both, FY2021 expenditure 4,121,559,166
+in both, FY2025 budget 4,281,549,540 in both, FY2025 expenditure 2,789,722,472 against the
+panel's 2,789,722,474. Not close, identical.
+
+What the exclusion did not notice is that the partner file begins at FY2021 and the
+operating-unit file carries a budget column from 2004 and an expenditure column from 2018. A
+correct decision about the overlap silently discarded 16 years of budget history and three years
+of expenditure. The repair is a second connector, `pepfar_ou_budgets`, that stops where
+`pepfar_expenditure` starts: budget for 2005 to 2020, expenditure for 2018 to 2020, and the five
+later year columns named in its log line as left to the other connector. **The general rule.
+Establishing that two files overlap settles what to do about the overlap and settles nothing
+about the parts that do not overlap. Check the range before excluding the file.**
+
+*Corrected 2026-09-19.* This section first said 17 years, counting a 2004 budget column that §9r
+shows is not a year's budget. The connector reads the 2004 column, reports the 2004 column in its
+log line and does not emit the 2004 column, so the budget recovered runs from 2005 to 2020.
+
+Three aggregate layers sit on the detail and all three had to be removed. The file's 12,062 rows
+are 11,919 detail rows, 71 country rows carrying `Program = Total`, 71 rows carrying
+`Applied Pipeline` simultaneously in four different columns, and one footer row whose only
+populated fields are `Operating Unit = Total` and the money. The footer row was found by
+arithmetic rather than by inspection: after removing the country `Total` rows, the remainder came
+to exactly 2.0000 times the country totals in all 30 money columns at once, and a ratio that
+clean is a duplicated layer rather than an error of degree. The rebuilt country budgets are
+checked against PEPFAR's own `Total` row at runtime, and they reproduce it exactly in 770 of the
+773 country-years that carry a budget, the other three differing by more than a dollar and by
+far less than one per cent.
+
+### §9o. A denominator that cannot be spent, and the execution rate it corrupts
+
+Rows whose `Record Type` is Management and Operations hold about half a billion dollars of
+budget in every recent year against almost no expenditure at all, 317m of budget in 2018 and
+518m against 12m in 2025. The pattern is flat across every year carrying expenditure, 2018 to
+2025, so it is a property of how
+PEPFAR books its own running costs rather than an artefact of any one year. Any execution rate
+computed over the whole file therefore carries half a billion in its denominator that its
+numerator structurally cannot contain, and understates execution by about ten points: 0.897
+against 0.966 in FY2018, 0.861 against 0.939 in FY2019, 0.808 against 0.902 in FY2020, and 0.652
+against 0.737 in FY2025. Both forms are carried on the row and the connector's interpretation
+string says which one to read. **The general rule. Before dividing one column of a file by
+another, check that every row contributing to the denominator is eligible to contribute to the
+numerator.**
+
+### §9p. The same conclusion by a second route is agreement, not corroboration
+
+The FY2025 expenditure fall has two candidate explanations that this project cannot afford to
+confuse, a reporting lag against a real stop in spending, and the file is stamped 21 January
+2026, less than four months after FY2025 closed. The operating-unit file discriminates between
+them without a mechanism column. A late file shrinks every programme by roughly the same
+fraction. Instead the FY2025 execution rate runs 0.77 for care and treatment, 0.80 for testing,
+0.66 for above-site programme support, 0.56 for programme management, 0.45 for prevention and
+0.35 for surveillance and survey work. Care and treatment is the activity the January 2025
+waiver covered, and it is the one that held up. An ordering that tracks which activities were
+allowed to continue does not come out of a reporting lag.
+
+`pepfar_expenditure` reaches the same conclusion from the mechanism reporting rates. That is
+worth recording and it is not corroboration, because both readings come from the same
+expenditure reports filed by the same staff. Two analyses of one instrument agreeing tells you
+the analyses are sound, not that the instrument is.
+
+### §9q. A country count can measure the publisher's attribution rather than the publisher's reach
+
+The PEPFAR operating-unit file gives 14 countries a budget in 2005, 31 in 2019 and 53 in 2020.
+Read as reach, the 22 countries entering in 2020 are countries PEPFAR started funding that year.
+They are not. Every one of the 22 already sat under an operating unit covering several
+countries, the operating unit does not change across the step, and what changes is that PEPFAR
+starts writing an ISO3 on those rows. Across the same step the budget on those operating units
+carrying no ISO3 falls from 79,647,757 to 8,956,546 while the budget on the same operating units
+carrying one rises from 46,654,139 to 194,948,927. Thailand shows it at country level, present
+2010 to 2013, absent 2014 to 2019, back with 21,141,451 in 2020, under one unchanged operating
+unit throughout.
+
+Nothing in the panel catches this. The validation harness warns when coverage falls between
+years and says nothing at all when coverage rises, so a composition change that adds countries
+passes silently. The cost lands on the analysis this project exists to run: an analysis
+measuring the effect of a funding cut reads an absent year as a cut, and here an absent year
+before 2020 means the file does not say. **The general rule. A count of units present in a
+period can measure how far the publisher attributed the quantity to units that period rather
+than where the publisher was working. Where that is so, an absence is not evidence of zero and a
+first appearance is not a start, and the rows have to say so.**
+
+Two corollaries came out of writing the connector that reports this.
+
+The first is about what a rise licenses. Reporting the rise is always right, because a total
+compared across the step covers two different sets of countries whatever caused it. Attributing
+the rise to a re-coding is a separate claim needing separate evidence. The early rises, from 14
+countries in 2005 to 28 in 2007, meet neither condition that the 2020 step meets. Of the 14
+countries entering, 11 sit under their own single-country operating units, and rows with no ISO3
+carry no budget at all from 2005 to 2010. A first draft of this connector attributed every rise to
+re-coding and was wrong on the early rises. A second draft called the early rises genuine
+expansion, and the file does not settle that either, because a file attributing no budget to
+regional rows in those years cannot show whether PEPFAR was already working in the countries
+entering. **Report the composition change on the count. Attribute it only where the file settles
+the cause, and where the file settles nothing, say that the file settles nothing.**
+
+The second is about how a category is defined. Regional operating units were first identified as
+the ones that somewhere appear with no ISO3, which is the property that made them visible. That
+definition misses South and Southeast Asia Region, which covers six countries and carries an
+ISO3 on all 519 of its rows, and Thailand is one of the six. Defining a regional operating unit
+as one covering more than one country flags 28 of the 55 emitted countries rather than 22.
+**A category defined by the symptom that made it visible will miss the members that never showed
+the symptom.**
+
+### §9r. A column can hold an allocation rule, a category can start partway, and a repeat is not a hold
+
+After the 2026-09-19 re-run the validator's outlier check, called directly because the
+validation text stops after ten series, flagged a single series on `pepfar_ou_budgets`, Uganda in
+2004. Following that one flag turned up three defects in the operating-unit file, and none of the
+three is an error in any single cell.
+
+The 2004 budget column is an allocation rule rather than a year's budget. The 2004 column holds
+22 rows over 11 countries and 68,991,569 dollars, and every row sits under testing or under care
+and treatment. In all 11 countries testing takes exactly 70 per cent and care and treatment
+exactly 30 per cent, from Tanzania at 14,693,227 dollars down to Cote d'Ivoire at 2,709,900. A
+budget planned programme by programme does not divide in the same proportion in 11 countries, so
+the 2004 column carries one figure per country divided by a fixed rule. The same 11 countries
+carry 783,034,013 dollars in 2005, 11.3 times the 2004 total and between 4.6 and 33.3 times by
+country. Emitted as planned funding, the 2004 column put an elevenfold rise at the start of every
+series the 2004 column touched. The connector now emits budget from 2005, and the log line
+measures the 70 and 30 per cent split on every run rather than asserting the split. **The general
+rule. Where a breakdown divides in exactly the same proportion in every unit, the breakdown holds
+one number per unit and a rule, not a measurement of each part.**
+
+Two budget categories begin in 2014. The file books nothing under Management and Operations or
+under Applied Pipeline before 2014, and 295,636,956 dollars and 1,180,230,636 dollars under those
+two categories in 2014. The emitted budget total rises from 3,213,039,728 dollars in 2013 to
+4,780,573,818 in 2014 over the same 32 countries, and 1,475,867,592 of that rise of 1,567,534,090
+comes from the two categories that start in 2014. The file does not say whether the years before
+2014 carried those costs inside the programme lines, so the 2013 to 2014 comparison changes basis
+as well as amount. The 244 budget rows for 2005 to 2013 now name the absent categories in
+`categories_absent`, and a comparison across the step subtracts `mgmt_ops_budget` and
+`applied_pipeline` from the later year first. **The general rule. When a category first appears
+partway through a series, the rows before the category appears must say so, because nothing in a
+total shows that the total is measured on a different basis.**
+
+Some years repeat the year before. In 2010 all 28 countries present in both 2009 and 2010 carry
+the 2009 budget to the dollar in every programme area, and the whole change in the 2010 total,
+32,775,394 dollars, belongs to the three countries entering in 2010, China, Guyana and Thailand.
+The file does not say whether PEPFAR copied the 2009 plan or planned 2010 at exactly the 2009
+levels. A second kind of repeat holds the total while the split moves. In 24 country-years between
+2016 and 2018, five in 2016, 12 in 2017 and seven in 2018, the total repeats the year before while
+the programme areas and Applied Pipeline change. Angola holds 17,700,000 dollars in every year from
+2015 to 2018. Mozambique's own Total row reads 337,075,909 dollars in 2016 and in 2017, while the
+budget net of Applied Pipeline falls from 330,523,501 to 310,403,040 and Applied Pipeline rises
+from 6,552,407 to 26,672,869. A held total therefore does not mean held new money. The rows carry
+`repeats_previous_year` naming which kind of repeat applies. **The general rule. A change of zero
+is not evidence that funding was held. An exact repeat across every part of a breakdown cannot be
+told apart from a copied plan, and every check that looks for jumps passes a copied year
+silently.**
+
+The runtime check that absorbs the second kind of repeat needed a tolerance of two dollars rather
+than half a dollar. The rebuilt budget is detail plus Applied Pipeline, each rounded separately in
+PEPFAR's file, so a country total that PEPFAR held at exactly the same figure can rebuild a dollar
+apart, as Mozambique does at 337,075,908 against 337,075,909. At half a dollar the check missed
+Indonesia, Ghana, Cote d'Ivoire and Mozambique.
+
 ---
 
 ## Status of the claims here
@@ -1421,3 +1687,27 @@ has not been tested here and must not be written up as though it had been.
 | The site was publishing reconciliation verdicts from a panel that no longer existed | `reconciliation_pairs.csv` and `reconciliation_cells.csv` were dated 20 July 2026 against a panel of 7 September 2026, because `run_all.py` never called `reconcile.run()` and no script wrapper existed. `run_all.py` now regenerates them after writing the panel, and `build_site.py` warns before building when the tables are the older file |
 | Six pairs in the panel are one source reprinting another | Regenerated tables give 87 source pairs, 61 independent, 11 subset, nine insufficient and six derived. The six are `hiv_expenditure_total` (AIDSinfo and GAM, 469 cells), `hiv_prevalence_15_49` (AIDSinfo and World Bank, 3,693), `tbhiv_deaths` (AIDSinfo and WHO TME, 4,302), `hiv_tests_performed` (AIDSinfo and WHO GHO, 323) and `know_status_pct` twice (Thembisa against AIDSinfo, 16, and against WHO GHO, 11). None may be counted as corroboration |
 | Four money indicators in the panel double if summed across their sources | `external_hiv_oda_us` has 3,194 rows sharing a country-year with a second source, `hiv_expenditure_total` 938, `global_fund_hiv_disbursements` 652 and `pepfar_expenditure` 144. The data page now states the count on every affected indicator, 30 of the 33 multi-source indicators in all |
+| PEPFAR's modality file is a decomposition of a total the panel already held | Run of 7 September 2026. Summing HTS_TST across modality, age and sex gives 415 country-years over 58 countries against `pepfar_panorama`, median ratio exactly 1.000000, 349 inside 0.5%; HTS_TST_POS against `new_diagnoses` the same 415 and the same median. The reconciler reached `derived` on the testing pair unprompted |
+| The partner sum undercounts the country in regional operating units | Thailand FY2018 names one partner, Bangkok Metropolitan Administration, 1,308 tests against 75,944 in the country-level file; FY2019 1,752 against 136,227; from FY2020 three partners and agreement to 1.000000. Every country-year more than 5% short belongs to South and Southeast Asia Region, Central Asia Region or Central and South America Region, except Kenya FY2018 at 5.8% |
+| Eleven country-years run the other way and are unexplained | This file 3–54% BELOW the partner sum, worst MWI 2018 (0.462) and NAM 2020–22 (0.675–0.744). Shortfall even across all four quarters, no modality absent. The age hypothesis was tested and refuted: Namibia's Unknown Age share is 28–30% in exactly the years it falls short |
+| A modality that appears only in the year the answer changes is excluded from the answer | `Not Specified` carries 0 HTS_TST before FY2025 and 784,344 in Q4 FY2025, in seven countries (THA, MOZ, HTI, DOM, BWA, JAM, ZMB), 727,005 of it Thailand. Thailand's classified testing in Q4 FY2024 was 45,211 across both arms. Counted into the total, put in neither arm, flagged in `extra.unclassified_tests`, and all seven held out of the headline |
+| Community testing fell four times as far as facility testing | Q4 FY2024 → Q4 FY2025 over the 52 clean countries: community 3,056,545 → 1,068,854 (-65.0%), facility 16,021,304 → 13,517,748 (-15.6%), share 16.0% → 7.3%. Community fell further in 21 of the 26 countries over 20,000 tests a quarter with both arms running, UGA -93.5 against -10.3, NGA -83.4 against -15.8 |
+| Outreach was cut before the clinic, and yield rose as it went | Community positives 51,185 → 34,825 (-32.0%) against facility 294,968 → 241,411 (-18.2%); community positivity 1.67% → 3.26% while facility positivity moved 1.84% → 1.79% |
+| The reconciler splits identical pairs on a two-cell margin | Same run. `pepfar_modality` against `pepfar_panorama`, identical 415 cells, both at median relative difference 0.000000 and median ratio 1.000000: `hiv_tests_performed` agrees within 2% on 374 cells and is `derived`, `new_diagnoses` agrees on 372 and is `independent`. The `derived` test needs 374 |
+| Eight independent pairs are identical on the typical cell | 8 of 65 independent pairs, holding 8,567 of 28,671 independent cells (panel of 2026-09-19, which added the 46-cell `pepfar_ou_budgets` against `gam` pair at 7.2%; 8 of 64 and 28,625 before it), have a median relative difference at or below 1%. AIDSinfo against WHO GHO is `derived` on `hiv_tests_performed` (323 cells) and `independent` on `aids_deaths` (3,264), `pmtct_arv_count` (1,515), `on_art_count` (2,030) and `hiv_test_positivity_pct` (321), all at or below 1%. **Unfixed pending a decision** |
+| The OU budgets file and the partner file are the same money | Restricted to ISO3 rows with the three aggregate layers removed: FY2021 budget 5,036,285,258 in both, FY2021 expenditure 4,121,559,166 in both, FY2025 budget 4,281,549,540 in both, FY2025 expenditure 2,789,722,472 against the panel's 2,789,722,474. `pepfar_ou_budgets` therefore emits nothing after 2020 |
+| ~~Excluding that file cost the panel seventeen years~~ — corrected 2026-09-19, see below | Counted the 2004 budget column, 68,991,569 over 11 countries, as a year's budget. §9r shows the 2004 column is one figure per country split 70/30 by a fixed rule. 611 rows, 496 budget and 115 expenditure, was the count with the 2004 column emitted |
+| Excluding that file cost the panel sixteen years | `Public_Partner_Budgets_and_Expenditures` starts at FY2021. The OU file carries budget from 2005 (1,069,544,078 over 14 countries) to 2020 (4,657,232,673 over 53) and expenditure from 2018. 600 rows recovered, 485 budget and 115 expenditure, over 55 countries. Run into the panel 2026-09-19, taking the panel from 183,000 to 182,989; the 11 rows removed are exactly the 2004 budget rows and no other value moved |
+| The file carries three aggregate layers, not one | 12,062 rows = 11,919 detail + 71 `Program = Total` + 71 `Applied Pipeline` + 1 footer row whose only populated fields are `Operating Unit = Total` and the money. The footer was found by arithmetic: the remainder after removing the country totals came to exactly 2.0000× those totals in all 30 money columns at once |
+| The rebuilt budgets reproduce PEPFAR's own totals | Detail plus Applied Pipeline against the `Program = Total` row: exact in 770 of 773 country-years carrying a budget, the other three differing by more than a dollar and far less than 1%. Checked at runtime at 0.5%, so a future download that breaks it says so |
+| Management and Operations corrupts every execution rate | About 0.5bn of budget a year against almost no expenditure, flat across all years: 317m in 2018, 518m against 12m in 2025. Including it understates execution by ~10 points — 0.897 vs 0.966 (FY2018), 0.861 vs 0.939 (FY2019), 0.808 vs 0.902 (FY2020), 0.652 vs 0.737 (FY2025). Both forms carried on the row |
+| The FY2025 fall is not a reporting lag, on this file's own evidence | File stamped 21 Jan 2026, under four months after FY2025 closed. A lag shrinks every programme alike; instead execution runs C&T 0.77, HTS 0.80, ASP 0.66, PM 0.56, PREV 0.45, SE 0.35. Care and treatment is what the January 2025 waiver covered. Agrees with `pepfar_expenditure`'s mechanism-reporting result, but from the same expenditure reports, so agreement and not corroboration |
+| ~~455 regional rows hold 10,255,130 USD, 0.22% of 2024~~ — corrected 2026-09-08, see below | The figure was measured in 2024, a year `pepfar_ou_budgets` does not emit, and the regional share is not flat across the file. The connector reported a discard for a period it never reports |
+| 463 regional rows have no country to go to | Caribbean, Central Asia, Central and South America, Pacific, two West Africa regions, `Invalid`, plus retired labels such as `Asia Region (pre-FY24)`. Over 2005–2020, the years the connector emits, they hold 623,079,124 USD of budget against the 57,308,862,383 emitted (1.08% of the dropped and emitted budget together) and 120,451,355 USD of expenditure over 2018–2020 against 11,712,716,512 (1.02%). Of the discarded budget, 39,714,294 sits under `Invalid` and 81,305,868 is Applied Pipeline on eight rows an earlier version of the drop branch skipped without counting. Dropped and counted in the log line, never spread across a region's countries |
+| The count of countries in a year measures attribution, not where PEPFAR worked | Countries carrying a budget go 31 in 2019 → 53 in 2020. All 22 entrants already sit under an operating unit covering several countries, and the operating unit does not change across the step. Across the same step the budget on those units carrying no ISO3 falls 79,647,757 → 8,956,546 while the budget on the same units carrying one rises 46,654,139 → 194,948,927. 20 of the 22 had never appeared in any earlier year |
+| Regional is a property of the file, not of the name | Defining regional as "an operating unit that somewhere appears with no ISO3" misses South and Southeast Asia Region, which covers six countries and carries an ISO3 on all 519 of its rows. Defining it as "covers more than one country" flags 28 of the 55 emitted countries instead of 22, Thailand among them |
+| Three countries have a hole in the middle of the series | THA present 2010–2013, absent 2014–2019, 21,141,451 in 2020, one unchanged operating unit throughout; GUY present 2010–2016, absent 2017–2019, back 2020; MMR missing 2015 alone. Named on every row of the country in `extra.series_gap_years`; the 28 regional countries also carry `extra.funded_through_regional_ou` and `extra.coverage_warning` |
+| Not every rise in the country count is an attribution change | 14 (2005) → 19 → 28 (2007). Of the 14 countries entering, 11 sit under their own single-country operating units, and rows with no ISO3 carry no budget from 2005 to 2010. Of the three one-year rises of a quarter or more in the emitted years, only 2019→2020 has most entrants already regional AND a falling regional share (1.70% → 0.19%). The runtime log reports all three and attributes only that one. The file does not say what caused the early rises. *Corrected 2026-09-19* from "PEPFAR expanded genuinely 11 (2004) → 28 (2007)", which counted the 2004 allocation column and made a causal claim the file does not settle |
+| The 2004 budget column is an allocation rule, not a year's budget | 22 rows, 11 countries, 68,991,569 USD, only testing and care and treatment. Testing takes exactly 70% and care and treatment 30% in all 11, TZA 14,693,227 down to CIV 2,709,900. The same 11 carry 783,034,013 in 2005, 11.3× (4.6× to 33.3× by country). Found by following the validator's only outlier flag on the source, UGA 2004. Read, logged with the split measured on every run, not emitted |
+| Management and Operations and Applied Pipeline begin in 2014 | Nothing under either before 2014; 295,636,956 and 1,180,230,636 over the emitted countries in 2014. The budget total goes 3,213,039,728 (2013) → 4,780,573,818 (2014) over the same 32 countries, and 1,475,867,592 of the 1,567,534,090 rise is the two categories. The 244 budget rows for 2005–2013 carry `categories_absent` |
+| A repeated budget is not a held budget | 2010 repeats 2009 to the dollar in every programme area in all 28 countries present in both years; the 2010 total rises 32,775,394, all of it CHN, GUY and THA entering. 24 further country-years in 2016–2018 (5, 12, 7) hold the total while the split moves: AGO at 17,700,000 from 2015 to 2018, MOZ's Total row 337,075,909 in 2016 and 2017 while budget net of pipeline falls 330,523,501 → 310,403,040. Tolerance two dollars, because detail and pipeline round separately. Carried in `repeats_previous_year` with the kind named |
