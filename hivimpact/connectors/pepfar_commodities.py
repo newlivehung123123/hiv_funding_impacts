@@ -210,12 +210,14 @@ CHECKED AGAINST THE PARTNER FILE
 partner file's `Total Planned Funding` for the same country-year. A commodity plan larger than
 the country's whole planned funding would be a defect in one file or the other, and the log names
 any country-year where the commodity plan is larger. Across 2021 to 2025 the full commodity plan
-is between 15.9 and 17.9 per cent of planned funding in every year, over 228 country-years. The
+is between 15.8 and 17.9 per cent of planned funding in every year, over 228 country-years. The
 highest single share is 0.408, for the Democratic Republic of the Congo in 2023, and no
-country-year's commodity plan exceeds the country's planned funding. The check keys the partner
-file on the partner file's `ISO3` column, which labels 106 Peace Corps rows USA in 2022 to 2025.
-Keyed on the `Country` column the range is 15.8 to 17.9 per cent. The comparison runs only when
-the partner file sits in the same folder, and the log says when the comparison was skipped.
+country-year's commodity plan exceeds the country's planned funding. The partner file's `ISO3`
+column labels 106 Peace Corps rows USA in 2022 to 2025 while the `Country` column names the
+country, so the check places a partner row by the `Country` column wherever the `Country` column
+and the `ISO3` column name different countries, as `pepfar_expenditure` does (ACCESS_LADDER §9t).
+Keyed on the `ISO3` column alone, the range was 15.9 to 17.9 per cent. The comparison runs only
+when the partner file sits in the same folder, and the log says when the comparison was skipped.
 
 TAGGING: PEPFAR commodity procurement plans, not spending and not national HIV expenditure.
 Nominal USD, not deflated. source_type = expenditure_account.
@@ -392,11 +394,14 @@ class PEPFARCommoditiesConnector(BaseConnector):
         return None
 
     def _read_partner(self) -> Optional[pd.DataFrame]:
-        """The four columns of the partner-level budget file that the checks need. The partner
-        file is read here for checking only, and nothing in the partner file is emitted."""
+        """The four columns of the partner-level budget file that the checks need, and the
+        `Country` column, which decides the country of a row wherever the `ISO3` column names a
+        different country. The partner file is read here for checking only, and nothing in the
+        partner file is emitted."""
         paths = [p for p in sorted(self.raw_dir.glob("*.zip"))
                  if "public_partner" in p.name.lower() and "budget" in p.name.lower()]
-        want = {"iso3", "implementation year", "total planned funding", "condoms: commodities"}
+        need = {"iso3", "implementation year", "total planned funding", "condoms: commodities"}
+        want = need | {"country"}
         for path in paths:
             try:
                 with zipfile.ZipFile(path) as z:
@@ -407,7 +412,7 @@ class PEPFARCommoditiesConnector(BaseConnector):
                         df = pd.read_csv(fh, sep="\t", dtype=str, keep_default_na=False,
                                          usecols=lambda c: c.lower().strip() in want,
                                          on_bad_lines="skip", low_memory=False)
-                if len(df.columns) == len(want):
+                if need <= {c.lower().strip() for c in df.columns}:
                     return df
             except Exception as exc:
                 log.warning("pepfar_commodities: error reading %s for the check against the "
@@ -861,8 +866,15 @@ class PEPFARCommoditiesConnector(BaseConnector):
             return
         cols = list(p.columns)
         iso_of = {c: to_iso3(c) for c in p[_ci(cols, "iso3")].unique()}
+        iso3 = p[_ci(cols, "iso3")].map(iso_of)
+        cn = _ci(cols, "country")
+        if cn:
+            # placed as pepfar_expenditure places the rows, by the Country column wherever the
+            # ISO3 column names a different country (ACCESS_LADDER §9t)
+            name_of = {c: to_iso3(c) for c in p[cn].unique()}
+            iso3 = p[cn].map(name_of).where(iso3.notna()).fillna(iso3)
         q = pd.DataFrame({
-            "iso3": p[_ci(cols, "iso3")].map(iso_of),
+            "iso3": iso3,
             "year": pd.to_numeric(p[_ci(cols, "implementation year")].str[:4], errors="coerce"),
             "planned": p[_ci(cols, "total planned funding")].map(_num),
             "condoms": p[_ci(cols, "condoms: commodities")].map(_num),

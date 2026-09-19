@@ -1643,22 +1643,22 @@ the code of the country each row names, and so do the Peace Corps rows booked to
 later years, which hold the Peace Corps expenditure of 2025 and Lesotho's Peace Corps plan for
 2024 and 2025. The test of the condom averaging in §9s found the mislabel on 19 September 2026.
 
-`pepfar_expenditure` takes a partner row's country from the `ISO3` column alone, so the panel
-holds four rows for the United States in each of `pepfar_planned_funding`,
+Until 19 September 2026 `pepfar_expenditure` took a partner row's country from the `ISO3` column
+alone, so the panel held four rows for the United States in each of `pepfar_planned_funding`,
 `pepfar_planned_funding_other_agency`, `pepfar_expenditure` and `pepfar_expenditure_other_agency`,
-one row for each year from 2022 to 2025, and the 13 countries' series for the same years lack the
+one row for each year from 2022 to 2025, and the 13 countries' series for the same years lacked the
 Peace Corps money. Over the 50 affected country-years the missing money is a median 0.85 per cent
 of a country's corrected planned funding and at most 6.04 per cent, in Botswana 2022, and at most
 4.12 per cent of corrected expenditure, in Botswana 2024. The other-agency series, which holds
 every agency other than USAID and HHS/CDC, loses far more. The missing money is a median 19.2 per
 cent of a country's corrected other-agency planned funding and 75.2 per cent in Botswana 2024.
-The panel reads other-agency expenditure of zero in Botswana 2024, Namibia 2023 and Namibia 2024,
+The panel read other-agency expenditure of zero in Botswana 2024, Namibia 2023 and Namibia 2024,
 where the Peace Corps spent 1,675,092, 528,167 and 646,038 dollars. The mislabel starts in
-2022, so a country's other-agency series falls between 2021 and 2022 partly because the Peace
-Corps money leaves the country's rows. Botswana's other-agency planned funding reads 6,943,294
+2022, so a country's other-agency series fell between 2021 and 2022 partly because the Peace
+Corps money left the country's rows. Botswana's other-agency planned funding read 6,943,294
 dollars in 2021 and 2,564,110 in 2022 in the panel, a fall of 63 per cent, and 6,279,181 in 2022
 with the Peace Corps money restored, a fall of 9.6 per cent. The mechanism counts on the affected
-rows leave out the Peace Corps mechanism, which the United States rows count instead, 13
+rows left out the Peace Corps mechanism, which the United States rows counted instead, 13
 mechanisms in 2022 and 2023 and 12 in 2024 and 2025.
 
 `PEPFAR_OU_Budgets_and_Program_Expenditures` places the Peace Corps money in the 13 countries, and
@@ -1666,20 +1666,92 @@ settles which column is wrong. Keyed on the partner file's `Country` column, the
 planned funding equals the OU file's budget to within two dollars in all 277 country-years from
 2021 to 2025, and the partner file's expenditure equals the OU file's expenditure to within two
 dollars in 271 of 278 country-years and to within four dollars in all 278. Keyed on the `ISO3`
-column, as the panel is keyed now, planned funding agrees in 227 of 281 country-years and
+column, as the panel was keyed before the fix, planned funding agrees in 227 of 281 country-years and
 expenditure in 238 of 281. The same key moves one figure in connector 22's check against the
 partner file (§9s). Keyed on `Country`, the full commodity plan is 15.8 to 17.9 per cent of
 planned funding by year, against 15.9 to 17.9 keyed on `ISO3`, and the highest share stays 0.408,
 in the Democratic Republic of the Congo in 2023.
 
-The panel as it stood on 19 September 2026 still holds the mislabel. A fix in
-`pepfar_expenditure`, taking a partner row's country from the `Country` column wherever `Country`
-and `ISO3` name different countries and counting the reassigned rows and money in the log, has
-not been made, and the panel changes only when `pepfar_expenditure` is run again. **The general
+The fix was made on 19 September 2026. `pepfar_expenditure` and connector 22's check now take a
+partner row's country from the `Country` column wherever `Country` and `ISO3` name different
+countries, and the log of every run counts the rows and dollars moved and names the countries.
+Jason's run of the same day at 11:25 removed the 16 United States rows and raised the planned
+funding of 50 country-years by 101,663,836 dollars and the expenditure of 37 country-years by
+30,336,352 dollars. No value fell, and the 181,039 rows of every other source are unchanged.
+Botswana's other-agency planned funding now reads 6,279,181 dollars in 2022, and the other-agency
+expenditure of Botswana 2024, Namibia 2023 and Namibia 2024 now reads 1,675,092, 528,167 and
+646,038 dollars. The reporting rate changed on 100 expenditure rows of the 13 countries. Six
+other-agency rows lost the completeness warning (Botswana 2023 and 2024, Mozambique 2022,
+Eswatini 2022, Ukraine 2022 and South Africa 2023), and five other-agency rows of 2025 gained the
+warning (Mozambique, Malawi, Eswatini, Uganda and Zambia), for the reason §9u gives. **The general
 rule. A file that gives a code and a name for the same unit can let the code and the name
 disagree, and a connector keyed on the code alone moves money between countries without any
 warning. Where a file carries both columns, the connector has to derive the code from the name as
 well and name every row on which the two columns disagree.**
+
+### §9u. A reporting rate counted by mechanism cannot see money booked to no mechanism
+
+The partner file writes `All for OU` in `Mechanism Code` for money booked to a whole operating
+unit and not to a mechanism. The partner file holds 506 `All for OU` rows under 12 funding
+agencies, which form 490 agency-country-years. In 375 of the 490 agency-country-years the
+`All for OU` line carries budget and no expenditure, in 72 the line carries both, and in 43 the
+line carries expenditure and no budget, 20,644,073 dollars in all. `pepfar_expenditure` counts a
+mechanism as reporting when the mechanism holds a budget and files expenditure, so an `All for OU`
+line with expenditure and no budget enters no reporting rate. Wherever an agency's `All for OU`
+line carries expenditure and no budget, the same agency also holds a mechanism with a budget and
+no expenditure in the same country-year, and the budgeted mechanism reads as silent although the
+agency reported spending in the country-year. The 43 unbudgeted `All for OU` lines belong to USAID
+(18), the Peace Corps (13), HHS/CDC (five), State/AF (five), HHS/HRSA (one) and the Department of
+Defense (one). The connector pools the Peace Corps, the Department of Defense and the State
+Department in the other-agency series, so the 43 unbudgeted `All for OU` lines fall in 42 agency
+series-years, because Mozambique in 2025 has an unbudgeted line for both the Peace Corps and
+State/AF.
+
+The Peace Corps in 2025 is the largest case. From 2022 to 2024 the Peace Corps booked most of the
+agency's spending on the Management and Operations mechanism, 7,435,672, 10,556,066 and
+12,344,614 dollars by year, against 1,031,930 and 800,010 dollars on `All for OU` lines in 2022
+and 2024. In 2025 the Management and Operations rows carry 24,292,139 dollars of planned funding
+and no expenditure, and the Peace Corps spending of 12 countries, 11,544,602 dollars, sits on
+`All for OU` lines with no budget, led by Zambia (2,462,597 dollars) and Botswana (2,019,855).
+Lesotho's Peace Corps `All for OU` line carries a budget of 976,618 dollars in both 2024 and 2025,
+so Lesotho's Peace Corps spending enters the reporting rate. The partner file does not say why the
+Peace Corps spending of 2025 moved off the Management and Operations mechanism. Of the 43
+unbudgeted `All for OU` lines, 18 fall in 2025 and carry 12,500,610 dollars, and the two unbudgeted
+USAID lines of 2025 carry 144,659 dollars, in South Africa (138,485) and Senegal (6,174).
+
+The Peace Corps `All for OU` booking of 2025 did not show in the country rows until the fix of
+§9t. Before the fix, the silent Management and Operations mechanisms of 2025 sat on the United
+States rows, where the other-agency reporting rate read 1.00 in 2024 and 0.00 in 2025. Placing the
+Peace Corps rows by `Country` moved the silent Management and Operations mechanisms into the 13
+countries, and the other-agency rows of Mozambique, Malawi, Eswatini, Uganda and Zambia for 2025
+gained a completeness warning. The partner file does not say which mechanism an `All for OU` line
+belongs to, so the connector changes no reporting rate. Every
+expenditure row carries the unbudgeted `All for OU` spending of the row's agency series and
+country-year in `ou_level_unbudgeted_expenditure`, above zero on 79 of the 970 expenditure rows.
+Where the unbudgeted `All for OU` spending sits beside a silent mechanism, the completeness
+warning names the amount and calls the reporting rate a lower bound, on 33 of the 214 warnings.
+Jason's run of 19 September 2026 at 11:25 left every value and every reporting rate as the offline
+dry run without the new field had predicted.
+
+How far the `All for OU` booking can move a warning was tested under the reading that each
+unbudgeted `All for OU` line holds the spending of one silent mechanism of the same agency. The
+test credits one silent mechanism for each unbudgeted line and compares the credited rate of a
+year with the uncredited rate of the year before, which gives the smallest fall the file allows
+under the one-mechanism reading. Under the one-mechanism reading 11 of the 33 lower-bound warnings
+would not fire, among them all five warnings that the Peace Corps fix added. Mozambique's
+other-agency rate reads three of eight mechanisms in 2024 and two of eight in 2025, and four of
+eight in 2025 once the Peace Corps line and the State/AF line are each credited. Under the same
+reading 22 of the 33 lower-bound warnings still fire, among them South Africa's USAID series, 29
+of 36 mechanisms reporting in 2024 and seven of 34 in 2025, eight of 34 with the South African
+line credited, and Senegal's USAID series, three of six in 2024 and one of six in 2025, two of six
+with the Senegalese line credited. The `All for OU` booking therefore does not explain the fall in
+USAID reporting in 2025. The partner file does not say how many mechanisms an `All for OU` line
+holds, so the 11 cleared warnings describe one plausible reading and not a bound. **The general
+rule. A completeness measure counted over reporting
+units cannot see money a file books outside the reporting units. Where a file has a placeholder
+unit, the connector has to carry the money on the placeholder beside every completeness figure,
+and has to call the completeness figure a lower bound wherever the placeholder's money sits
+beside a silent unit.**
 
 ---
 
@@ -1891,10 +1963,14 @@ well and name every row on which the two columns disagree.**
 | A category the plan does not list is zero, and the first run's three drop flags were the missing zeros | The 936-row first run was flagged on `pepfar_arv_budget` 32 (2023) to 26 (2024), `pepfar_lab_budget` 37 (2021) to 29 (2022) and `pepfar_rtk_budget` 42 (2021) to 33 (2022), all plans with a total and no line in the category. The second run writes zeros marked `category_not_in_plan`, ARV 84, Laboratory 65 and RTKs 31, and no commodity series is flagged. MLI 2024 carries 489,495 USD and no ARV line. A country-year absent or withheld still carries no row |
 | A net country count hid four exits | Like-for-like total 44 countries (2023) to 43 (2024). GTM, HND, PAN and SLV leave and LSO is withheld, while COL, PER, SEN and SSD return from gaps. `writers._reporter_drops` compares net counts against `REPORTER_DROP_SHARE` = 0.15, so nothing fired. In 2024 the Central and South America Region carries one line naming `Western Hemisphere Region (pre-FY24)`, 436,870 USD of PrEP tablets. The series of 12 countries end before 2025. The four Central American countries carry the regional sentence in `coverage_warning`, 60 rows |
 | The 2020 rise in the commodity country count is regional plans entering the file | 23 countries (2019) to 38 (2020), 15 of the 16 entering under a regional operating unit and no regional operating unit in the file for 2019. 38 to 47 in 2021, ten of the 12 entering regional. Seven regional operating units cover 29 countries. The §9q pattern in a second PEPFAR file |
-| The full commodity plan sits between 15.9% and 17.9% of planned funding | All categories against the partner file's `Total Planned Funding`, 228 country-years over 2021 to 2025, by year 17.9%, 16.4%, 17.7%, 16.4% and 15.9%. Highest share 0.408 in COD 2023, and no commodity plan exceeds the country's planned funding. Keyed on the partner file's `ISO3`, as the connector keys the check. Keyed on `Country` the range is 15.8% to 17.9% (§9t) |
+| The full commodity plan sits between 15.8% and 17.9% of planned funding | All categories against the partner file's `Total Planned Funding`, 228 country-years over 2021 to 2025, by year 17.9%, 16.3%, 17.6%, 16.3% and 15.8%. Highest share 0.408 in COD 2023, and no commodity plan exceeds the country's planned funding. Partner rows placed by `Country` wherever `Country` and `ISO3` disagree, as `pepfar_expenditure` places the rows. *Corrected 2026-09-19* from 15.9% to 17.9% (17.9%, 16.4%, 17.7%, 16.4% and 15.9%), which was keyed on `ISO3` alone (§9t) |
 | Exact duplicate commodity lines are kept | 326 lines, 22,420,358 USD, 0.40% of the file and 1.51% in 2020. UGA 2020 holds one Roche viral-load line of 4,064,808 USD twice. The file has no mechanism column to separate two mechanisms planning the same purchase from a line entered twice. Carried in `duplicate_lines` and `duplicate_usd` |
 | The partner file labels 106 Peace Corps rows USA | Funding Agency `PC`, mechanism Management and Operations, `ISO3` USA and `Country` naming BWA, CMR, SWZ, KEN, LSO, MWI, MOZ, NAM, ZAF, TZA, UGA, UKR or ZMB. 28 rows in 2022, 30 in 2023, 25 in 2024 and 23 in 2025, none in 2021. 101,663,836 USD planned and 30,336,352 spent. No partner row names the United States in `Country`. Found 2026-09-19 by the averaging test of §9s |
-| The panel carries the Peace Corps money under the United States | Four USA rows each of `pepfar_planned_funding`, `pepfar_planned_funding_other_agency`, `pepfar_expenditure` and `pepfar_expenditure_other_agency`, 2022 to 2025, equal to the mislabelled rows by year (planned 27,687,491, 25,330,412, 24,353,794 and 24,292,139). USA `mechanisms_budgeted` 13, 13, 12 and 12, the Peace Corps mechanisms. **Not fixed**, the panel changes only when `pepfar_expenditure` is run again |
-| The mislabel is small in country totals and large in the other-agency series | 50 affected country-years. Missing share of corrected planned funding median 0.85%, largest 6.04% (BWA 2022), of corrected expenditure largest 4.12% (BWA 2024). Missing share of corrected other-agency planned funding median 19.2%, largest 75.2% (BWA 2024). Other-agency expenditure reads zero in BWA 2024, NAM 2023 and NAM 2024 against Peace Corps spending of 1,675,092, 528,167 and 646,038 USD |
-| The 2021 to 2022 fall in the other-agency series is partly the mislabel | Peace Corps rows carry the right code in 2021 (40 of 40). BWA other-agency planned funding 6,943,294 (2021) and 2,564,110 (2022) in the panel, a fall of 63%, and 6,279,181 in 2022 with the Peace Corps money restored, a fall of 9.6% |
+| The panel carries the Peace Corps money under the United States | Four USA rows each of `pepfar_planned_funding`, `pepfar_planned_funding_other_agency`, `pepfar_expenditure` and `pepfar_expenditure_other_agency`, 2022 to 2025, equal to the mislabelled rows by year (planned 27,687,491, 25,330,412, 24,353,794 and 24,292,139). USA `mechanisms_budgeted` 13, 13, 12 and 12, the Peace Corps mechanisms. *Fixed 2026-09-19*. The run of 11:25 removed the 16 USA rows and raised planned funding in 50 country-years by 101,663,836 USD and expenditure in 37 by 30,336,352, in the total and the other-agency series alike, with no value lowered. The 181,039 rows of every other source and the 1,116 commodity rows are identical, the validator's 142 warnings are unchanged word for word, and the reconciliation stays at 95 pairs. The log names the rows moved on every run |
+| The mislabel was small in country totals and large in the other-agency series | 50 affected country-years before the fix. Missing share of corrected planned funding median 0.85%, largest 6.04% (BWA 2022), of corrected expenditure largest 4.12% (BWA 2024). Missing share of corrected other-agency planned funding median 19.2%, largest 75.2% (BWA 2024). Other-agency expenditure read zero in BWA 2024, NAM 2023 and NAM 2024 and now reads the Peace Corps spending of 1,675,092, 528,167 and 646,038 USD |
+| The 2021 to 2022 fall in the other-agency series was partly the mislabel | Peace Corps rows carry the right code in 2021 (40 of 40). BWA other-agency planned funding 6,943,294 (2021) and 2,564,110 (2022) before the fix, a fall of 63%, and 6,279,181 in 2022 in the panel since the fix, a fall of 9.6% |
 | The OU file settles which partner column is wrong | Keyed on `Country`, partner planned funding equals the budget of `PEPFAR_OU_Budgets_and_Program_Expenditures` (detail rows) within 2 USD in 277 of 277 country-years 2021 to 2025, and expenditure within 2 USD in 271 of 278 and within 4 USD in 278 of 278. Keyed on `ISO3`, 227 of 281 and 238 of 281. The two files split totals across programme areas differently, so the agreement holds at country-year only |
+| The partner file books spending on `All for OU` lines with no budget | 506 `All for OU` rows under 12 agencies, 490 agency-country-years. 375 carry budget only, 72 budget and spending, and 43 spending only, 20,644,073 USD. Spending-only lines by agency USAID 18, PC 13, HHS/CDC five, State/AF five, HHS/HRSA one and DOD one, and 18 spending-only lines in 2025 (12,500,610 USD). Every spending-only line sits beside a budgeted mechanism of the same agency that filed no expenditure. The spending-only lines fall in 42 agency series-years, because MOZ 2025 pools PC and State/AF in the other-agency series (§9u) |
+| The Peace Corps moved the 2025 spending off the Management and Operations mechanism | Management and Operations spending 7,435,672 (2022), 10,556,066 (2023), 12,344,614 (2024) and 0 (2025) against 24,292,139 USD planned in 2025. PC `All for OU` 2025 976,618 planned (LSO alone) and 12,385,194 spent, 11,544,602 USD of the PC spending on lines with no budget in 12 countries (ZMB 2,462,597, BWA 2,019,855). The partner file does not say why the PC spending moved (§9u) |
+| The five warnings the Peace Corps fix added come from the `All for OU` booking | MOZ, MWI, SWZ, UGA and ZMB other-agency 2025. Crediting each spending-only `All for OU` line to one silent mechanism of the same agency, against the uncredited rate of the year before, clears 11 of the 33 lower-bound warnings, the five added warnings among the cleared (MOZ 3/8 in 2024, 2/8 in 2025, 4/8 credited). 22 lower-bound warnings still fire, among them ZAF USAID 2025 (29/36 to 7/34, 8/34 credited) and SEN USAID 2025 (3/6 to 1/6, 2/6 credited), so the booking does not explain the USAID fall of 2025. One mechanism per line is a reading, not a bound (§9u) |
+| The `All for OU` booking is marked and not corrected | `ou_level_unbudgeted_expenditure` on all 970 expenditure rows, above zero on 79. The lower-bound sentence on 33 of 214 completeness warnings. No value and no reporting rate changed, checked row by row against the dry run without the field. *Written and run 2026-09-19* (§9u) |

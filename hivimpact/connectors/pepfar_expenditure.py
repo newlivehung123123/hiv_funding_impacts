@@ -44,6 +44,8 @@ cut. The connector therefore carries on every expenditure row:
   * `planned_on_silent_mechanisms` — the budget held by mechanisms that filed nothing, which
     bounds what the missing reports could contain;
   * `expenditure_ceiling` = value + that budget, the most generous reading available;
+  * `ou_level_unbudgeted_expenditure`, the expenditure the file books on `All for OU` lines that
+    carry no budget, which the reporting rate cannot see (below);
   * `completeness_warning` whenever the reporting rate falls ten points or more year on year.
 
 Kenya FY2025 is the shape of it: 111.6m reported against a 187.0m ceiling, on a reporting rate
@@ -70,6 +72,37 @@ The programme split is where the shape of the FY2025 cut shows, and it is not fl
 FY2024, USAID's reported spend falls 21% on care and treatment, 76% on prevention, 58% on
 above-site programme support and 70% on socio-economic support. Treatment was protected and
 everything around it was not — subject, throughout, to the reporting caveat above.
+
+WHICH COLUMN PLACES A ROW IN A COUNTRY
+
+The partner file gives every row an `ISO3` code and a `Country` name, and in 106 rows the `ISO3`
+code and the `Country` name point to different countries. Every such row is a Peace Corps
+"Management and Operations" line from 2022 to 2025, coded USA while the `Country` column names
+one of 13 countries, among them Botswana, Eswatini and Zambia. PEPFAR's OU budget file matches
+the partner file's planned funding in 277 of 277 country-years when the partner file is keyed on
+`Country` and in 227 of 281 when the partner file is keyed on `ISO3`. The connector therefore
+places a row by the `Country` column wherever the `Country` column and the `ISO3` column
+disagree, and logs the rows and dollars moved. Keyed on `ISO3`, the panel held 101,663,836 USD of
+planned funding and 30,336,352 USD of expenditure under the United States, and the other-agency
+series of Botswana fell 63% from 2021 to 2022 where the fall is 9.6% (ACCESS_LADDER §9t).
+
+SPENDING BOOKED TO A WHOLE OPERATING UNIT
+
+The file writes `All for OU` in `Mechanism Code` for money booked to a whole operating unit and
+not to a mechanism. In 43 agency-country-years from 2021 to 2025 an `All for OU` line carries
+expenditure and no budget, beside a mechanism of the same agency that carries budget and no
+expenditure. The reporting rate is judged mechanism by mechanism, so the mechanism with the budget
+reads as silent although the agency reported spending in that country-year. The Peace Corps in
+2025 is the largest case. In 12 countries the Peace Corps budget of 2025 sits on the Management
+and Operations mechanism, and the Peace Corps spending, 11,544,602 USD in all, sits on `All for
+OU` lines with no budget. The connector pools the Peace Corps, the Department of Defense and the
+State Department into the other-agency series, so the 43 agency-country-years fall in 42 agency
+series-years, because Mozambique in 2025 books such lines for both the Peace Corps and State/AF.
+The file does not say which mechanism an `All for OU` line belongs to,
+so the connector changes no reporting rate. Every expenditure row carries the amount in
+`ou_level_unbudgeted_expenditure`, and wherever the amount sits beside a silent mechanism the
+completeness warning names the amount and calls the reporting rate a lower bound
+(ACCESS_LADDER §9u).
 
 TAGGING: PEPFAR expenditure reporting measures the PEPFAR programme, not national HIV spending.
 Amounts are nominal USD, not deflated. source_type = expenditure_account.
@@ -101,6 +134,10 @@ SPENT = "pepfar_expenditure"
 # a year-on-year fall of this many points in the share of budgeted mechanisms filing an
 # expenditure report is flagged on the row: below it the level is not comparable with last year's
 REPORTING_DROP_FLAG = 0.10
+
+# the placeholder the file writes in `Mechanism Code` for money booked to a whole operating unit
+# and not to a mechanism
+OU_LINE = "all for ou"
 
 INTERPRETATION = (
     "PEPFAR programme spending, not national HIV expenditure, and nominal USD. The FY2025 "
@@ -154,12 +191,17 @@ class PEPFARExpenditureConnector(BaseConnector):
         chunk: pd.DataFrame,
         mech: Dict[tuple, Dict[str, float]],
         names: Dict[str, str],
+        relabelled: Dict[tuple, Dict[str, float]],
+        ou_lines: Dict[tuple, List[float]],
         wanted,
         start_year: int,
         end_year: int,
     ) -> bool:
         """Accumulate at (iso3, year, agency, mechanism). The mechanism is the unit that files
-        an expenditure report, so completeness has to be judged there and not on the row."""
+        an expenditure report, so completeness has to be judged there and not on the row.
+        `relabelled` counts, by (ISO3 code, Country code), the rows whose two codes disagree.
+        `ou_lines` sums planned funding and expenditure on `All for OU` lines by (iso3, year,
+        funding agency as the file writes the agency), before agencies are pooled."""
         cols = list(chunk.columns)
         iso_c = _ci(cols, "iso3")
         yr_c = _ci(cols, "implementation year")
@@ -176,7 +218,12 @@ class PEPFARExpenditureConnector(BaseConnector):
             return False
 
         for _, r in chunk.iterrows():
-            iso3 = to_iso3(r[iso_c])
+            coded = iso3 = to_iso3(r[iso_c])
+            # the file labels 106 Peace Corps rows USA in 2022 to 2025 while the Country column
+            # names the country the money was planned for, and PEPFAR's OU file agrees with the
+            # Country column (ACCESS_LADDER §9t), so the Country column decides a disagreement
+            if cn_c and iso3:
+                iso3 = to_iso3(r[cn_c]) or iso3
             if not iso3 or (wanted and iso3 not in wanted):
                 continue
             try:
@@ -189,8 +236,17 @@ class PEPFARExpenditureConnector(BaseConnector):
             key = (iso3, year, _suffix(r[ag_c]), str(r[mc_c]).strip())
             d = mech.setdefault(key, {})
             planned, spent = _num(r[pl_c]), _num(r[ex_c])
+            if iso3 != coded:
+                t = relabelled.setdefault((coded, iso3), {"rows": 0, "planned": 0.0, "spent": 0.0})
+                t["rows"] += 1
+                t["planned"] += planned
+                t["spent"] += spent
             d["planned"] = d.get("planned", 0.0) + planned
             d["spent"] = d.get("spent", 0.0) + spent
+            if str(r[mc_c]).strip().lower() == OU_LINE:
+                o = ou_lines.setdefault((iso3, year, str(r[ag_c]).strip()), [0.0, 0.0])
+                o[0] += planned
+                o[1] += spent
             if pn_c:
                 pname = str(r[pn_c]).strip()
                 if pname and pname.lower() != "nan":
@@ -235,6 +291,8 @@ class PEPFARExpenditureConnector(BaseConnector):
 
         mech: Dict[tuple, Dict[str, float]] = {}
         names: Dict[str, str] = {}
+        relabelled: Dict[tuple, Dict[str, float]] = {}
+        ou_lines: Dict[tuple, List[float]] = {}
         for path in wanted_files:
             used = False
             try:
@@ -246,7 +304,8 @@ class PEPFARExpenditureConnector(BaseConnector):
                                 sep = "\t" if member.lower().endswith(".txt") else ","
                                 for chunk in pd.read_csv(fh, sep=sep, dtype=str, chunksize=200_000,
                                                          on_bad_lines="skip", low_memory=False):
-                                    if self._process(chunk, mech, names, wanted, start_year, end_year):
+                                    if self._process(chunk, mech, names, relabelled, ou_lines,
+                                                     wanted, start_year, end_year):
                                         used = True
                                     else:
                                         break
@@ -254,7 +313,8 @@ class PEPFARExpenditureConnector(BaseConnector):
                     sep = "\t" if path.suffix == ".txt" else ","
                     for chunk in pd.read_csv(path, sep=sep, dtype=str, chunksize=200_000,
                                              on_bad_lines="skip", low_memory=False):
-                        if self._process(chunk, mech, names, wanted, start_year, end_year):
+                        if self._process(chunk, mech, names, relabelled, ou_lines, wanted,
+                                         start_year, end_year):
                             used = True
                         else:
                             break
@@ -264,9 +324,33 @@ class PEPFARExpenditureConnector(BaseConnector):
             log.info("pepfar_expenditure: %s %s", path.name,
                      "(used)" if used else "(skipped — no Funding Agency / amount columns)")
 
-        yield from self._emit(mech, names)
+        if relabelled:
+            log.info("pepfar_expenditure: %d rows carry an ISO3 code that contradicts the Country "
+                     "column and are placed by the Country column, moving %s USD of planned funding "
+                     "and %s USD of expenditure (ACCESS_LADDER §9t). %s",
+                     sum(t["rows"] for t in relabelled.values()),
+                     f"{sum(t['planned'] for t in relabelled.values()):,.0f}",
+                     f"{sum(t['spent'] for t in relabelled.values()):,.0f}",
+                     ", ".join(f"{a}->{b} {t['rows']} rows"
+                               for (a, b), t in sorted(relabelled.items())))
+
+        yield from self._emit(mech, names, ou_lines)
 
     # -- aggregation ------------------------------------------------------------
+    @staticmethod
+    def _unbudgeted(ou_lines: Dict[tuple, List[float]]) -> Dict[tuple, float]:
+        """(iso3, year, agency) -> the expenditure the file books on `All for OU` lines that carry
+        no budget, judged for each funding agency as the file writes the agency and then summed to
+        the agency series and the country total. A mechanism whose spending the file books on such
+        a line reads as budgeted and silent, so the amount is how much reported spending the
+        reporting rate cannot see (ACCESS_LADDER §9u)."""
+        out: Dict[tuple, float] = {}
+        for (iso3, year, agency), (planned, spent) in ou_lines.items():
+            if planned <= 0 < spent:
+                for key in ((iso3, year, _suffix(agency)), (iso3, year, "")):
+                    out[key] = out.get(key, 0.0) + spent
+        return out
+
     @staticmethod
     def _roll_up(mech: Dict[tuple, Dict[str, float]]) -> Dict[tuple, dict]:
         """(iso3, year, agency) -> the aggregate, plus the completeness counts that decide
@@ -296,8 +380,20 @@ class PEPFARExpenditureConnector(BaseConnector):
                     a["partners"][partner] = a["partners"].get(partner, 0.0) + d["spent"]
         return out
 
-    def _emit(self, mech: Dict[tuple, Dict[str, float]], names: Dict[str, str]) -> Iterator[PanelRow]:
+    def _emit(self, mech: Dict[tuple, Dict[str, float]], names: Dict[str, str],
+              ou_lines: Dict[tuple, List[float]]) -> Iterator[PanelRow]:
         agg = self._roll_up(mech)
+        unbudgeted = self._unbudgeted(ou_lines)
+        lines = {k: spent for k, (planned, spent) in ou_lines.items() if planned <= 0 < spent}
+        if lines:
+            beside = sorted(k for k, v in unbudgeted.items()
+                            if k[2] and agg.get(k, {}).get("planned_silent", 0.0) > 0)
+            log.info("pepfar_expenditure: %d agency-country-years book %s USD of expenditure on "
+                     "`All for OU` lines that carry no budget. In %d agency series-years such a "
+                     "line sits beside a budgeted mechanism that filed no expenditure, so the "
+                     "reporting rate there is a lower bound, and every expenditure row carries "
+                     "the amount in `ou_level_unbudgeted_expenditure` (ACCESS_LADDER §9u)",
+                     len(lines), f"{sum(lines.values()):,.0f}", len(beside))
         n = 0
         for (iso3, year, agency), a in sorted(agg.items()):
             suffix = f"_{agency}" if agency else ""
@@ -327,11 +423,13 @@ class PEPFARExpenditureConnector(BaseConnector):
 
             # --- expenditure: the measured quantity, and the one that needs the caveat ---
             if a["spent"] > 0 or budgeted:
+                ou_spent = unbudgeted.get((iso3, year, agency), 0.0)
                 extra: Dict[str, object] = {
                     **base,
                     "reporting_rate": round(rate, 3) if rate is not None else None,
                     "planned_on_silent_mechanisms": a["planned_silent"],
                     "expenditure_ceiling": a["spent"] + a["planned_silent"],
+                    "ou_level_unbudgeted_expenditure": ou_spent,
                     "interpretation": INTERPRETATION,
                 }
                 if a["planned"] > 0:
@@ -352,9 +450,19 @@ class PEPFARExpenditureConnector(BaseConnector):
                             f"reported figure is a floor; the ceiling is "
                             f"{a['spent'] + a['planned_silent']:,.0f} USD."
                         )
+                        ou_note = ""
+                        if ou_spent > 0 and a["planned_silent"] > 0:
+                            warn += (
+                                f" The file also books {ou_spent:,.0f} USD of this series' "
+                                f"FY{year} expenditure on `All for OU` lines that carry no budget, "
+                                f"so some of the {budgeted - reporting} silent mechanisms may have "
+                                f"reported there, and {reporting}/{budgeted} is a lower bound on "
+                                f"the mechanisms that reported."
+                            )
+                            ou_note = f" ({ou_spent:,.0f} USD booked on All for OU lines with no budget)"
                         extra["completeness_warning"] = warn
-                        log.warning("pepfar_expenditure: %s %s FY%d — reporting rate %.2f -> %.2f",
-                                    iso3, agency or "all", year, prev_rate, rate)
+                        log.warning("pepfar_expenditure: %s %s FY%d — reporting rate %.2f -> %.2f%s",
+                                    iso3, agency or "all", year, prev_rate, rate, ou_note)
 
                 if a["programs"]:
                     extra["by_program"] = {k: v for k, v in
