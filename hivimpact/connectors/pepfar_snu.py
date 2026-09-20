@@ -16,11 +16,20 @@ FORMAT (verified 2026-08-04): tab-separated, WIDE. One row per
 SNU1, SNU2, SNU3), and 50 value columns — `{year} Targets` and `{year} Quarter {1-4}
 Results` for 2016-2025. Targets are intent and are not read here.
 
-WHAT IT DOES NOT HAVE: a funding agency. Agency appears only in the partner files
-(`Public_Partner_MER_*`), which stop at the country, and the geographic files
-(this one, `Site_Performance_*`) carry no agency column. So agency x province cannot be
-built from PEPFAR's public data at all — checked across every geographic and partner file
-in the catalogue on 2026-08-04. The agency split in this panel stays national.
+WHAT IT DOES NOT HAVE: a funding agency. This file carries no agency column, and neither do
+the two `Site_Performance_*` files. An entry of 2026-08-04 said that agency by province could
+not be built from PEPFAR's public data at all, and that entry was wrong (corrected 2026-09-19,
+docs/ACCESS_LADDER.md section 9w). `Partner_Performance.zip` names the funding agency of every
+partner in every priority sub-national unit from FY2018 to FY2025. Among the 26 countries this
+connector emits provinces for, Partner_Performance's units carry the same names as this
+connector's provinces in 17 and sit lower, at district level, in nine, two levels lower in
+Malawi and one level lower in the other eight. Partner_Performance
+adds every partner's count without removing the people two partners both report, so
+Partner_Performance's totals run above this file's and are never a substitute for this file.
+The agency split in this panel stays national until a connector reads Partner_Performance.
+
+This file itself is deduplicated, which is why `national_quarters` below is the check
+pepfar_panorama runs its partner-summed national totals against.
 
 TWO DOUBLE-COUNTING TRAPS, both checked before a single row was emitted:
 
@@ -38,12 +47,33 @@ TWO DOUBLE-COUNTING TRAPS, both checked before a single row was emitted:
    does not: over all ten years, zero SNU2 groups have a value on both sides. Countries
    simply publish two levels or three. Summing every row up to SNU1 is therefore correct.
 
-NATIONAL TOTALS IN DISGUISE: 33 of the 59 countries publish a single "sub-national unit"
+NATIONAL TOTALS IN DISGUISE: 35 of the 61 countries publish a single "sub-national unit"
 that is the country itself — SNU1 "Thailand" for Thailand, "Burma" for Burma. Those are
 national figures wearing a province's label, and emitting them would duplicate
 `pepfar_panorama` under a fake admin1. A country whose only SNU1 is its own name is
 dropped, which leaves 26 countries with real sub-national detail (Kenya 47 counties,
 Nigeria 37 states, Vietnam 35 provinces, Cote d'Ivoire 34, Tanzania 32, Ukraine 27 ...).
+
+Correction of 2026-09-20. The count of 2026-08-04 was 33 of 59 because Bahamas and Belize
+carry no ISO3 code in this file, and a count grouped on the ISO3 column leaves both out. This
+connector resolves a country from the Country column when ISO3 is blank, and the connector's
+own log names 35 countries skipped.
+
+Correction of 2026-09-19, recounted 2026-09-20. Most of the 35 skipped countries publish real
+provinces one level down. In all 35, every row carrying a value names a Sub-National Unit 2.
+Leaving aside the "Data above SNU2" rows and the units whose names begin with an underscore, 31
+of the 35 countries name two or more SNU2 units carrying a value on some indicator, 239 units
+in all, and the SNU2 names are provinces, departments, states or districts (Thailand 17
+provinces, Cambodia six provinces, Myanmar 15 states and regions, Guatemala 19 departments,
+Belize three districts). Peru's only SNU2 unit is `_Peru Aggregated PSNU`, Colombia's are
+`_Colombia Aggregated PSNU` and Antioquia, Barbados's is Saint Michael Parish and Bahamas's is
+New Providence Island, so Peru, Colombia, Barbados and Bahamas have no provincial split to
+read. The first count of 2026-09-19 gave 238 units over 30 countries, because the first count
+took SNU2 names from every row and so included Roraima in Brazil and Nickerie District in
+Suriname, which carry no value. This connector reads SNU1 only and so emits nothing for the 31
+countries yet, six of the nine Southeast Asian countries among them. Reading SNU2 where SNU1
+is the country is a change awaiting Jason's decision, recorded in docs/ACCESS_LADDER.md
+section 9w.
 
 ADMIN1 NAMES: published names are kept as they are, with two exceptions that exist to
 make the panel joinable — a leading province code ("ec Eastern Cape Province") and a
@@ -115,6 +145,60 @@ def _num(cell) -> Optional[float]:
         return None
 
 
+def national_quarters(raw_dir, codes: Iterable[str], wanted=None, start_year: int = 2000,
+                      end_year: int = 2035) -> Optional[Dict[tuple, List[Optional[float]]]]:
+    """Every row of this file added to the country, quarter by quarter, for the MER codes asked.
+
+    Returns {(iso3, code, year): [q1, q2, q3, q4]}, with None for a quarter nothing reported, or
+    None when the file is not on disk. Numerator rows only, every modality and every unit level
+    included, since the two double-counting traps in the module docstring were both checked and
+    neither applies to a sum over the whole country.
+
+    pepfar_panorama calls this to test its own national totals. The partner file pepfar_panorama
+    reads adds every partner without removing people two partners both report, and this file is
+    deduplicated, so where the two disagree this file is the safer national figure.
+    """
+    raw_dir = Path(raw_dir)
+    files = sorted(p for p in list(raw_dir.glob("*.zip")) + list(raw_dir.glob("*.txt"))
+                   if FILE_HINT in p.name.lower()) if raw_dir.exists() else []
+    if not files:
+        return None
+    codes = set(codes)
+    years = [y for y in YEARS if start_year <= y <= end_year]
+    qcols = [f"{y} Quarter {q} Results" for y in years for q in QUARTERS]
+    iso_cache: Dict[tuple, Optional[str]] = {}
+    total: Optional[pd.DataFrame] = None
+    for path in files:
+        for chunk in PEPFARSNUConnector._chunks(path):
+            sub = chunk[chunk["Indicator"].isin(codes)
+                        & chunk["Numerator/Denominator"].fillna("N").str.strip().str.upper().eq("N")]
+            if sub.empty:
+                continue
+            keys = list(zip(sub["ISO3"].fillna(""), sub["Country"].fillna("")))
+            for k in set(keys):
+                if k not in iso_cache:
+                    iso_cache[k] = to_iso3(k[0]) or to_iso3(k[1])
+            sub = sub.assign(_iso3=[iso_cache[k] for k in keys]).dropna(subset=["_iso3"])
+            if wanted:
+                sub = sub[sub["_iso3"].isin(wanted)]
+            vals = sub.reindex(columns=qcols).apply(
+                lambda c: pd.to_numeric(c.astype(str).str.replace(",", "", regex=False),
+                                        errors="coerce"))
+            part = vals.groupby([sub["_iso3"], sub["Indicator"]]).sum(min_count=1)
+            # adding two chunks keeps a quarter blank only where both chunks left it blank
+            total = part if total is None else total.add(part, fill_value=0)
+    out: Dict[tuple, List[Optional[float]]] = {}
+    if total is None:
+        return out
+    for (iso3, code), row in total.iterrows():
+        for y in years:
+            q = [row[f"{y} Quarter {i} Results"] for i in QUARTERS]
+            q = [None if pd.isna(v) else float(v) for v in q]
+            if any(v is not None for v in q):
+                out[(iso3, code, y)] = q
+    return out
+
+
 class PEPFARSNUConnector(BaseConnector):
     source_id = "pepfar_snu"
     default_source_type = SourceType.ROUTINE_PROGRAMME
@@ -142,7 +226,9 @@ class PEPFARSNUConnector(BaseConnector):
                      [p.name for p in candidates if p not in kept])
         return kept
 
-    def _chunks(self, path: Path):
+    @staticmethod
+    def _chunks(path: Path):
+        # static so national_quarters can read the file without building a connector
         read = dict(sep="\t", dtype=str, chunksize=100_000, on_bad_lines="skip",
                     low_memory=False, usecols=lambda c: c in _COLS or c in _VALUE_COLS)
         if path.suffix == ".zip":

@@ -39,7 +39,7 @@ import sys
 import zipfile
 from collections import Counter
 from pathlib import Path
-from typing import Iterable, Optional, Set, Tuple
+from typing import Dict, Iterable, Optional, Set, Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -69,11 +69,17 @@ def _rule(title: str) -> None:
 # --------------------------------------------------------------------------------------
 
 def audit_directory(name: str, subdir: str, used: Iterable[str],
-                    note: str = "") -> Tuple[int, int]:
+                    note: str = "",
+                    declared: Optional[Dict[str, str]] = None) -> Tuple[int, int]:
     """Compare every file in a raw directory against the files a connector opens.
 
     `used` holds filenames, not patterns, because a pattern is what hides the skip in the first
     place. Writing the names out forces the audit to state which files the connector reads.
+
+    `declared` maps a file nobody reads to the reason it is refused, the way
+    unaids_aidsinfo._declared_reason does for exports. A refused file is a decision on the record
+    and an unread file is a decision nobody has made, so only the unexamined count needs anyone's
+    attention.
     """
     d = RAW / subdir
     if not d.exists():
@@ -83,15 +89,24 @@ def audit_directory(name: str, subdir: str, used: Iterable[str],
                    if p.is_file() and not p.name.startswith(".")
                    and p.suffix.lower() not in DOC_SUFFIXES)
     used_set = set(used)
-    unread = [p for p in files if p.name not in used_set]
-    missing = used_set - {p.name for p in files}
-    print(f"{name:22s} {len(files) - len(unread):3d} of {len(files):3d} files read"
-          + (f"   [{note}]" if note else ""))
+    declared = declared or {}
+    # A file both read and refused is a contradiction in this script, not in the data.
+    both = used_set & set(declared)
+    if both:
+        raise ValueError(f"{name}: named as read and as refused: {sorted(both)}")
+    present = {p.name for p in files}
+    read = [p for p in files if p.name in used_set]
+    refused = [p for p in files if p.name in declared]
+    unread = [p for p in files if p.name not in used_set and p.name not in declared]
+    print(f"{name:22s} {len(read):3d} of {len(files):3d} files read, {len(refused)} declared "
+          f"out of scope, {len(unread)} unexamined" + (f"   [{note}]" if note else ""))
     for p in unread:
-        print(f"    unread  {p.name}  ({_fmt_size(p.stat().st_size)})")
-    for m in sorted(missing):
+        print(f"    unexamined  {p.name}  ({_fmt_size(p.stat().st_size)})")
+    for p in refused:
+        print(f"    declared  {p.name}  {declared[p.name]}")
+    for m in sorted((used_set | set(declared)) - present):
         print(f"    NAMED BUT ABSENT  {m}")
-    return (len(files) - len(unread), len(files))
+    return (len(read), len(files))
 
 
 # --------------------------------------------------------------------------------------
@@ -187,16 +202,45 @@ def main() -> int:
         for reason, n in reasons.most_common():
             print(f"    declared  {n:3d} file(s)  {reason}")
 
+    # Each refusal below rests on a comparison of the file's national totals with the files the
+    # panel already reads, for TX_CURR, TX_NEW, HTS_TST and HTS_TST_POS, recorded in
+    # docs/ACCESS_LADDER.md section 9w. A file whose totals equal a series already in the panel
+    # is a split of that series and adds no new measurement of the country.
     audit_directory(
         "pepfar_*", "pepfar",
         used=["Public_Partner_MER_TopLine.zip",           # pepfar_panorama, pepfar_agency
               "Public_Partner_Budgets_and_Expenditures.zip",  # pepfar_expenditure
-              "Enhanced_Geographical_Analysis.zip",       # pepfar_snu
+              # pepfar_snu, and pepfar_panorama for the check on its national totals
+              "Enhanced_Geographical_Analysis.zip",
               "Country_Level_Results_by_Modality_Coarse_Age_and_Sex.zip",  # pepfar_modality
               "PEPFAR_OU_Budgets_and_Expenditures.zip",   # pepfar_ou_budgets
               "PEPFAR_OU_Commodities_Procurements.zip",   # pepfar_commodities
-              "HRH_Inventory_Public_Dataset.zip"],        # pepfar_hrh
-        note="seven connectors share one directory")
+              "HRH_Inventory_Public_Dataset.zip",         # pepfar_hrh
+              "Voluntary_Male_Medical_Circumcisions_Results_by_Operating_Unit.zip"],  # pepfar_vmmc
+        declared={
+            "Operating_Unit_by_Fine_Age_and_Sex.zip":
+                "age and sex split of the geographic file's national totals, equal to them "
+                "exactly in 1,466 of 1,466 country-indicator-years",
+            "Clinical_Cascade_Results_by_Coarse_Age_and_Sex.zip":
+                "age and sex split of the geographic file below the country, equal to it "
+                "exactly in 1,756 of 2,012 country-indicator-years, every mismatch in FY2016 "
+                "to FY2018",
+            "Clinical_Cascade_Results_by_Fine_Age_and_Sex.zip":
+                "the coarse Cascade file's totals in finer age bands, and the fine bands are "
+                "defined differently in different years",
+            "Public_Partner_MER_AgeSex.zip":
+                "age and sex split of TopLine, equal to pepfar_panorama in 401 of 406 TX_CURR "
+                "country-years, and the eight codes TopLine lacks are orphan and vulnerable "
+                "children codes that pepfar_panorama declares outside the HIV cascade",
+            "Site_Performance_2016-2020.zip":
+                "facility split of the geographic file, equal to it exactly in 903 of 934 "
+                "country-indicator-years",
+            "Site_Performance_2021_plus.zip":
+                "facility split of the geographic file, equal to it exactly in 1,080 of 1,080 "
+                "country-indicator-years, and a facility that stops reporting cannot be told "
+                "apart from one handed to the national government",
+        },
+        note="nine connectors share one directory")
 
     audit_directory("foreign_assistance", "foreign_assistance",
                     used=["us_foreign_aid_complete.csv"], note="reads every CSV present")

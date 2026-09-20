@@ -181,6 +181,13 @@ CUMULATIVE_CANON = {MER_INDICATORS[k] for k in MER_INDICATORS if k not in SNAPSH
 SEMI_ANNUAL = {"TB_PREV", "KP_PREV"}
 SEMI_ANNUAL_CANON = {MER_INDICATORS[k] for k in SEMI_ANNUAL if k in MER_INDICATORS}
 
+# How far a national total may sit from the geographic file's figure before the row carries the
+# geographic figure beside it. Five per cent is the tolerance every section 9f comparison in this
+# project uses. On the download of 2026-07-18 the count of rows above the geographic file falls
+# from 335 past 0.5 per cent to 222 past 2 per cent and 157 past 5 per cent, so the choice moves
+# the count and a reader wanting a tighter test can recompute from geographic_value.
+GEO_TOLERANCE = 0.05
+
 # Every other code in the TopLine file, with the reason this connector leaves the code alone.
 # The audit in scripts/audit_coverage.py subtracts this list before reporting a gap, so a code
 # named here is a decision on the record and a code named nowhere is a decision nobody has made.
@@ -646,6 +653,27 @@ class PEPFARPanoramaConnector(BaseConnector):
                          ", ".join(f"Q{q}" for q in was), year - 1,
                          ", ".join(f"Q{q}" for q in qs))
 
+        # The same national figure from PEPFAR's geographic file, which removes people two
+        # partners both report. The TopLine file read above adds every mechanism without that
+        # removal, so a TopLine total can sit above the geographic one, and Kazakhstan's TX_CURR
+        # sits at exactly twice the geographic figure in every year from FY2021 to FY2025. A
+        # TopLine total can also sit below it where TopLine is missing reporting that the
+        # geographic file holds, as Thailand FY2018 HTS_TST does at 1,308 against 75,944. Values
+        # are never replaced. A row more than GEO_TOLERANCE away carries the geographic figure
+        # beside its own, in either direction (docs/ACCESS_LADDER.md section 9w).
+        # Imported here and not at the top, because pepfar_snu imports this module at load.
+        from .pepfar_agency import MER_INDICATORS as _AGENCY_CODES
+        from .pepfar_snu import national_quarters
+        geo = national_quarters(self.raw_dir, MER_INDICATORS, wanted, start_year, end_year)
+        if geo is None:
+            log.warning("pepfar_panorama: no Enhanced Geographical Analysis file in %s, so the "
+                        "national totals are not checked against the geographic file this run",
+                        self.raw_dir)
+        code_of = {v: k for k, v in MER_INDICATORS.items()}
+        agency_canon = set(_AGENCY_CODES.values())
+        geo_off: Dict[str, List[str]] = {"above": [], "below": []}
+        geo_checked = 0
+
         n = 0
         like: Dict[tuple, List[float]] = {}
         for (iso3, canonical, year), value in sorted(values.items()):
@@ -745,6 +773,43 @@ class PEPFARPanoramaConnector(BaseConnector):
                         f"inspect partner-level detail before using in trend analysis.")
                 extra["data_quality_flag"] = flag
                 log.warning("pepfar_panorama: %s %s %d — %s", iso3, canonical, year, flag)
+            # A snapshot is compared at the quarter this row was read at, which is not always the
+            # geographic file's own latest quarter (five country-years differ), and a flow is
+            # compared as the sum of whatever quarters the geographic file reports.
+            gq = geo.get((iso3, code_of[canonical], year)) if geo else None
+            if gq:
+                if canonical in CUMULATIVE_CANON:
+                    g_nn = [v for v in gq if v is not None]
+                    g_value = sum(g_nn) if g_nn else None
+                else:
+                    g_value = gq[snap_q[key] - 1]
+                if g_value:
+                    geo_checked += 1
+                    ratio = value / g_value
+                    if abs(ratio - 1) > GEO_TOLERANCE:
+                        above = ratio > 1
+                        if above:
+                            note = (f"PEPFAR's geographic file gives {g_value:,.0f} for this "
+                                    f"country and year and this value is {ratio:.2f} times that "
+                                    f"figure. The partner file this value comes from adds every "
+                                    f"partner's count without removing the people two partners "
+                                    f"both report, and the geographic file removes them, so "
+                                    f"the geographic figure is the safer national total.")
+                            if canonical in agency_canon:
+                                note += (" The pepfar_agency rows split this same partner total "
+                                         "by funding agency and carry the same excess.")
+                        else:
+                            note = (f"PEPFAR's geographic file gives {g_value:,.0f} for this "
+                                    f"country and year and this value is {ratio:.2f} of that "
+                                    f"figure. The partner file this value comes from is missing "
+                                    f"reporting that the geographic file holds, so this value is "
+                                    f"a floor for the PEPFAR programme, and a fall against "
+                                    f"another year may be missing reporting and not missing "
+                                    f"services.")
+                        extra["geographic_total_differs"] = {
+                            "geographic_value": g_value, "ratio": round(ratio, 4),
+                            "direction": "above" if above else "below", "note": note}
+                        geo_off["above" if above else "below"].append(f"{iso3} {canonical} {year}")
             yield self.make_row(
                 country_iso3=iso3, country_name=names.get(iso3, ""),
                 indicator_id=canonical, year=year, value=value, unit="count",
@@ -762,4 +827,11 @@ class PEPFARPanoramaConnector(BaseConnector):
                      "are not comparable. Like-quarter median %.2f over %d countries, below 1.0 "
                      "in %d of them.", canonical, year, year - 1, med, len(ratios),
                      len([r for r in ratios if r < 1.0]))
+        if geo is not None:
+            for direction, rows in geo_off.items():
+                countries = Counter(r.split()[0] for r in rows)
+                log.warning("pepfar_panorama: %d of %d rows checked sit more than %d%% %s the "
+                            "geographic file, flagged in extra.geographic_total_differs. By "
+                            "country: %s", len(rows), geo_checked, round(GEO_TOLERANCE * 100),
+                            direction, ", ".join(f"{c} {k}" for c, k in countries.most_common()))
         log.info("pepfar_panorama: emitted %d rows", n)

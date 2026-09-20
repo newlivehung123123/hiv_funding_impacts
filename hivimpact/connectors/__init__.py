@@ -16,6 +16,7 @@ from .pepfar_modality import PEPFARModalityConnector  # testing split community 
 from .pepfar_ou_budgets import PEPFAROUBudgetsConnector  # budget from 2004, before the partner file
 from .pepfar_commodities import PEPFARCommoditiesConnector  # what PEPFAR planned to buy, COP18-COP24
 from .pepfar_hrh import PEPFARHRHConnector  # the staff PEPFAR paid for, FY2025
+from .pepfar_vmmc import PEPFARVMMCConnector  # circumcisions 2010-2017, before the partner file
 from .clm_asia import CLMAsiaConnector  # community-led monitoring (Indonesia sentinel)
 from .global_fund import GlobalFundConnector  # grant-reported annual results, by country and year
 from .country import COUNTRY_CONNECTORS  # Phase 2 country-level "to source" connectors
@@ -53,6 +54,7 @@ CONNECTORS = {
         PEPFAROUBudgetsConnector,    # PEPFAR budget 2004-2020, the years the partner file lacks
         PEPFARCommoditiesConnector,  # PEPFAR commodity procurement plans 2019-2025, pre-freeze
         PEPFARHRHConnector,          # PEPFAR-funded staff, spend and FTE, FY2025 inventory
+        PEPFARVMMCConnector,         # PEPFAR circumcisions 2010-2017, the years the partner file lacks
         CLMAsiaConnector,            # community-led monitoring — Indonesia sentinel (API)
         GlobalFundConnector,         # ART initiations and service results, grant-reported (OData v4.2)
     )
@@ -66,6 +68,6 @@ __all__ = [
     "DHSConnector", "ForeignAssistanceConnector", "PEPFARPanoramaConnector",
     "PEPFARAgencyConnector", "PEPFARExpenditureConnector", "PEPFARSNUConnector",
     "PEPFARModalityConnector", "PEPFAROUBudgetsConnector", "PEPFARCommoditiesConnector",
-    "PEPFARHRHConnector", "CLMAsiaConnector", "GlobalFundConnector",
+    "PEPFARHRHConnector", "PEPFARVMMCConnector", "CLMAsiaConnector", "GlobalFundConnector",
     "COUNTRY_CONNECTORS", "CONNECTORS",
 ]

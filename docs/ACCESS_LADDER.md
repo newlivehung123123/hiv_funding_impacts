@@ -396,7 +396,9 @@ geographic file has no mechanism column at all: it is one row per district, so a
 mechanisms both support is still counted once. Nothing inside the partner file separates an
 overlapping mechanism from an additional one, so this cannot be corrected from that file alone
 — it only becomes visible by holding the two downloads against each other. Where they disagree,
-the geographic total is the safer one.
+the geographic total is the safer one. Since 19 September 2026 `pepfar_panorama` holds every row
+against the geographic file on every run and records the geographic figure on any row more than
+five per cent away (§9w).
 
 Vietnam runs the other way, and is not the same problem. The partner file is around half the
 UNAIDS national total in every year, which is what partial coverage looks like: PEPFAR supports
@@ -1877,6 +1879,237 @@ same day wrote the 162 rows into the panel. Checked offline, the 162 rows on dis
 in every column, the 184,089 rows of the other sources match `hiv_panel.prev.csv` in every column,
 and the validator and the reconciliation give the same counts as the dry run.
 
+### §9w. A split of a total already read is refused in writing, a zero that means two things is not emitted, and an absence has to be checked in every file
+
+Work item #15 required every one of the 15 PEPFAR Spotlight zips in `data/raw/pepfar/` to be read
+or refused in writing, and seven had been read by the end of §9v. The last eight zips were held
+against two series the panel already holds, the national totals of the geographic file
+(`Enhanced_Geographical_Analysis`, read by `pepfar_snu`), which removes people whom two partners
+both report, and the partner-summed totals of `pepfar_panorama`, which do not remove them. The
+comparison is the §9f test, under which a file whose totals equal a series already in the panel is
+a split of that series and never corroboration of that series. Six of the eight zips are refused,
+`Voluntary_Male_Medical_Circumcisions_Results_by_Operating_Unit` is read by connector 24,
+`pepfar_vmmc`, and `Partner_Performance` waits on a design that Jason has not yet approved.
+`scripts/audit_coverage.py` now reports eight of the 15 files read, six declared out of scope with
+the reason printed beside each file, and `Partner_Performance` as the one file unexamined.
+
+Summed over age, sex and facility, four of the refused files reproduce the geographic file's
+national totals for TX_CURR, TX_NEW, HTS_TST and HTS_TST_POS. `Operating_Unit_by_Fine_Age_and_Sex`
+equals the geographic file exactly in 1,466 of 1,466 country-indicator-years,
+`Site_Performance_2021_plus` in 1,080 of 1,080, `Site_Performance_2016-2020` in 903 of 934, and
+`Clinical_Cascade_Results_by_Coarse_Age_and_Sex` in 1,756 of 2,012, with every mismatch in FY2016
+to FY2018. `Clinical_Cascade_Results_by_Fine_Age_and_Sex` carries the coarse Cascade file's totals
+in finer age bands, and the fine bands are defined differently in different years.
+`Public_Partner_MER_AgeSex` is the age and sex split of `Public_Partner_MER_TopLine`, the partner
+file `pepfar_panorama` reads, and equals `pepfar_panorama` in 401 of 406 TX_CURR country-years and
+in 415 of 415 HTS_TST_POS country-years. The eight codes that `Public_Partner_MER_AgeSex` carries
+and TopLine lacks are codes for orphans and vulnerable children, which `pepfar_panorama` already
+declares outside the HIV cascade. None of the six refused files holds a country-indicator-year that
+the geographic file lacks. The Cascade files and the 2016 to 2020 site file do hold about 93
+country-years per code that the panel lacks at the national level, most of them in FY2016 and
+FY2017 before `pepfar_panorama` begins, and the geographic file holds the same country-years, so a
+national PEPFAR series for FY2016 and FY2017 would be read from the geographic file and not from a
+split of the geographic file. **The general rule. A file whose totals equal a series already in the
+panel adds a breakdown of that series and no evidence about that series. A refusal of such a file
+has to name the series matched and the count of cells that match, so that the refusal can be
+checked and reversed without repeating the comparison.**
+
+`Site_Performance_2021_plus` carries one finding that the refusal does not discard. Named
+facilities reporting TX_CURR at the fourth quarter number 24,260 in FY2023, 27,098 in FY2024 and
+27,359 in FY2025. Between FY2024 and FY2025, 779 facilities stopped reporting, against 492 between
+FY2023 and FY2024. Myanmar's count of reporting facilities fell 55 per cent, from 33 to 15, India's
+38 per cent, Haiti's 30 per cent, Nepal's 28 per cent, Thailand's 28 per cent and Burundi's 18 per
+cent. The site file cannot tell a facility that stopped treating people from a facility handed to
+the national government, which then reports outside PEPFAR, so the count of facilities that stopped
+reporting is recorded here and enters no series.
+
+`pepfar_vmmc`, connector 24, reads the circumcision file, a table of 17 rows, one for each
+country, with a column for every PEPFAR fiscal year from 2010 to 2024, a column pooling 2007 to
+2009 and a total. On the download of 2026-07-18, dated 29 May 2025 inside the zip, the total equals
+the sum of the other columns in all 17 rows, and the connector repeats the check on every run. From
+FY2018 onwards `pepfar_panorama` already emits `circumcisions_performed` from the partner file. The
+circumcision file and `pepfar_panorama` agree within half of one per cent in 92 of the 101
+country-years both carry, and the other nine country-years lie between 0.952 of
+`pepfar_panorama`'s value (Zambia 2018) and 1.030 (Kenya 2018), which also shows that the years in
+the circumcision file are PEPFAR fiscal years. For 2016 and 2017 the circumcision file equals the
+geographic file exactly in 27 of the 28 country-years, Uganda 2017 standing at 732,527 against
+734,492, so the circumcision file is a deduplicated series and carries none of the partner
+overcount described below. The connector emits FY2010 to FY2017 only, 108 rows over 14 countries
+and 14,939,124 circumcisions, and leaves the 101 later cells to `pepfar_panorama`. The pooled column
+holds 73,118 circumcisions in six countries (Kenya 45,657, South Africa 18,100, Botswana 5,180,
+Eswatini 3,802, Tanzania 262 and Namibia 117) and is read, counted in the log and never emitted,
+because dividing a three-year figure by three would invent a path the file does not contain.
+
+The circumcision file writes 0 both for a country with no programme and for a running programme
+that reported nothing. Nigeria, Burundi and Sierra Leone carry 0 in every year from 2010 to 2017,
+and the three countries report 22 procedures between them after 2019. Namibia carries 0 in 2013
+between 6,121 in 2012 and 785 in 2014, and Botswana carries 0 in 2011 between 534 in 2010 and 8,590
+in 2012. A 0 in the panel would read as a measured stop to a programme. The connector emits cells
+above 0 only, names every 0 left out in the log, and marks every Namibian and Botswanan row with
+`extra.zero_years_not_emitted`. **The general rule. A value that a file writes both for no
+programme and for no report is not a count of services. The connector has to leave such a value
+out of the series, name every omitted cell, and mark the neighbouring rows, so that a gap in the
+series is not read as a fall in services.**
+
+Connector 24 adds attribution and almost no coverage. `unaids_aidsinfo` carries the national
+circumcision count under the same indicator for every one of the 108 country-years, and gives 0 for
+Lesotho 2011, where the circumcision file gives 199. PEPFAR's figure is at or below the national
+figure in 85 of the other 107 country-years, with a median ratio of 0.831. Four country-years sit
+more than 25 per cent above the national figure, Malawi 2013 at 1.65 times, Eswatini 2012 at 1.45
+times, Tanzania 2015 at 1.39 times and Namibia 2012 at 1.26 times. A PEPFAR fiscal year begins
+three months before the calendar year of the same number and could move a campaign into the next
+year, but neither file can confirm that explanation, so the four country-years are recorded and not
+explained. With `pepfar_panorama`, the panel now holds PEPFAR's own circumcision series from FY2010
+to FY2024, and the PEPFAR series divided by the UNAIDS series gives the share of each country's
+circumcisions that PEPFAR supported, which is the share a cut to PEPFAR puts at risk. The PEPFAR
+series and the UNAIDS series must never be added together.
+
+§5 judged the geographic file the safer national total wherever the geographic file and the partner
+file disagree, after Namibia's partner-file TX_CURR of 298,637 in FY2022 was set against 200,190 in
+the geographic file. The comparison was made for the §5 correction and was not repeated on later
+runs. `pepfar_panorama` now compares every row the connector emits with the geographic file's
+national figure for the same country, code and year, a snapshot at the quarter the row was read at
+and a flow as the sum of the quarters. A row more than five per cent away keeps the partner value
+and carries the geographic value, the ratio and the direction in `extra.geographic_total_differs`.
+Values are never replaced. The count of rows above the geographic file falls from 335 past half of
+one per cent to 222 past two per cent and 157 past five per cent, and five per cent is the
+tolerance. The dry run of 19 September 2026 checked 3,338 rows over 11 codes from FY2018 to FY2025,
+found 3,101 rows within five per cent and 2,892 within half of one per cent, and flagged 157 rows
+above the geographic file and 79 below.
+
+The 157 rows above the geographic file belong to 19 countries, Namibia 33, Kazakhstan 19,
+Tajikistan 18, Laos 16, Kyrgyzstan 11, Lesotho, Malawi and Vietnam 10 each, and 11 other countries
+with six rows or fewer, and reach 2.17 times the geographic figure. Kazakhstan's TX_CURR is exactly
+twice the geographic figure in every year from FY2021 to FY2025, because two mechanisms report the
+same patients, mechanisms 81234 and 85713 at 5,234 each in FY2023. Namibia reaches 1.56 times on
+TX_NEW in FY2022. The `pepfar_agency` rows split the same partner totals by funding agency and carry
+the same excess, and the note on every flagged row of TX_CURR, TX_NEW or HTS_TST_POS says that the
+`pepfar_agency` rows carry the same excess. The 79 rows below the geographic file belong to 13
+countries, Thailand 12, Colombia 10, Guatemala nine, Honduras and Panama eight each, and eight other
+countries, and 69 of the 79 rows fall in FY2018 and FY2019, the years in which §9l found PEPFAR's
+regional operating units naming few partners. The lowest is Panama's TX_CURR in FY2018, 31 against
+11,932, and Thailand's HTS_TST in FY2018 stands at 1,308 against 75,944. The note on a row below the
+geographic file calls the row a floor for the PEPFAR programme and warns that a fall against
+another year may be missing reporting and not missing services.
+
+The survey of 19 September 2026 first reported that the rows below the geographic file already
+carried a discontinuity or `partners_absent` flag, and the survey was wrong. On the panel of 5
+September 2026, 56 of the 80 rows more than five per cent below carried no warning of any kind in
+`extra`, 15 carried `partial_year`, six carried a discontinuity flag, two carried `partners_absent`
+and one carried only a snapshot-quarter mismatch. The change Jason approved flags rows above the
+geographic file, and the rows below are flagged as well because the 56 unflagged rows would
+otherwise read as measured falls. Dropping the flag on rows below is a one-line change if Jason
+prefers the approved scope. The 80th row, Laos TX_PVLS in FY2019, is read at the first quarter, and
+at the first quarter the geographic file gives the same 534, so the check passes the row. **The
+general rule. A comparison that decides which of two totals is safer protects a later reader only
+if the comparison runs inside the connector on every run and leaves the answer on the row.**
+
+The claim row of 4 August 2026 that PEPFAR has no agency × province anywhere was wrong.
+`Partner_Performance` names the funding agency of every partner in every priority sub-national unit
+(PSNU), the unit at which PEPFAR plans a country's programme, for every quarter from FY2018 to
+FY2025. The file carries 1,188 PSNUs over 61 countries, four of the PSNUs in Bahamas and Belize,
+which carry no ISO3 code. Of the 59 countries with an ISO3 code, 15 have one PSNU covering the whole
+country and 44 have more than one, 1,169 PSNUs in all. The PSNU sits at the geographic file's first
+sub-national level in 17 of the 44 countries, at the second level in 22 and at the third level in
+four, and Mali's PSNU names match no level of the geographic file until accents such as the one in
+`Ségou` are normalised. Among the 26 countries for which `pepfar_snu` emits provinces, the PSNU
+names equal `pepfar_snu`'s province names in 17 countries and sit lower, at district level, in
+nine, among them Uganda with 146 PSNUs against 10 provinces and Zambia with 116 against 10. The
+PSNU sits one level below `pepfar_snu`'s province in eight of the nine and two levels below in
+Malawi, where 28 PSNUs fall under four provinces. The claim of 4 August named every geographic and partner file as checked and said that the
+partner files stop at the country, and `Partner_Performance` does not stop at the country. **The
+general rule. A claim that a publisher lacks a split is a claim about every file the publisher
+releases. Before such a claim is written down, every file in the catalogue has to be opened and
+every column read, and the claim has to name the files checked.**
+
+`Partner_Performance` adds every partner's count without removing the people two partners both
+report, and agrees with `pepfar_panorama` within half of one per cent in 389 of 406 TX_CURR
+country-years. Held against the geographic file province by province for FY2024, the partner sum
+lies within five per cent in 390 of 399 provinces on TX_CURR, 385 of 401 on TX_NEW and 387 of 394
+on HTS_TST_POS, with a median ratio of 1.000 and no province more than five per cent below. The
+provinces above lie in Kyrgyzstan, Kazakhstan, Tajikistan, Namibia, India, Haiti and Botswana. In
+FY2024, 116 provinces report TX_CURR through USAID-funded partners alone, 167 through CDC-funded
+partners alone and 116 through a mix of agencies. In 15 countries, among them Kenya, Mozambique,
+Nigeria, South Africa, Tanzania, Uganda, Zambia and Zimbabwe, the USAID share of TX_CURR runs from
+under 20 per cent in one province to over 80 per cent in another. No national series can show that
+spread, which is the variation within a country in exposure to the closure of USAID.
+
+The proposed connector 25 would emit the three `pepfar_agency` codes with the agency suffix at
+admin1 for FY2018 to FY2025. The connector would place each PSNU in the province `pepfar_snu` writes
+through the geographic file's own SNU1, SNU2 and SNU3 columns, compare every province with the
+geographic file's deduplicated province total and flag any province more than five per cent away as
+`pepfar_panorama` does, check on every run that the province sums reproduce `pepfar_agency`'s
+national rows, and handle FY2025's single quarter by `pepfar_panorama`'s partial-year rules. Of the
+PSNUs carrying the three codes, 1,123 fall in exactly one province and none in two, and the five
+PSNUs named `Data reported above PSNU Level`, one each in Burkina Faso, the Democratic Republic of
+the Congo, Liberia, Senegal and Sierra Leone, carry no TX_CURR in FY2024 and would be logged. The 15
+countries whose PSNU is the whole country are already covered nationally by `pepfar_agency`, and
+Mali waits on accent normalisation. Targets, including the FY2025 targets set before the freeze,
+are left for a later decision. No code is written until Jason approves the design.
+
+The survey also found a gap in `pepfar_snu`. The connector skips the 35 countries whose only SNU1 is
+the country's own name, treating such a unit as a national total wearing a province's label. The
+claim row of 4 August 2026 gives 35 countries, and the connector's docstring gave 33 until 20
+September, because Bahamas and Belize carry no ISO3 code in the geographic file and a count grouped
+on the ISO3 column leaves both out, while the connector resolves both from the `Country` column. The
+survey of 19 September made the same omission. In all 35 countries every row carrying a value
+names an SNU2. Leaving aside the `Data above SNU2` rows and the units whose names begin with an
+underscore, 31 of the 35 countries name two or more SNU2 units carrying a value on some indicator,
+239 units in all, and the units are provinces, departments, states or districts. Thailand names 17
+provinces, Myanmar 15 states and regions, Laos six provinces, Cambodia six, the Philippines five and
+Indonesia four, so six of the nine Southeast Asian countries of
+[`PHASE2_FEASIBILITY.md`](PHASE2_FEASIBILITY.md) have PEPFAR provinces that the panel does not yet
+hold. Peru's only unit is `_Peru Aggregated PSNU`, Colombia's units are `_Colombia Aggregated PSNU`
+and Antioquia, Barbados names Saint Michael Parish alone and Bahamas names New Providence Island
+alone, so Peru, Colombia, Barbados and Bahamas have no provincial split to read. The survey of 19
+September first gave 238 units over 30 countries, because the first count took SNU2 names from every
+row and so counted Roraima in Brazil and Nickerie District in Suriname, which carry no value, and
+missed Belize's three districts. Reading SNU2 where SNU1 is the country would add 31 countries to the
+26 for which `pepfar_snu` emits provinces, and would raise the proposed connector 25 in FY2024 from
+339 provinces over 26 countries to 399 provinces over 41 countries. The connector 25 figures leave
+out Belize, whose `Partner_Performance` rows also carry no ISO3 code. Both changes await Jason's
+decision.
+
+The offline dry run of 20 September 2026 emitted 108 `pepfar_vmmc` rows over 14 countries, with
+14,939,124 circumcisions, and Jason's run of the same day wrote the 108 rows into the panel.
+Merged into the panel of 184,251 rows, the 108 rows give 184,359. The
+validator's warning messages stay at 142, and the warning on rows far below the scale of their own
+series rises from 345 rows to 346 with Lesotho 2011, 199 circumcisions in the first year of Lesotho's programme against 6,971 in
+2012, which is kept as published. The reconciliation rises from 95 pairs to 96, the new pair being
+`pepfar_vmmc` against `unaids_aidsinfo` over 108 cells with a median ratio of 0.831, classed as
+independent measurement. The `pepfar_panorama` dry run of 19 September gave the flag counts above.
+
+The dry run found that the panel of 5 September 2026 still holds the `pepfar_panorama`,
+`pepfar_snu` and `pepfar_agency` rows written before the fix of 7 September (§9j), because none of
+the three connectors has run since the fix. Run again on the files on disk, the three connectors
+give the same 3,338, 14,517 and 2,077 rows with no value changed, and differ from the panel only in
+`extra`. The new `extra` clears 101 partial-year warnings from `pepfar_panorama` rows
+(`prep_recipients` FY2019 and FY2020, `tb_patients_hiv_positive` and `tb_patients_hiv_tested`
+FY2018) and 379 from `pepfar_snu` rows (`prep_recipients` FY2016, FY2017, FY2019 and FY2020),
+every one a year that the cadence derived under §9j reads as complete, and adds no partial-year
+warning. 14 of the 101 cleared `pepfar_panorama` rows, all `prep_recipients` in FY2019 or FY2020,
+gain a discontinuity flag instead, because the connector raises no discontinuity flag on a row
+already marked partial. Every row of an indicator summed over the year gains the quarterly values of
+§9j, 2,533 `pepfar_panorama` rows, 5,379 `pepfar_snu` rows and 1,412 `pepfar_agency` rows, while the
+rows of TX_CURR and TX_PVLS, which are read at a single quarter, gain none. 439 `pepfar_panorama`
+rows, 984 `pepfar_snu` rows and 231 `pepfar_agency` rows gain a like-quarter comparison. The validator and the reconciliation give the
+same results with the three connectors run again as with `pepfar_vmmc` alone. §9j's claim row
+that deriving the cadence removes 93 false partial-year warnings describes the connectors, and the
+panel matches that claim row now that the four connectors have run together.
+
+Jason ran `pepfar_vmmc`, `pepfar_panorama`, `pepfar_snu` and `pepfar_agency` together at 13:54 on
+20 September 2026, and the run printed every line the dry run printed. The panel holds 184,359
+rows, 108 keys added and no key lost, and the 164,319 rows of the other 20 sources match the panel
+as it stood before the run in every column. On the 19,932 rows that the panel before the run and
+the panel after the run share, no column outside `extra` and the retrieval stamp differs, so the
+run changed no value. 10,129 rows carry a changed `extra`, 480 of the 10,129 losing a false
+partial-year warning, and 236 `pepfar_panorama` rows carry `geographic_total_differs`, 157 above
+the geographic file and 79 below. The rows of the four connectors match the dry run's rows in
+every column, `extra` included, 20,040 rows on each side. The validator gives 142 messages with
+346 rows far below the scale of their own series, one more than before the run, and the
+reconciliation gives 96 pairs with no pair lost and no column changed on the 95 pairs that were
+there before the run.
+
 ---
 
 ## Status of the claims here
@@ -1902,7 +2135,7 @@ and the validator and the reconciliation give the same counts as the dry run.
 | PEPFAR publishes admin1 detail for 26 countries | `Enhanced_Geographical_Analysis`, run 2026-08-04: 61 countries, 35 of which publish only a country-wide "SNU"; 388 real units, 14,517 rows emitted |
 | Two countries carry no ISO3 in that file | Bahamas and Belize appear under "Caribbean Region" and "Central and South America Region" with `ISO3` blank; 31 rows, recoverable only from the country name |
 | Summing over modality and over ragged SNU depth does not double-count | Checked before any row was emitted: blank modality is how 2016–17 reported (named modalities zero) and named modalities are how 2018+ reports (blank zero), the two overlapping in 49 unit-years of 2025 worth 0.13% of the total; and 0 SNU2 groups carry a value on both the SNU3-named and SNU3-blank side |
-| PEPFAR has no agency × province anywhere | Every geographic and partner file in the catalogue checked 2026-08-04: agency appears only in the partner files, which stop at the country |
+| ~~PEPFAR has no agency × province anywhere~~, corrected 2026-09-19 in §9w | ~~Every geographic and partner file in the catalogue checked 2026-08-04: agency appears only in the partner files, which stop at the country~~. `Partner_Performance` names the funding agency of every partner in 1,188 priority sub-national units over 61 countries, FY2018 to FY2025 |
 | The snapshot indicators were inflated by mixed-quarter summation | 61 of 821 country-years in the panel of 2026-08-03, all `on_art_count`, all inflated; ZWE FY2024 1,753,641 against a Q4 figure of 1,214,535 |
 | The correction removes exactly the mechanisms that stopped reporting | All 821 country-years and all 1,408 agency-years: old − new equals the absent mechanisms' last reported total, worst gap 0 |
 | The agency series still partition the country total after the fix | All 821 country-years re-checked, 0 mismatches |
@@ -2107,3 +2340,19 @@ and the validator and the reconciliation give the same counts as the dry run.
 | Inventory spend is about half of PEPFAR expenditure | Against the partner file's `Total Expenditure`, partner rows placed by `Country` (§9t), over 54 countries the median share is 0.515 and the overall share 0.444, highest JAM 0.762 and lowest NGA 0.275. No country above 1, and every country with 2025 expenditure has inventory rows, withheld UKR aside |
 | The partner file's `Human Resources for Health` column is not staff pay | The guide defines the programme area as above-site work to strengthen the health workforce, pre-service training and national workforce planning among the examples (pages 50 and 51). The column totals 19,829,631 USD in 2025 over placed rows and is filled for 39 of the 54 countries, and inventory spend is a median 40 times the column. Logged and never compared with the inventory (§9v) |
 | Inventory rows with no FTE, and rows above 500,000 USD per FTE, are kept | 30 rows with no FTE and 23,580 USD. Eight rows above 500,000 USD per FTE, 1,179,430 USD in all and at most 0.38 FTE on a row, UKR's single row among the rows above 500,000 USD per FTE. Counted in the log on every run |
+| Four Spotlight files are the geographic file split by age, sex or facility | Summed to the country, exact against `Enhanced_Geographical_Analysis` in 1,466 of 1,466 country-indicator-years (`Operating_Unit_by_Fine_Age_and_Sex`), 1,080 of 1,080 (`Site_Performance_2021_plus`), 903 of 934 (`Site_Performance_2016-2020`) and 1,756 of 2,012 (coarse Cascade, every mismatch FY2016 to FY2018), for TX_CURR, TX_NEW, HTS_TST and HTS_TST_POS. 0 country-indicator-years in any of the four files that the geographic file lacks |
+| `Public_Partner_MER_AgeSex` is TopLine split by age and sex | Equal to `pepfar_panorama` in 401 of 406 TX_CURR and 415 of 415 HTS_TST_POS country-years. The eight codes TopLine lacks are orphan and vulnerable children codes |
+| Facilities reporting TX_CURR stopped faster in FY2025 | Named facilities with TX_CURR above 0 at Q4 in `Site_Performance_2021_plus`: 24,260 (FY2023), 27,098 (FY2024), 27,359 (FY2025). 779 stopped between FY2024 and FY2025 against 492 a year earlier. MMR 33 to 15, IND 130 to 81, HTI 162 to 114, NPL 53 to 38, THA 29 to 21, BDI 426 to 349. Recorded, not emitted |
+| The circumcision file's years are PEPFAR fiscal years, and the file is deduplicated | Against `pepfar_panorama` FY2018 to FY2024, 92 of 101 within 0.5%, the other nine from 0.952 (ZMB 2018) to 1.030 (KEN 2018). Against the geographic file FY2016 and FY2017, exact in 27 of 28, UGA 2017 732,527 against 734,492 |
+| `pepfar_vmmc` emits FY2010 to FY2017 only | Run of 2026-09-20: 108 rows over 14 countries, 14,939,124 circumcisions. The pooled 2007 to 2009 column, 73,118 in six countries, and 101 cells after FY2017 are read and not emitted. *Written and run 2026-09-20* (§9w) |
+| A 0 in the circumcision file is not emitted | NGA, BDI and SLE 0 in every year 2010 to 2017 and 22 procedures after 2019. NAM 2013 0 between 6,121 and 785, BWA 2011 0 between 534 and 8,590 |
+| PEPFAR's circumcisions are mostly a share of the national count | Against `unaids_aidsinfo`, all 108 country-years shared, LSO 2011 UNAIDS 0 against 199. At or below the national figure in 85 of 107, median 0.831. Above 1.25 in four, MWI 2013 1.65, SWZ 2012 1.45, TZA 2015 1.39, NAM 2012 1.26, unexplained |
+| `pepfar_panorama` flags rows away from the geographic file | Dry run of 2026-09-19: 3,338 rows checked, 3,101 within 5%, 157 above (NAM 33, KAZ 19, TJK 18, LAO 16, ...) and 79 below (THA 12, COL 10, GTM 9, ...), 69 of the 79 in FY2018 and FY2019. The run of 2026-09-20 wrote 236 rows carrying `geographic_total_differs` into the panel, the same 157 above and 79 below |
+| Kazakhstan's partner-summed TX_CURR is exactly double | Ratio 2.000 against the geographic file FY2021 to FY2025. Mechanisms 81234 and 85713 each report 5,234 in FY2023 |
+| Most rows below the geographic file carried no warning | Panel of 2026-09-05: 56 of 80 rows more than 5% below had no warning in `extra`, 15 `partial_year`, six discontinuity, two `partners_absent`, one snapshot-quarter mismatch only. Corrects the survey note of 2026-09-19 |
+| `Partner_Performance` carries agency by priority sub-national unit | 1,188 PSNUs over 61 countries, 44 of the 59 with ISO3 having more than one PSNU. PSNU at SNU1 in 17, SNU2 in 22, SNU3 in four, MLI unmatched. Among `pepfar_snu`'s 26 countries, same names in 17 and district level in nine |
+| Partner_Performance province sums match the geographic file | FY2024, within 5% in 390 of 399 provinces (TX_CURR), 385 of 401 (TX_NEW), 387 of 394 (HTS_TST_POS), median 1.000, none below. 1,123 PSNUs placed in one province, none in two |
+| Exposure to the USAID closure varies inside countries | FY2024 TX_CURR, 399 provinces over 41 countries: 116 USAID alone, 167 CDC alone, 116 mixed. 15 countries with provinces from under 20% to over 80% USAID |
+| `pepfar_snu` skips 31 countries that publish provinces at SNU2 | 35 countries with one SNU1, BHS and BLZ resolved from `Country` because the file gives them no ISO3. In all 35 every valued row names an SNU2. 31 name two or more real SNU2 units carrying a value, 239 in all (THA 17, MMR 15, LAO 6, KHM 6, PHL 5, IDN 4, BLZ 3). PER, COL, BRB and BHS have no provincial split. Recounted 2026-09-20 from 238 over 30, which counted SNU2 names on rows with no value and missed BLZ |
+| The panel carried partial-year warnings the fix of 7 September removed, until the run of 20 September | Panel of 2026-09-05, rows retrieved before §9j. Dry run of 2026-09-20 on the files on disk: same rows and values for `pepfar_panorama` (3,338), `pepfar_snu` (14,517) and `pepfar_agency` (2,077). Partial-year warnings cleared on 101 `pepfar_panorama` rows and 379 `pepfar_snu` rows, none added, 14 cleared `prep_recipients` rows gaining a discontinuity flag. Like-quarter comparisons added on 439, 984 and 231 rows. The run of 2026-09-20 wrote every cleared warning and every quarterly value into the panel |
+| The run of 20 September changed no value outside the 108 new rows | Panel 184,251 to 184,359, 108 keys added and no key lost. The 164,319 rows of the other 20 sources identical to `hiv_panel.prev.csv` in every column. On the 19,932 rows shared by the panel before the run and the panel after the run, no column outside `extra` and the retrieval stamp differs. 10,129 rows carry a changed `extra`. The four connectors' rows match the dry run's rows in every column, `extra` included. Validator 142 messages, 346 rows far below the scale of their own series. Reconciliation 96 pairs, no pair lost, no column changed on the 95 earlier pairs |
