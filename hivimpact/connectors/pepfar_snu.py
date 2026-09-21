@@ -9,7 +9,9 @@ implementing partner.
 
 Access: download `Enhanced_Geographical_Analysis.zip` from https://data.pepfar.gov/datasets
 and drop the ZIP into `data/raw/pepfar/` (no need to unzip — the `.txt` inside is read
-directly). 157 MB unzipped, 624,800 rows, 59 countries, read in chunks.
+directly). 157 MB unzipped, 624,800 rows, read in chunks. The ISO3 column names 59 countries
+and two more, Bahamas and Belize, carry a blank ISO3 and are resolved from the Country column,
+so the file covers 61.
 
 FORMAT (verified 2026-08-04): tab-separated, WIDE. One row per
 (Operating Unit, Country, ISO3, Indicator, Description, Numerator/Denominator, Modality,
@@ -35,52 +37,82 @@ TWO DOUBLE-COUNTING TRAPS, both checked before a single row was emitted:
 
 1. **Modality.** HTS_TST and HTS_TST_POS carry 28 modality values including a blank one,
    and a blank category that turned out to be a TOTAL would double every count summed
-   over it. It is not a total: the blank modality is how 2016 and 2017 were reported
-   (75.3m and 84.2m tests, with the named modalities at zero), and named modalities are
-   how 2018 onward is reported (with the blank at zero). Across ten years the two never
-   both carry a value in the same unit-year, except 49 units in FY2025 totalling 24,782
-   against 19.6m — 0.13%, an unspecified residual and not a total. Summing over modality
-   is therefore correct.
+   over it. The blank modality is not a total. The blank modality is how FY2016 and FY2017
+   were reported, 78,545,152 and 87,552,680 tests and positives together with every named
+   modality at zero, and the named modalities are how FY2018 onward is reported with the
+   blank at zero. Counted at the level this connector emits, one country-unit-indicator-year,
+   the two sides both carry a value in 26 unit-years out of 8,796, every one of the 26 in
+   FY2025 and in the Dominican Republic or Mozambique, and the blank side in those 26 holds
+   26,920 against 20,000,990 on the named side in the same year, 0.0038% of the two codes'
+   total. A residual that size is not a total, so summing over modality is correct.
 
-2. **Ragged depth.** Some SNU2 groups hold both an SNU3-named row and an SNU3-blank row,
-   which would be a total-plus-parts pair if the blank one carried the group's sum. It
-   does not: over all ten years, zero SNU2 groups have a value on both sides. Countries
-   simply publish two levels or three. Summing every row up to SNU1 is therefore correct.
+2. **Ragged depth.** Some units hold both an SNU3-named row and an SNU3-blank row, which
+   would be a total-plus-parts pair if the blank row carried the unit's sum. The blank row
+   does not carry the sum. Over the six codes and all ten years, 1,160 unit-indicator-quarter
+   cells carry a value on both sides, 537 in the 26 countries read at SNU1 and 623 in the 35
+   whose only SNU1 is the country name, and the two sides are equal in five of the 1,160.
+   Each of those five cells holds one named SNU3 unit and values of 3, 5, 7, 62 and 71, which
+   is two small numbers coinciding and not a total over its parts. In the other 1,155 the
+   blank side runs from 0.002 to 221 times the named sum. The blank rows hold the part of a
+   unit that the country attributed to no district, so summing every row up to the emitted
+   unit is correct. Three countries put a large share of their programme on such rows, 26% of
+   the Dominican Republic's six-code total, 4.2% of Laos's and 3.8% of Thailand's, which says
+   how much district detail those three publish and is not a double count.
 
-NATIONAL TOTALS IN DISGUISE: 35 of the 61 countries publish a single "sub-national unit"
-that is the country itself — SNU1 "Thailand" for Thailand, "Burma" for Burma. Those are
-national figures wearing a province's label, and emitting them would duplicate
-`pepfar_panorama` under a fake admin1. A country whose only SNU1 is its own name is
-dropped, which leaves 26 countries with real sub-national detail (Kenya 47 counties,
-Nigeria 37 states, Vietnam 35 provinces, Cote d'Ivoire 34, Tanzania 32, Ukraine 27 ...).
+   Correction of 2026-09-20. An entry of 2026-08-04 recorded that zero groups carry a value
+   on both sides. That count is wrong and the figures above are the recount. The conclusion
+   the 2026-08-04 entry supported still stands, because the blank rows are residuals.
 
-Correction of 2026-09-20. The count of 2026-08-04 was 33 of 59 because Bahamas and Belize
-carry no ISO3 code in this file, and a count grouped on the ISO3 column leaves both out. This
-connector resolves a country from the Country column when ISO3 is blank, and the connector's
-own log names 35 countries skipped.
+TWO LEVELS, BECAUSE 35 COUNTRIES PUBLISH A NATIONAL TOTAL AT SNU1: 35 of the 61 countries
+publish a single "sub-national unit" that is the country itself, SNU1 "Thailand" for Thailand
+and "Burma" for Burma. Those are national figures wearing a province's label, and emitting
+them would duplicate `pepfar_panorama` under a fake admin1. In all 35, every row carrying a
+value names a Sub-National Unit 2, and the SNU2 names are provinces, departments, states or
+districts (Thailand 17 provinces, Myanmar 14 states and regions, Guatemala 19 departments,
+Cambodia six provinces, Belize three districts). So a country whose only SNU1 is its own name
+is read one level down instead of being dropped, and the other 26 countries are read at SNU1
+(Kenya 47 counties, Nigeria 37 states, Vietnam 35 provinces, Cote d'Ivoire 34, Tanzania 32,
+Ukraine 27 ...). Every row says which level it came from, in `extra.unit_level`.
 
-Correction of 2026-09-19, recounted 2026-09-20. Most of the 35 skipped countries publish real
-provinces one level down. In all 35, every row carrying a value names a Sub-National Unit 2.
-Leaving aside the "Data above SNU2" rows and the units whose names begin with an underscore, 31
-of the 35 countries name two or more SNU2 units carrying a value on some indicator, 239 units
-in all, and the SNU2 names are provinces, departments, states or districts (Thailand 17
-provinces, Cambodia six provinces, Myanmar 15 states and regions, Guatemala 19 departments,
-Belize three districts). Peru's only SNU2 unit is `_Peru Aggregated PSNU`, Colombia's are
-`_Colombia Aggregated PSNU` and Antioquia, Barbados's is Saint Michael Parish and Bahamas's is
-New Providence Island, so Peru, Colombia, Barbados and Bahamas have no provincial split to
-read. The first count of 2026-09-19 gave 238 units over 30 countries, because the first count
-took SNU2 names from every row and so included Roraima in Brazil and Nickerie District in
-Suriname, which carry no value. This connector reads SNU1 only and so emits nothing for the 31
-countries yet, six of the nine Southeast Asian countries among them. Reading SNU2 where SNU1
-is the country is a change awaiting Jason's decision, recorded in docs/ACCESS_LADDER.md
-section 9w.
+Three SNU2 labels are not a place and are not read as one, a blank, "Data above SNU2" (the
+part of the country's total the country attributed to no unit) and a name beginning with an
+underscore (PEPFAR's own aggregate stand-in, `_Peru Aggregated PSNU`). Over the six codes read
+here, "Data above SNU2" carries zero in all 35 countries and no row with a blank SNU2 carries
+a value, so the only countries losing anything to those labels are Peru, whose entire
+programme sits on `_Peru Aggregated PSNU`, and Colombia, where `_Colombia Aggregated PSNU`
+holds 99.88% of the total and Antioquia the rest.
 
-ADMIN1 NAMES: published names are kept as they are, with two exceptions that exist to
-make the panel joinable — a leading province code ("ec Eastern Cape Province") and a
-trailing " Province" are removed. That touches 19 names in two countries (ZAF, ZMB),
-collides nothing, and makes PEPFAR's nine South African provinces match the nine
-Thembisa already contributes, so the programme footprint and the modelled provincial
-total can be read against each other for the first time.
+A country is read at SNU2 only where two or more of its SNU2 units carry a value, since a
+country whose whole programme sits on one unit is publishing a national total again under a
+smaller label. Over the six codes that test admits 29 of the 35 countries and 203 units, and
+it excludes Bahamas (New Providence Island alone), Barbados (Saint Michael Parish alone),
+Colombia, Peru, Guyana and Trinidad and Tobago. The same test is applied a second time per
+indicator-year, which drops a further 100 country-indicator-years out of 5,446 where the
+country named several units on other indicators and only one there (Papua New Guinea 43,
+Indonesia 15, Suriname 11, China seven, Ghana six and ten countries with fewer than five).
+
+Correction of 2026-09-20. A count of 2026-09-19 gave 31 countries and 239 units, and a count
+before it gave 30 and 238. The 239 counts every one of the 35 indicators in the file, and 203
+is the count over the six codes this connector reads. Guyana and Trinidad and Tobago reach two
+units only on indicators the connector does not read, which is why 31 becomes 29. The count of
+238 took SNU2 names from every row and so included Roraima in Brazil and Nickerie District in
+Suriname, which carry no value.
+
+Correction of 2026-09-20. The count of 35 national-only countries was 33 of 59 on 2026-08-04
+because Bahamas and Belize carry no ISO3 code in this file, and a count grouped on the ISO3
+column leaves both out. This connector resolves a country from the Country column when ISO3 is
+blank.
+
+UNIT NAMES: published names are kept as they are, with two exceptions at SNU1 that exist to
+make the panel joinable, a leading province code ("ec Eastern Cape Province") and a trailing
+" Province", both removed. That touches 19 names in two countries (ZAF, ZMB), collides
+nothing, and makes PEPFAR's nine South African provinces match the nine Thembisa already
+contributes, so the programme footprint and the modelled provincial total can be read against
+each other for the first time. Neither exception is applied at SNU2, where no such join
+exists and where removing a trailing " Province" would turn Sierra Leone's Eastern Province
+into "Eastern" and would leave Laos with "Vientiane" beside "Vientiane Capital", which are two
+different units. No SNU2 name collides with another in its country, and the one SNU2 unit
+named after its own country, Guatemala, is a real department among the 19 Guatemala publishes.
 
 TAGGING: PEPFAR MER measures the PEPFAR programme footprint, NOT provincial totals, and
 provinces do not sum to the national total. source_type = routine_programme_record.
@@ -89,6 +121,7 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 import zipfile
 from pathlib import Path
 from typing import Dict, Iterable, Iterator, List, Optional, Tuple
@@ -114,6 +147,8 @@ MER = {
     "HTS_TST_POS": ("new_diagnoses", False),
     "PrEP_NEW":    ("prep_recipients", False),
     "TX_PVLS":     ("viral_suppression_count", True),
+    "TX_NEW":      ("art_initiations", False),
+    "HTS_TST":     ("hiv_tests_performed", False),
 }
 # TX_PVLS publishes a denominator too (people on ART with a viral-load result in the last
 # 12 months), so the third 95 can be computed at province level instead of inferred.
@@ -123,14 +158,30 @@ YEARS = range(2016, 2026)
 QUARTERS = (1, 2, 3, 4)
 
 _COLS = ["Country", "ISO3", "Indicator", "Numerator/Denominator", "Modality",
-         "Sub-National Unit 1"]
+         "Sub-National Unit 1", "Sub-National Unit 2"]
 _VALUE_COLS = [f"{y} Quarter {q} Results" for y in YEARS for q in QUARTERS]
+
+# SNU2 labels that are not a place. `Data above SNU2` is the part of a country's total that the
+# country did not attribute to any unit, and a leading underscore marks PEPFAR's own aggregate
+# stand-in (`_Peru Aggregated PSNU`). Neither is emitted, and both are logged as a share.
+_ABOVE_SNU2 = "data above snu2"
 
 
 def _admin1(name: str) -> str:
     """Published SNU1 name, minus the two decorations that block a join."""
     s = re.sub(r"^[a-z]{2} ", "", str(name).strip())
     return re.sub(r"\s+Province$", "", s).strip()
+
+
+def _snu2_name(name: str) -> str:
+    """Published SNU2 name, kept as published.
+
+    The two decorations `_admin1` removes are removed to make SNU1 join Thembisa's South
+    African provinces, and no such join exists at SNU2. Removing a trailing " Province" here
+    would turn Sierra Leone's Eastern Province into "Eastern" and would leave Laos with
+    "Vientiane" beside "Vientiane Capital", which are two different units.
+    """
+    return str(name).strip()
 
 
 def _num(cell) -> Optional[float]:
@@ -199,10 +250,128 @@ def national_quarters(raw_dir, codes: Iterable[str], wanted=None, start_year: in
     return out
 
 
+def _fold(name: str) -> str:
+    """One spelling for comparing two files' names for the same place.
+
+    Accents, case, punctuation and spacing all differ between PEPFAR's own files — the partner
+    file writes Panama where the geographic file writes Panamá — and none of those differences
+    mean two different places. Anything that survives folding is a real difference of name.
+    """
+    s = unicodedata.normalize("NFKD", str(name))
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return re.sub(r"[^a-z0-9]+", "", s.lower())
+
+
+def emitted_units(raw_dir, wanted=None) -> Optional[Dict[str, dict]]:
+    """The admin1 vocabulary this connector emits, so another connector can write into it.
+
+    Returns {iso3: {"country", "level", "units", "lookup", "national_names"}}, or None when the
+    geographic file is not on disk. `level` is "SNU1" or "SNU2", naming the level the country's
+    units are read at, and is absent for a country this connector skips. `units` is the set of
+    unit names emitted for that country. `lookup` is three dictionaries, one per level of the
+    published hierarchy, each mapping a folded name to the unit this connector emits for it, so
+    a file naming a district can find the province the district belongs to. `national_names`
+    holds the folded spellings that mean the whole country, which must never resolve to a unit:
+    Guatemala's priority sub-national unit named Guatemala is the national figure, and the
+    department of Guatemala is a different thing with the same name.
+
+    A name is looked up at one level, never at three in turn. Tanzania publishes a region called
+    Kagera and, somewhere else in the country, a district called Kagera, so a search that falls
+    through from one level to the next places a region in the wrong province.
+
+    The unit set is a superset of what `fetch` emits, by the country-indicator-years `fetch`
+    drops because a single unit carries the whole country in that cell. A caller wanting the
+    exact set should compare against the rows themselves.
+    """
+    raw_dir = Path(raw_dir)
+    files = sorted(p for p in list(raw_dir.glob("*.zip")) + list(raw_dir.glob("*.txt"))
+                   if FILE_HINT in p.name.lower()) if raw_dir.exists() else []
+    if not files:
+        return None
+    names: Dict[str, str] = {}
+    units: Dict[str, set] = {}
+    units2: Dict[str, set] = {}
+    tree: Dict[str, set] = {}
+    qcols = [f"{y} Quarter {q} Results" for y in YEARS for q in QUARTERS]
+    iso_cache: Dict[tuple, Optional[str]] = {}
+    for path in files:
+        for chunk in PEPFARSNUConnector._chunks(path, hierarchy=True):
+            sub = chunk[chunk["Indicator"].isin(MER)
+                        & chunk["Numerator/Denominator"].fillna("N").str.strip().str.upper().eq("N")]
+            if sub.empty:
+                continue
+            keys = list(zip(sub["ISO3"].fillna(""), sub["Country"].fillna("")))
+            for k in set(keys):
+                if k not in iso_cache:
+                    iso_cache[k] = to_iso3(k[0]) or to_iso3(k[1])
+            vals = sub.reindex(columns=qcols).apply(
+                lambda c: pd.to_numeric(c.astype(str).str.replace(",", "", regex=False),
+                                        errors="coerce"))
+            carries = vals.notna().any(axis=1).tolist()
+            s1s = sub["Sub-National Unit 1"].fillna("").str.strip().tolist()
+            s2s = sub["Sub-National Unit 2"].fillna("").str.strip().tolist()
+            s3s = (sub["Sub-National Unit 3"].fillna("").str.strip().tolist()
+                   if "Sub-National Unit 3" in sub.columns else [""] * len(sub))
+            countries = sub["Country"].fillna("").str.strip().tolist()
+            for iso3, country, s1, s2, s3, has in zip(
+                    (iso_cache[k] for k in keys), countries, s1s, s2s, s3s, carries):
+                if not iso3 or not s1 or (wanted and iso3 not in wanted):
+                    continue
+                names[iso3] = country or iso3
+                tree.setdefault(iso3, set()).add((s1, s2, s3))
+                if not has:
+                    continue
+                units.setdefault(iso3, set()).add(s1)
+                if (_admin1(s1).lower() == country.lower() and s2
+                        and s2.lower() != _ABOVE_SNU2 and not s2.startswith("_")):
+                    units2.setdefault(iso3, set()).add(_snu2_name(s2))
+
+    national_only = {iso for iso, s in units.items()
+                     if len(s) == 1 and _admin1(next(iter(s))).lower() == names.get(iso, "").lower()}
+    read_at_snu2 = {iso for iso in national_only if len(units2.get(iso, ())) > 1}
+
+    out: Dict[str, dict] = {}
+    for iso3, triples in tree.items():
+        level = ("SNU2" if iso3 in read_at_snu2
+                 else None if iso3 in national_only else "SNU1")
+        national = {_fold(names.get(iso3, iso3))}
+        s1s = {s1 for s1, _, _ in triples}
+        if len(s1s) == 1:
+            national.add(_fold(next(iter(s1s))))
+        entry = {"country": names.get(iso3, iso3), "units": set(), "national_names": national,
+                 "lookup": [{}, {}, {}]}
+        if level:
+            entry["level"] = level
+        out[iso3] = entry
+        if not level:
+            continue
+        entry["units"] = ({_admin1(u) for u in units.get(iso3, ())} if level == "SNU1"
+                          else set(units2.get(iso3, ())))
+        clash = [set(), set(), set()]
+        for s1, s2, s3 in triples:
+            target = _admin1(s1) if level == "SNU1" else _snu2_name(s2)
+            if not target or target not in entry["units"]:
+                continue
+            for i, name in ((0, s1), (0, _admin1(s1)), (1, s2), (2, s3)):
+                if not name:
+                    continue
+                k = _fold(name)
+                if k in entry["lookup"][i] and entry["lookup"][i][k] != target:
+                    clash[i].add(k)
+                entry["lookup"][i].setdefault(k, target)
+        for i in range(3):
+            for k in clash[i]:
+                entry["lookup"][i].pop(k, None)
+    return out
+
+
 class PEPFARSNUConnector(BaseConnector):
     source_id = "pepfar_snu"
     default_source_type = SourceType.ROUTINE_PROGRAMME
-    description = ("PEPFAR MER at sub-national unit 1 (province/county/state) — the admin1 layer "
+    description = ("PEPFAR MER at the province, county, state or department, read at sub-national "
+                   "unit 1 in the 26 countries that publish real units there and at sub-national "
+                   "unit 2 in the 29 whose only SNU1 is the country's own name. Six MER codes, "
+                   "TX_CURR, TX_NEW, TX_PVLS, HTS_TST, HTS_TST_POS and PrEP_NEW. The admin1 layer "
                    "no aggregator publishes. Programme footprint, not provincial totals.")
 
     def __init__(self, raw_dir: str = "data/raw/pepfar", **kw):
@@ -227,10 +396,13 @@ class PEPFARSNUConnector(BaseConnector):
         return kept
 
     @staticmethod
-    def _chunks(path: Path):
-        # static so national_quarters can read the file without building a connector
+    def _chunks(path: Path, hierarchy: bool = False):
+        # static so national_quarters can read the file without building a connector.
+        # `hierarchy` adds the third level, which emitted_units needs to place a district and
+        # fetch has no use for.
+        cols = _COLS + ["Sub-National Unit 3"] if hierarchy else _COLS
         read = dict(sep="\t", dtype=str, chunksize=100_000, on_bad_lines="skip",
-                    low_memory=False, usecols=lambda c: c in _COLS or c in _VALUE_COLS)
+                    low_memory=False, usecols=lambda c: c in cols or c in _VALUE_COLS)
         if path.suffix == ".zip":
             with zipfile.ZipFile(path) as z:
                 for member in [m for m in z.namelist() if m.lower().endswith((".txt", ".csv"))]:
@@ -240,8 +412,18 @@ class PEPFARSNUConnector(BaseConnector):
             yield from pd.read_csv(path, **read)
 
     def _accumulate(self, chunk: pd.DataFrame, agg: Dict[tuple, List[Optional[float]]],
-                    names: Dict[str, str], units: Dict[str, set], wanted,
+                    agg2: Dict[tuple, List[Optional[float]]], names: Dict[str, str],
+                    units: Dict[str, set], units2: Dict[str, set],
+                    carried: Dict[str, Dict[str, float]], wanted,
                     start_year: int, end_year: int) -> None:
+        """Add a chunk to the SNU1 aggregate, and to the SNU2 aggregate where SNU1 is a country.
+
+        `agg` holds every country at SNU1 and `agg2` holds one level down, built only from the
+        rows whose SNU1 is the country's own name, since those are the only rows where SNU1
+        carries no sub-national information. `carried` records, per country, how much of the
+        six codes' numerator total sits on a named SNU2 unit and how much sits on a label that
+        is not a place, so the log can report what reading SNU2 leaves behind.
+        """
         sub = chunk[chunk["Indicator"].isin(MER)]
         if sub.empty:
             return
@@ -262,6 +444,24 @@ class PEPFARSNUConnector(BaseConnector):
             names[iso3] = country or iso3
             units.setdefault(iso3, set()).add(raw_snu)
             admin1 = _admin1(raw_snu)
+
+            # Where SNU1 is the country's own name, the sub-national unit the row belongs to is
+            # named at SNU2. Three SNU2 labels are not a place and are not read as one: a blank,
+            # `Data above SNU2` (the part of the country's total the country attributed to no
+            # unit) and a name beginning with an underscore (PEPFAR's own aggregate stand-in,
+            # `_Peru Aggregated PSNU`).
+            raw2 = str(r.get("Sub-National Unit 2") or "").strip()
+            if admin1.lower() != country.lower():
+                level2 = None
+            elif not raw2:
+                level2 = "blank"
+            elif raw2.lower() == _ABOVE_SNU2:
+                level2 = "above"
+            elif raw2.startswith("_"):
+                level2 = "aggregate"
+            else:
+                level2 = "unit"
+
             for y in YEARS:
                 if y < start_year or y > end_year:
                     continue
@@ -273,6 +473,21 @@ class PEPFARSNUConnector(BaseConnector):
                 for i, v in enumerate(vals):
                     if v is not None:
                         cur[i] = (cur[i] or 0.0) + v
+                if level2 is None:
+                    continue
+                if nd == "N":
+                    book = carried.setdefault(iso3, {})
+                    book[level2] = book.get(level2, 0.0) + sum(v for v in vals if v is not None)
+                if level2 != "unit":
+                    continue
+                name2 = _snu2_name(raw2)
+                key2 = (iso3, name2, ind, nd, y)
+                cur2 = agg2.setdefault(key2, [None, None, None, None])
+                for i, v in enumerate(vals):
+                    if v is not None:
+                        cur2[i] = (cur2[i] or 0.0) + v
+                if nd == "N":
+                    units2.setdefault(iso3, set()).add(name2)
 
     # -- emitting --------------------------------------------------------------
     @staticmethod
@@ -300,26 +515,95 @@ class PEPFARSNUConnector(BaseConnector):
             return
 
         agg: Dict[tuple, List[Optional[float]]] = {}
+        agg2: Dict[tuple, List[Optional[float]]] = {}
         names: Dict[str, str] = {}
         units: Dict[str, set] = {}
+        units2: Dict[str, set] = {}
+        carried: Dict[str, Dict[str, float]] = {}
         for path in files:
             try:
                 for chunk in self._chunks(path):
-                    self._accumulate(chunk, agg, names, units, wanted, start_year, end_year)
+                    self._accumulate(chunk, agg, agg2, names, units, units2, carried,
+                                     wanted, start_year, end_year)
             except Exception as exc:
                 log.warning("pepfar_snu: error reading %s: %s", path.name, exc)
                 continue
             log.info("pepfar_snu: read %s", path.name)
 
+        # How many quarters make a whole year, asked of the release rather than fixed at four.
+        # PrEP_NEW is read here and published at Q2 and Q4 through FY2020, so counting to four
+        # would put a partial-year warning on every province in a year that is complete. Same
+        # helper as pepfar_panorama, so the national and provincial connectors cannot disagree
+        # about which years are short.
+        #
+        # The vote is taken here, before any country moves from SNU1 to SNU2, so that regrouping
+        # a country's rows under its SNU2 units cannot change which quarters an indicator-year is
+        # held to publish at, and so cannot move a partial-year flag on a province of one of the
+        # countries that already had provinces.
+        cadence = _panorama.release_cadence(
+            {k: v for k, v in agg.items() if k[3] == "N"}, lambda k: (k[2], k[4]))
+        latest_year = max((y for _, y in cadence), default=0)
+
         # A country publishing exactly one "sub-national unit" that is its own name is
-        # publishing a national total. Dropping it here (and not by a hardcoded country
+        # publishing a national total. Finding those here (and not by a hardcoded country
         # list) means a country that gains real SNU detail later starts appearing on its own.
         national_only = {iso for iso, s in units.items()
                          if len(s) == 1 and _admin1(next(iter(s))).lower() == names.get(iso, "").lower()}
-        if national_only:
-            log.info("pepfar_snu: %d countries publish only a country-wide 'SNU' and are skipped "
-                     "(they would duplicate pepfar_panorama under a fake admin1): %s",
-                     len(national_only), ", ".join(sorted(national_only)))
+
+        # THE SECOND LEVEL. In a country whose only SNU1 is its own name, the sub-national units
+        # are named at SNU2, and reading them there is the difference between the country having
+        # no admin1 rows at all and having its provinces. A country is read at SNU2 when two or
+        # more of its SNU2 units carry a value, since a country whose whole programme sits on one
+        # unit is publishing a national total again under a smaller label. The same test is
+        # applied a second time per indicator-year, because a country can name several units on
+        # one indicator and only one on another.
+        agg2 = {k: v for k, v in agg2.items() if k[0] in national_only}
+        by_cell: Dict[tuple, set] = {}
+        for (iso3, unit, ind, nd, year) in agg2:
+            if nd == "N":
+                by_cell.setdefault((iso3, ind, year), set()).add(unit)
+        read_at_snu2 = {iso for iso, s in units2.items()
+                        if iso in national_only and len(s) > 1}
+        solo_cells = {k for k, s in by_cell.items() if len(s) == 1 and k[0] in read_at_snu2}
+        at_snu2: set = set()
+        for key in [k for k in agg if k[0] in read_at_snu2]:
+            del agg[key]
+        for key, vals in agg2.items():
+            iso3, unit, ind, nd, year = key
+            if iso3 not in read_at_snu2 or (iso3, ind, year) in solo_cells:
+                continue
+            agg[key] = vals
+            at_snu2.add((iso3, unit))
+        skipped = national_only - read_at_snu2
+
+        if read_at_snu2:
+            log.info("pepfar_snu: %d countries publish only a country-wide 'SNU1' and are read one "
+                     "level down at SNU2, where they name %d units carrying a value: %s",
+                     len(read_at_snu2), len(at_snu2), ", ".join(sorted(read_at_snu2)))
+            if solo_cells:
+                log.info("pepfar_snu: %d country-indicator-years inside those countries name a "
+                         "single SNU2 unit and are dropped, since one unit carrying the whole "
+                         "country is a national total under a smaller label", len(solo_cells))
+            for iso3 in sorted(read_at_snu2):
+                book = carried.get(iso3, {})
+                total = sum(book.values())
+                loose = total - book.get("unit", 0.0)
+                if total and loose / total > 0.01:
+                    log.info("pepfar_snu: %s — %.1f%% of the programme total sits on a label that "
+                             "is not a place (blank SNU2, 'Data above SNU2' or an aggregate name "
+                             "beginning with an underscore) and is not emitted", iso3,
+                             100.0 * loose / total)
+        if skipped:
+            log.info("pepfar_snu: %d countries publish only a country-wide 'SNU' and no usable "
+                     "second level, and are skipped (they would duplicate pepfar_panorama under a "
+                     "fake admin1): %s", len(skipped), ", ".join(sorted(skipped)))
+            for iso3 in sorted(skipped):
+                book = carried.get(iso3, {})
+                total = sum(book.values())
+                log.info("pepfar_snu: %s skipped, %d SNU2 unit(s) carry a value (%s) and %.1f%% of "
+                         "its programme total sits on PEPFAR's own aggregate stand-in", iso3,
+                         len(units2.get(iso3, ())), ", ".join(sorted(units2.get(iso3, ()))) or "none",
+                         100.0 * book.get("aggregate", 0.0) / total if total else 0.0)
 
         # ONE QUARTER PER COUNTRY-YEAR, for the snapshot indicators.
         #
@@ -335,33 +619,26 @@ class PEPFARSNUConnector(BaseConnector):
         # province still being served.
         common_q: Dict[tuple, int] = {}
         for (iso3, admin1, ind, nd, year), vals in agg.items():
-            if nd != "N" or iso3 in national_only or not MER[ind][1]:
+            if nd != "N" or iso3 in skipped or not MER[ind][1]:
                 continue
             _, q = self._snapshot(vals)
             if q:
                 k = (iso3, ind, year)
                 common_q[k] = max(common_q.get(k, 0), q)
 
-        # How many quarters make a whole year, asked of the release rather than fixed at four.
-        # PrEP_NEW is read here and published at Q2 and Q4 through FY2020, so counting to four
-        # would put a partial-year warning on every province in a year that is complete. Same
-        # helper as pepfar_panorama, so the national and provincial connectors cannot disagree
-        # about which years are short.
-        cadence = _panorama.release_cadence(
-            {k: v for k, v in agg.items() if k[3] == "N"}, lambda k: (k[2], k[4]))
-        latest_year = max((y for _, y in cadence), default=0)
-
         n = 0
         emitted_units: set = set()
         off_quarter: Dict[tuple, int] = {}
         for (iso3, admin1, ind, nd, year), vals in sorted(agg.items()):
-            if nd != "N" or iso3 in national_only:
+            if nd != "N" or iso3 in skipped:
                 continue
             canonical, is_snapshot = MER[ind]
+            level = "SNU2" if (iso3, admin1) in at_snu2 else "SNU1"
             nq = len([v for v in vals if v is not None])
-            extra = {"note": "PEPFAR MER at SNU1 — PROGRAMME FOOTPRINT, not a provincial total; "
-                             "provinces do not sum to the national figure",
+            extra = {"note": f"PEPFAR MER at {level} — PROGRAMME FOOTPRINT, not a provincial "
+                             "total; provinces do not sum to the national figure",
                      "mer_indicator": ind,
+                     "unit_level": level,
                      "quarters_reported": nq}
 
             if is_snapshot:
@@ -428,7 +705,7 @@ class PEPFARSNUConnector(BaseConnector):
             pct = 100.0 * vals[i] / den[i]
             pct_extra = {"note": "PEPFAR TX_PVLS: virally suppressed / on ART with a VL result in "
                                  "the last 12 months, among the PEPFAR-supported cohort only",
-                         "mer_indicator": ind, "snapshot_quarter": i + 1,
+                         "mer_indicator": ind, "unit_level": level, "snapshot_quarter": i + 1,
                          "numerator": vals[i], "denominator": den[i]}
             if pct > 100.0:
                 # The numerator is not a strict subset of the denominator at this level. A
@@ -455,5 +732,7 @@ class PEPFARSNUConnector(BaseConnector):
             log.info("pepfar_snu: %s %s FY%d — %d unit(s) reported this year but not in Q%d, the "
                      "quarter the country is read at; they are absent from that year and not "
                      "carried forward", iso3, ind, year, k, common_q.get((iso3, ind, year), 0))
-        log.info("pepfar_snu: emitted %d rows over %d sub-national units in %d countries",
-                 n, len(emitted_units), len({i for i, _ in emitted_units}))
+        log.info("pepfar_snu: emitted %d rows over %d sub-national units in %d countries, of which "
+                 "%d units in %d countries are read at SNU2",
+                 n, len(emitted_units), len({i for i, _ in emitted_units}),
+                 len(emitted_units & at_snu2), len({i for i, _ in emitted_units & at_snu2}))

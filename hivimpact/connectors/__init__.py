@@ -12,6 +12,7 @@ from .pepfar_panorama import PEPFARPanoramaConnector
 from .pepfar_agency import PEPFARAgencyConnector  # the same MER file, split by funding agency
 from .pepfar_expenditure import PEPFARExpenditureConnector  # budget vs spend, split the same way
 from .pepfar_snu import PEPFARSNUConnector  # the same programme, at admin1 (province/county/state)
+from .pepfar_agency_snu import PEPFARAgencySNUConnector  # the agency split inside each province
 from .pepfar_modality import PEPFARModalityConnector  # testing split community vs facility
 from .pepfar_ou_budgets import PEPFAROUBudgetsConnector  # budget from 2004, before the partner file
 from .pepfar_commodities import PEPFARCommoditiesConnector  # what PEPFAR planned to buy, COP18-COP24
@@ -50,6 +51,7 @@ CONNECTORS = {
         PEPFARAgencyConnector,       # the same MER rows split USAID / CDC / other (no new download)
         PEPFARExpenditureConnector,  # PEPFAR budget vs spend by agency (no new download)
         PEPFARSNUConnector,          # PEPFAR MER at SNU1 — the admin1 layer no aggregator has
+        PEPFARAgencySNUConnector,    # USAID vs CDC inside one province (Partner Performance file)
         PEPFARModalityConnector,     # PEPFAR testing by modality — outreach vs the clinic door
         PEPFAROUBudgetsConnector,    # PEPFAR budget 2004-2020, the years the partner file lacks
         PEPFARCommoditiesConnector,  # PEPFAR commodity procurement plans 2019-2025, pre-freeze
@@ -67,7 +69,7 @@ __all__ = [
     "UNAIDSGAMExpenditureConnector", "WHOGHEDConnector", "OECDCRSConnector",
     "DHSConnector", "ForeignAssistanceConnector", "PEPFARPanoramaConnector",
     "PEPFARAgencyConnector", "PEPFARExpenditureConnector", "PEPFARSNUConnector",
-    "PEPFARModalityConnector", "PEPFAROUBudgetsConnector", "PEPFARCommoditiesConnector",
+    "PEPFARAgencySNUConnector", "PEPFARModalityConnector", "PEPFAROUBudgetsConnector", "PEPFARCommoditiesConnector",
     "PEPFARHRHConnector", "PEPFARVMMCConnector", "CLMAsiaConnector", "GlobalFundConnector",
     "COUNTRY_CONNECTORS", "CONNECTORS",
 ]

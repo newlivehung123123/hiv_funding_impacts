@@ -69,6 +69,52 @@ read the same rows of the same file and now pick the same quarter, so the partit
 They are a second view of the same numbers, not more numbers. Anything summing the panel must
 take one level or the other.
 
+TOPLINE IS SHORT IN FOUR YEARS
+
+Every run compares the TopLine values with PEPFAR's Partner_Performance file, which adds the
+same partners together and should therefore agree with TopLine cell for cell. The two files
+differ only in FY2018, FY2019, FY2021 and FY2022, and TopLine is the lower figure in every cell
+where the two files differ (docs/ACCESS_LADDER.md section 9w). Kenya's USAID-funded treatment
+cohort in FY2018 is 355,447 here and 405,420 in Partner_Performance, a shortfall of 49,973. No
+value from FY2023 on is affected, so the Kenya comparison above stands as printed.
+
+The values are kept as TopLine publishes them, because the ladder's rule is that a value is never
+replaced by another file's figure. A row that differs from Partner_Performance by more than 0.5
+carries the Partner_Performance figure beside its own in `extra.partner_file_differs`, and on the
+download of 2026-07-18 that flags 26 rows. Where TopLine has no row for an agency that
+Partner_Performance reports, the other agencies' rows for the same country, indicator and year
+carry `agency_missing_from_topline`, which covers 43 country-indicator-years and 47 rows.
+Guatemala in FY2018 is one of the 43. TopLine holds no USAID treatment row there, so a sum of the
+agency rows for Guatemala in FY2018 is short by the whole USAID cohort. Five
+country-indicator-years have no TopLine row for any agency, Barbados, Suriname and Trinidad and
+Tobago on TX_CURR in FY2018 and El Salvador on TX_CURR and TX_NEW in FY2019. No row exists to
+carry a flag for those five, so every run logs them by name.
+
+TARGETS
+
+Partner_Performance also carries the target PEPFAR set for each agency, country, indicator and
+year in the country operational plan, which is agreed before the fiscal year begins. A target is
+never emitted as a value. A row whose agency held a target carries the target in
+`extra.fy_target`, 2,030 of the 2,077 rows, and where the result covers the whole year the row
+also carries `result_to_target`, 1,813 rows. For TX_CURR a whole year means the Q4 snapshot and
+for a flow a year with every quarter the release publishes.
+
+Kenya's FY2025 cohort shows what the targets add. USAID reached 413,032 against a target of
+471,741, a ratio of 0.876, while CDC reached 844,340 against 825,326, a ratio of 1.023. Summed
+over the TX_CURR rows that carry both, USAID's ratio runs between 0.81 and 0.94 in FY2021 to
+FY2024 and falls to 0.65 in FY2025, while CDC's ratio runs between 0.99 and 1.03 and rises to
+1.17. USAID's FY2025 target on those rows, 8,179,443, is 7% below USAID's FY2024 target, while
+USAID's FY2025 result, 5,328,202, is 28% below USAID's FY2024 result. So the FY2025 fall was not
+in the plan, and CDC's result above CDC's own target in the same year is what patients moving
+from USAID-funded to CDC-funded care would produce. The targets do not prove a transfer, and the
+test the section above sets for transfer still applies.
+
+Where an agency held a target for a country, indicator and year and reported nothing in either
+partner file, the other agencies' rows carry `agency_held_target_without_result`. In FY2025 that
+covers USAID in India, with a treatment target of 195,559, in Namibia with 6,274 and in Colombia
+with 2,465, so USAID's national FY2025 treatment target across every country is 8,383,741 and
+not the 8,179,443 the rows carry.
+
 TAGGING: PEPFAR MER measures the PEPFAR programme footprint, not national totals.
 source_type = routine_programme_record.
 """
@@ -346,9 +392,17 @@ class PEPFARAgencyConnector(BaseConnector):
                             "MER_INDICATORS or to DECLARED_UNMAPPED with a reason.",
                             code, f"{seen[code]:,}")
 
-        yield from self._emit(agg, names, partners)
+        # The Partner_Performance file, read to the country, to test the TopLine values and to
+        # carry each year's target. See TOPLINE IS SHORT IN FOUR YEARS above. Imported here and
+        # not at the top, because pepfar_agency_snu imports this module at load.
+        from .pepfar_agency_snu import partner_performance_national
+        pp = partner_performance_national(self.raw_dir, wanted, start_year, end_year)
+        if pp is None:
+            log.warning("pepfar_agency: no Partner_Performance file in %s, so the TopLine values "
+                        "are not checked and no row carries a target this run", self.raw_dir)
+        yield from self._emit(agg, names, partners, pp)
 
-    def _emit(self, agg, names, partners) -> Iterator[PanelRow]:
+    def _emit(self, agg, names, partners, pp=None) -> Iterator[PanelRow]:
         # The snapshot quarter belongs to the COUNTRY-year, not to one agency's slice of it:
         # the latest quarter any agency's partners reached. Reading USAID at Q3 because that is
         # where its own reporting stopped, while CDC is read at Q4, would put two halves of the
@@ -387,7 +441,54 @@ class PEPFARAgencyConnector(BaseConnector):
         cadence = _panorama.release_cadence(agg, lambda k: (k[1], k[2], k[3]))
         latest_year = max((y for _, _, y in cadence), default=0)
 
+        # The Partner_Performance figure for every series, by the rule this connector uses: a
+        # snapshot at the quarter the country is read at, a flow summed. Then the two kinds of
+        # series the TopLine file cannot show. An agency Partner_Performance reports and TopLine
+        # does not has no row here at all, and neither has an agency that held a target and
+        # reported nothing in either file, so both are written on the rows that do exist.
+        from .pepfar_agency_snu import partner_file_differs, result_to_target, TARGET_NOTE
+        pp_res, pp_tgt = pp if pp else ({}, {})
+        code_of = {b: c for c, b in MER_INDICATORS.items()}
+        pp_val: Dict[tuple, float] = {}
+        pp_only: Dict[tuple, float] = {}
+        in_topline = {(k[0], k[1], k[3]) for k in values}
+        for (iso3, code, suf, year), qv in pp_res.items():
+            base = MER_INDICATORS.get(code)
+            if base is None:
+                continue
+            if base in SNAPSHOT_CANON:
+                q = common_q.get((iso3, base, year))
+                own = _last_q(qv)
+                v = qv[q - 1] if q else None
+                shown = qv[own - 1] if own else None
+            else:
+                nn = [x for x in qv if x is not None]
+                v = shown = sum(nn) if nn else None
+            if (iso3, base, year) not in in_topline:
+                pp_only[(iso3, base, suf, year)] = shown or 0.0
+            if v is not None:
+                pp_val[(iso3, base, suf, year)] = v
+        missing: Dict[tuple, Dict[str, float]] = {}
+        for (iso3, base, suf, year), v in pp_val.items():
+            if (iso3, base, year) in in_topline and (iso3, base, suf, year) not in values \
+                    and v > 0.5:
+                missing.setdefault((iso3, base, year), {})[suf] = v
+        held: Dict[tuple, Dict[str, float]] = {}
+        for (iso3, code, suf, year), t in pp_tgt.items():
+            base = MER_INDICATORS.get(code)
+            k = (iso3, base, suf, year)
+            if base and t > 0 and (iso3, base, year) in in_topline and k not in values \
+                    and (iso3, code, suf, year) not in pp_res:
+                held.setdefault((iso3, base, year), {})[suf] = t
+        if pp_only:
+            log.warning("pepfar_agency: %d agency series are reported in Partner_Performance for "
+                        "a country and year the TopLine file carries nothing for at all, so no "
+                        "row exists to flag: %s", len(pp_only),
+                        ", ".join(f"{k[0]} {k[1]}_{k[2]} FY{k[3]} ({v:,.0f})"
+                                  for k, v in sorted(pp_only.items())))
+
         n = 0
+        flagged = 0
         like: Dict[tuple, List[float]] = {}
         for key, value in sorted(values.items()):
             iso3, base, suffix, year = key
@@ -408,6 +509,7 @@ class PEPFARAgencyConnector(BaseConnector):
                 q_now = common_q.get((iso3, base, year))
                 q_prev = common_q.get((iso3, base, year - 1))
                 extra["snapshot_quarter"] = q_now
+                full_year = q_now == 4
                 if q_now and q_prev and q_now != q_prev:
                     warn = (f"snapshot taken from Q{q_now} of FY{year} but Q{q_prev} of "
                             f"FY{year - 1} — these are not twelve months apart and the change "
@@ -431,6 +533,7 @@ class PEPFARAgencyConnector(BaseConnector):
                     like.setdefault((canonical, year), []).append(lq)
                 extra["release_quarters"] = [f"Q{q}" for q in here]
                 extra["comparison_year_quarters"] = [f"Q{q}" for q in prev_cad]
+                full_year = not truncated and nq >= len(here)
                 if truncated or 0 < nq < len(here):
                     why = (f"FY{year} is part-published, carrying "
                            f"{', '.join('Q%d' % q for q in here)} where FY{year - 1} carries "
@@ -484,6 +587,37 @@ class PEPFARAgencyConnector(BaseConnector):
                              f"at; not carried forward."),
                 }
 
+            # The TopLine value tested against Partner_Performance, and kept either way.
+            pv = pp_val.get(key)
+            if pv is not None and abs(pv - value) > 0.5:
+                extra["partner_file_differs"] = partner_file_differs(
+                    value, pv, f"{suffix} series, country and year")
+                flagged += 1
+            t = pp_tgt.get((iso3, code_of[base], suffix, year))
+            if t is not None:
+                extra["fy_target"] = {"value": t,
+                                      "result_to_target": result_to_target(value, t, full_year),
+                                      "note": TARGET_NOTE}
+            gone = {a: v for a, v in missing.get((iso3, base, year), {}).items() if a != suffix}
+            if gone:
+                extra["agency_missing_from_topline"] = {
+                    "partner_performance_value": gone,
+                    "note": (f"Partner_Performance reports {', '.join(sorted(gone))} in this "
+                             f"country in FY{year} and the TopLine file this connector reads "
+                             f"does not, so no row exists for "
+                             f"{' or '.join(sorted(gone))} this year. The missing row is missing "
+                             f"reporting and not an agency that stopped working here."),
+                }
+            quit_ = {a: v for a, v in held.get((iso3, base, year), {}).items() if a != suffix}
+            if quit_:
+                extra["agency_held_target_without_result"] = {
+                    "target": quit_,
+                    "note": (f"{', '.join(sorted(quit_))} held an FY{year} target in this "
+                             f"country and reported nothing in either PEPFAR partner file, so "
+                             f"the absence of a row is a stop and not a gap in one file, and the "
+                             f"stop was not in the plan when the targets were set."),
+                }
+
             yield self.make_row(
                 country_iso3=iso3, country_name=names.get(iso3, ""),
                 indicator_id=canonical, year=year, value=value, unit="count",
@@ -502,4 +636,16 @@ class PEPFARAgencyConnector(BaseConnector):
                      "are not comparable. Like-quarter median %.2f over %d countries, below 1.0 "
                      "in %d of them.", canonical, year, year - 1, med, len(ratios),
                      len([r for r in ratios if r < 1.0]))
+        if pp:
+            log.warning("pepfar_agency: %d rows differ from Partner_Performance and carry "
+                        "extra.partner_file_differs; %d country-indicator-years have an agency "
+                        "Partner_Performance reports and TopLine does not (%s)", flagged,
+                        len(missing), ", ".join(
+                            f"{k[0]} {k[1]} FY{k[2]} {'/'.join(sorted(v))}"
+                            for k, v in sorted(missing.items())))
+            if held:
+                log.info("pepfar_agency: %d country-indicator-years have an agency that held a "
+                         "target and reported nothing in either file: %s", len(held), ", ".join(
+                             f"{k[0]} {k[1]} FY{k[2]} {'/'.join(sorted(v))}"
+                             for k, v in sorted(held.items())))
         log.info("pepfar_agency: emitted %d rows", n)

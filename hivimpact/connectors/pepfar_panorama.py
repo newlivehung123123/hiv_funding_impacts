@@ -127,6 +127,21 @@ do. KP_PREV is the interesting refusal: summing its two half-years and taking th
 differ by a factor of two against the Global Fund national figure, and no arithmetic decides
 which reading PEPFAR intends.
 
+TWO OTHER PEPFAR FILES CHECK EVERY RUN (2026-09-21)
+
+The TopLine file this connector reads is checked against two other PEPFAR files, and in both
+checks a row keeps its own value and carries the other file's figure beside it
+(docs/ACCESS_LADDER.md section 9w). The Enhanced Geographical Analysis file deduplicates
+patients two partners both report, so a row more than 5 per cent away from that file carries
+`extra.geographic_total_differs`. The Partner_Performance file adds partners together as TopLine
+does, so for TX_CURR, HTS_TST_POS and TX_NEW the two files should agree exactly, and a row that
+differs by more than 0.5 carries `extra.partner_file_differs`. On the download of 2026-07-18 the
+second check flags 62 rows, all in FY2018, FY2019, FY2021 and FY2022, and Partner_Performance is
+the higher figure in every one of the 62 rows. 15 of the 62 rows sit inside the geographic
+tolerance and would carry no warning without the second check, Kenya's FY2018 treatment cohort
+among them at 1,030,790 against 1,080,763. Five country-indicator-years sit in Partner_Performance
+with no TopLine row at all and are logged by name.
+
 TAGGING: PEPFAR MER measures the PEPFAR program footprint, NOT national totals.
 source_type = routine_programme_record.
 """
@@ -470,7 +485,9 @@ def _unit_id(row, pn_c: Optional[str], mc_c: Optional[str]):
 class PEPFARPanoramaConnector(BaseConnector):
     source_id = "pepfar_panorama"
     default_source_type = SourceType.ROUTINE_PROGRAMME
-    description = "PEPFAR Panorama MER (TX_CURR, HTS_TST_POS). PEPFAR footprint, not national."
+    description = ("PEPFAR MER TopLine, eleven indicators by country and year, TX_CURR, TX_NEW, "
+                   "HTS_TST, HTS_TST_POS, PrEP_NEW, TX_PVLS, TB_PREV, TB_STAT, TB_STAT_POS, "
+                   "PMTCT_ART and VMMC_CIRC. PEPFAR footprint, not national.")
 
     def __init__(self, raw_dir: str = "data/raw/pepfar", **kw):
         super().__init__(**kw)
@@ -674,6 +691,23 @@ class PEPFARPanoramaConnector(BaseConnector):
         geo_off: Dict[str, List[str]] = {"above": [], "below": []}
         geo_checked = 0
 
+        # The same national figure from PEPFAR's Partner_Performance file, for the three codes
+        # that file carries. Partner_Performance adds partners together as TopLine does, so the
+        # two should agree exactly, and the geographic check above cannot stand in for this one:
+        # a TopLine total can sit inside the geographic tolerance and still be missing a whole
+        # agency, as Kenya FY2018 TX_CURR is at 1,030,790 against 1,080,763. Values are never
+        # replaced (docs/ACCESS_LADDER.md section 9w).
+        from .pepfar_agency_snu import partner_performance_national, partner_file_differs
+        pp = partner_performance_national(self.raw_dir, wanted, start_year, end_year)
+        pp_q: Dict[tuple, List[Optional[float]]] = {}
+        for (iso3, code, _suf, year), qv in (pp[0] if pp else {}).items():
+            cur = pp_q.setdefault((iso3, MER_INDICATORS[code], year), [None] * 4)
+            for i, v in enumerate(qv):
+                if v is not None:
+                    cur[i] = (cur[i] or 0.0) + v
+        pp_off: List[str] = []
+        pp_absent = sorted(f"{k[0]} {k[1]} {k[2]}" for k in pp_q if k not in values)
+
         n = 0
         like: Dict[tuple, List[float]] = {}
         for (iso3, canonical, year), value in sorted(values.items()):
@@ -810,6 +844,17 @@ class PEPFARPanoramaConnector(BaseConnector):
                             "geographic_value": g_value, "ratio": round(ratio, 4),
                             "direction": "above" if above else "below", "note": note}
                         geo_off["above" if above else "below"].append(f"{iso3} {canonical} {year}")
+            pq = pp_q.get(key)
+            if pq:
+                if canonical in CUMULATIVE_CANON:
+                    p_nn = [v for v in pq if v is not None]
+                    p_value = sum(p_nn) if p_nn else None
+                else:
+                    p_value = pq[snap_q[key] - 1]
+                if p_value is not None and abs(p_value - value) > 0.5:
+                    extra["partner_file_differs"] = partner_file_differs(
+                        value, p_value, "country and year")
+                    pp_off.append(f"{iso3} {canonical} {year}")
             yield self.make_row(
                 country_iso3=iso3, country_name=names.get(iso3, ""),
                 indicator_id=canonical, year=year, value=value, unit="count",
@@ -834,4 +879,11 @@ class PEPFARPanoramaConnector(BaseConnector):
                             "geographic file, flagged in extra.geographic_total_differs. By "
                             "country: %s", len(rows), geo_checked, round(GEO_TOLERANCE * 100),
                             direction, ", ".join(f"{c} {k}" for c, k in countries.most_common()))
+        if pp is not None:
+            log.warning("pepfar_panorama: %d rows differ from the Partner_Performance file and "
+                        "carry extra.partner_file_differs: %s", len(pp_off), ", ".join(pp_off))
+            if pp_absent:
+                log.warning("pepfar_panorama: %d country-indicator-years are in Partner_Performance "
+                            "and absent from TopLine, so no row exists to flag: %s",
+                            len(pp_absent), ", ".join(pp_absent))
         log.info("pepfar_panorama: emitted %d rows", n)

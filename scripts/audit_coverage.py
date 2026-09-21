@@ -216,7 +216,8 @@ def main() -> int:
               "PEPFAR_OU_Budgets_and_Expenditures.zip",   # pepfar_ou_budgets
               "PEPFAR_OU_Commodities_Procurements.zip",   # pepfar_commodities
               "HRH_Inventory_Public_Dataset.zip",         # pepfar_hrh
-              "Voluntary_Male_Medical_Circumcisions_Results_by_Operating_Unit.zip"],  # pepfar_vmmc
+              "Voluntary_Male_Medical_Circumcisions_Results_by_Operating_Unit.zip",  # pepfar_vmmc
+              "Partner_Performance.zip"],                 # pepfar_agency_snu
         declared={
             "Operating_Unit_by_Fine_Age_and_Sex.zip":
                 "age and sex split of the geographic file's national totals, equal to them "
@@ -240,7 +241,7 @@ def main() -> int:
                 "country-indicator-years, and a facility that stops reporting cannot be told "
                 "apart from one handed to the national government",
         },
-        note="nine connectors share one directory")
+        note="ten connectors share one directory")
 
     audit_directory("foreign_assistance", "foreign_assistance",
                     used=["us_foreign_aid_complete.csv"], note="reads every CSV present")

@@ -2034,41 +2034,246 @@ Nigeria, South Africa, Tanzania, Uganda, Zambia and Zimbabwe, the USAID share of
 under 20 per cent in one province to over 80 per cent in another. No national series can show that
 spread, which is the variation within a country in exposure to the closure of USAID.
 
-The proposed connector 25 would emit the three `pepfar_agency` codes with the agency suffix at
-admin1 for FY2018 to FY2025. The connector would place each PSNU in the province `pepfar_snu` writes
-through the geographic file's own SNU1, SNU2 and SNU3 columns, compare every province with the
-geographic file's deduplicated province total and flag any province more than five per cent away as
-`pepfar_panorama` does, check on every run that the province sums reproduce `pepfar_agency`'s
-national rows, and handle FY2025's single quarter by `pepfar_panorama`'s partial-year rules. Of the
-PSNUs carrying the three codes, 1,123 fall in exactly one province and none in two, and the five
-PSNUs named `Data reported above PSNU Level`, one each in Burkina Faso, the Democratic Republic of
-the Congo, Liberia, Senegal and Sierra Leone, carry no TX_CURR in FY2024 and would be logged. The 15
-countries whose PSNU is the whole country are already covered nationally by `pepfar_agency`, and
-Mali waits on accent normalisation. Targets, including the FY2025 targets set before the freeze,
-are left for a later decision. No code is written until Jason approves the design.
+Jason approved connector 25 on 20 September 2026, and `pepfar_agency_snu` emits the three
+`pepfar_agency` codes with the agency suffix at admin1 for FY2018 to FY2025. Connector 25 places
+each PSNU in the province `pepfar_snu` writes, through the geographic file's own SNU1, SNU2 and
+SNU3 columns, and three rules settle every placement. A PSNU whose folded name equals the
+country's own name never places, because such a unit is a national figure wearing a province's
+label. Every PSNU in one country resolves at a single level of the hierarchy, the level most of
+that country's PSNUs match, and no single PSNU falls through to a lower level when the country's
+chosen level fails to match that PSNU. A PSNU resolving to a province that `pepfar_snu` does not
+name is not emitted by connector 25 either, so the two connectors write the same province names.
+Accents are folded before any name is matched, so Mali's `Ségou` places and Mali no longer waits
+on accent normalisation. The release cadence is voted on the country's own rows before any PSNU is
+placed, through `pepfar_panorama`'s `release_cadence`, so a province and the country that province
+sits in cannot disagree about which years are short. Five PSNUs are named `Data reported above
+PSNU Level`, one each in Burkina Faso, the Democratic Republic of the Congo, Liberia, Senegal and
+Sierra Leone. Only the Congolese heading carries any of the three codes, 43 in all, which
+connector 25 logs and leaves out of the panel. The 15 countries whose PSNU is the whole country
+are refused and stay covered nationally by `pepfar_agency`. Targets, including the FY2025 targets
+set before the freeze, are read and never emitted as values, and since 21 September 2026 every
+row carries its agency's target in `extra`, as the section on targets below sets out.
 
-The survey also found a gap in `pepfar_snu`. The connector skips the 35 countries whose only SNU1 is
-the country's own name, treating such a unit as a national total wearing a province's label. The
+TX_CURR is a snapshot and not a sum, so connector 25 settles one quarter for each
+country-indicator-year, the latest quarter any partner in any province of that country reports, and
+applies that one quarter to every province and every agency in the country alike. A province-agency
+series that reported earlier in the year and not in the settled quarter is absent from that year and
+is not carried forward, which the run logs country by country, 41 province-agency series over 22
+country-indicator-years, Vietnam FY2019 the largest with 14 series. **The general rule. When one
+figure is a snapshot, every part of a partition has to be read at the same date, because parts read
+at different dates do not add up to the whole and the disagreement looks like a measured change.**
+
+The survey also found a gap in `pepfar_snu`. The connector skipped the 35 countries whose only SNU1
+is the country's own name, treating such a unit as a national total wearing a province's label. The
 claim row of 4 August 2026 gives 35 countries, and the connector's docstring gave 33 until 20
 September, because Bahamas and Belize carry no ISO3 code in the geographic file and a count grouped
 on the ISO3 column leaves both out, while the connector resolves both from the `Country` column. The
-survey of 19 September made the same omission. In all 35 countries every row carrying a value
-names an SNU2. Leaving aside the `Data above SNU2` rows and the units whose names begin with an
-underscore, 31 of the 35 countries name two or more SNU2 units carrying a value on some indicator,
-239 units in all, and the units are provinces, departments, states or districts. Thailand names 17
-provinces, Myanmar 15 states and regions, Laos six provinces, Cambodia six, the Philippines five and
-Indonesia four, so six of the nine Southeast Asian countries of
-[`PHASE2_FEASIBILITY.md`](PHASE2_FEASIBILITY.md) have PEPFAR provinces that the panel does not yet
-hold. Peru's only unit is `_Peru Aggregated PSNU`, Colombia's units are `_Colombia Aggregated PSNU`
-and Antioquia, Barbados names Saint Michael Parish alone and Bahamas names New Providence Island
-alone, so Peru, Colombia, Barbados and Bahamas have no provincial split to read. The survey of 19
-September first gave 238 units over 30 countries, because the first count took SNU2 names from every
-row and so counted Roraima in Brazil and Nickerie District in Suriname, which carry no value, and
-missed Belize's three districts. Reading SNU2 where SNU1 is the country would add 31 countries to the
-26 for which `pepfar_snu` emits provinces, and would raise the proposed connector 25 in FY2024 from
-339 provinces over 26 countries to 399 provinces over 41 countries. The connector 25 figures leave
-out Belize, whose `Partner_Performance` rows also carry no ISO3 code. Both changes await Jason's
-decision.
+survey of 19 September made the same omission. In all 35 countries every row carrying a value names
+an SNU2, and the units are provinces, departments, states or districts. Thailand names 17 provinces,
+Guatemala 19 departments, Myanmar 14 states and regions, Laos six provinces, Cambodia six, the
+Philippines five and Indonesia four, so six of the nine Southeast Asian countries of
+[`PHASE2_FEASIBILITY.md`](PHASE2_FEASIBILITY.md) had PEPFAR provinces the panel did not hold.
+
+Jason approved reading SNU2 on 20 September 2026, and `pepfar_snu` now reads two levels. A country
+is read at SNU2 where two or more of its SNU2 units carry a value on the six MER codes the connector
+reads, which admits 29 countries and 203 units. Bahamas names New Providence Island alone, Barbados
+names Saint Michael Parish alone, Colombia's only named unit is Antioquia beside `_Colombia
+Aggregated PSNU`, which holds 99.88 per cent of Colombia's total, Peru's whole programme sits on
+`_Peru Aggregated PSNU`, and Guyana and Trinidad and Tobago reach two units only on indicators the
+connector does not read. The same two-unit test is applied a second time per indicator-year and
+drops a further 100 country-indicator-years out of 5,446, each one a year where the country named
+several units on its other indicators and one unit there, Papua New Guinea 43, Indonesia 15,
+Suriname 11, China seven, Ghana six and ten countries with fewer than five each. Every emitted row
+now carries `extra.unit_level`, which says whether the row was read at SNU1 or at SNU2.
+
+Recounted 20 September 2026. The figure of 239 units over 31 countries, recorded on 19 September and
+recounted the next day, counts every one of the 35 indicators in the geographic file, and 203 units
+over 29 countries is the count over the six codes `pepfar_snu` reads. The survey of 19 September
+first gave 238 units over 30 countries, because that count took SNU2 names from every row and so
+counted Roraima in Brazil and Nickerie District in Suriname, which carry no value, and missed
+Belize's three districts. The claim row below is corrected to 203 over 29.
+
+The offline dry run of 20 September 2026 emitted 27,328 rows over 591 units in 55 countries, against
+14,517 rows over 388 units in 26 countries before the change. The 14,517 rows already in the panel
+came back with every column unchanged, `extra` included, apart from the new `unit_level` key every
+row now carries. The release cadence vote is taken before any country moves from SNU1 to SNU2 for
+that reason, since regrouping a country's rows would otherwise move a partial-year flag on a
+province of a country that already had provinces. Of the 12,811 new rows, 6,216 are the 203 SNU2
+units and 6,595 are TX_NEW and HTS_TST at SNU1 in the 26 countries. The emitted SNU2 units reproduce
+the geographic file's own national figure exactly in all 1,047 country-code-years they cover, none
+above it and none below, and the 100 country-code-years that the per-indicator-year test drops are
+exactly the 100 the comparison cannot be made for. The validator gains one message, a fall in the
+countries reporting `prep_recipients` from 48 in FY2024 to 32 in FY2025, and the reconciliation is
+unchanged at 96 pairs with nothing added, lost or reclassified.
+
+The offline dry run of connector 25 on 20 September 2026 emitted 12,705 rows over 455 provinces in
+43 countries in 12 seconds, FY2018 to FY2025, with no null value, no negative value and no duplicate
+key. The rows divide into `new_diagnoses_usaid` 2,295, `new_diagnoses_cdc` 2,157,
+`art_initiations_cdc` 2,124, `on_art_count_cdc` 2,105, `art_initiations_usaid` 1,744,
+`on_art_count_usaid` 1,737 and 543 rows under the pooled other-agency suffix. Counted by agency
+instead of by code, the rows are 6,386 CDC, 5,776 USAID and 543 other.
+11,483 rows name a province `pepfar_snu` reads at SNU1 and
+1,222 name a province `pepfar_snu` reads at SNU2, 1,550 rows carry a partial-year flag, and the
+settled snapshot quarter is the fourth in 3,958 rows, the third in 36 and the second in one. The
+partner file names 58 countries on the three codes, and Bahamas, Belize and Cambodia are not among
+the 58, because the PSNUs those three countries name carry no value on TX_CURR, TX_NEW or
+HTS_TST_POS in any year.
+
+1,015 PSNUs carry a value on the three codes, 999 place in a province and 16 do not. The PSNUs that
+do not place are the single PSNU of each of the 15 refused countries, Barbados, Colombia, Guatemala,
+Guyana, Honduras, Jamaica, Laos, Nicaragua, Panama, Peru, the Philippines, El Salvador, Suriname,
+Thailand and Trinidad and Tobago, together with the Democratic Republic of the Congo's `Data
+reported above PSNU Level` heading. Placement settles at SNU1 in 17 countries, at SNU2 in 22 and at
+SNU3 in four, Brazil, Indonesia, Malawi and Sierra Leone, and finds no level in the 15 refused
+countries. Of the 527,123,747 the partner file carries on the three codes, 99.02 per cent is placed
+and 0.98 per cent falls in the refused countries and the Congo's heading.
+
+In FY2024 connector 25 covers 406 provinces over 42 countries, against the 487 provinces over 50
+countries `pepfar_snu` emits for FY2024, so the FY2024 figures of 339 provinces over 26 countries
+and 399 provinces over 41 countries, both written before `pepfar_snu` read SNU2, are superseded. The
+nine countries `pepfar_snu` holds in FY2024 and connector 25 refuses are Guatemala, Honduras,
+Jamaica, Laos, Nicaragua, Panama, the Philippines, El Salvador and Thailand, 82 provinces in all.
+One province runs the other way. Papua New Guinea names one PSNU in the partner file, National
+Capital District, which is a real district and not the country's own name, so the district places
+and carries 24 rows. `pepfar_snu` emits Papua New Guinea in FY2016 and FY2017 only and drops the
+later years through the two-unit test above. Papua New Guinea is the only country where connector 25
+emits a single province, and the 189,816 the National Capital District rows carry over three codes
+and eight years are the whole PEPFAR programme in the country, which is what a footprint row means
+and not a provincial share of a national total.
+
+Three checks run on every run of connector 25. The emitted provinces reproduce the partner file's
+own national figure in 5,860 of 7,593 country-code-agency-year-quarter cells, exceed that figure
+in none and fall short in 1,733, and every cell falling short lies in one of the 15 refused
+countries or in the Congo's heading. Against `pepfar_snu`'s deduplicated provinces, over 9,060
+province-code-years the two connectors agree within one part in a thousand in 8,282, connector 25
+stands above `pepfar_snu` in 777 and below in one, Lualaba in the Democratic Republic of the Congo
+on HTS_TST_POS in FY2020 at a ratio of 0.994. Standing above is what a partner sum does, because a
+patient two partners both report is counted twice, and the largest ratio anywhere is 2.167. 54 of
+the 777 province-code-years sit at exactly two, in Kazakhstan from FY2021 to FY2025, Kyrgyzstan
+from FY2021 to FY2024, Tajikistan from FY2021 to FY2023 and in FY2025, Namibia in FY2020 and
+FY2022 and Vietnam from FY2018 to FY2020. The claim
+row recording Kazakhstan's doubled TX_CURR left open whether any other country doubles, and
+Kyrgyzstan, Tajikistan, Namibia and Vietnam double in the same way, province by province.
+
+The third check holds connector 25 against `Public_Partner_MER_TopLine`, the file `pepfar_panorama`
+and `pepfar_agency` read. At the country-code-agency-year-quarter grain 7,320 cells agree, 85
+disagree, no cell exists in TopLine and not in `Partner_Performance`, and 188 cells exist in
+`Partner_Performance` and not in TopLine, carrying 518,523. TopLine is the lower figure in all 85
+cells that disagree. The 273 cells fall in four years, 129 in FY2018, 114 in FY2019, 18 in FY2021
+and 12 in FY2022, and no cell from FY2020 or from FY2023 on differs, so the years the funding cuts
+fall in are untouched. The deduplicated geographic file sides with `Partner_Performance` wherever
+the geographic file holds the same country-year, Panama's FY2018 treatment cohort being 31 in
+TopLine, 11,956 in `Partner_Performance` and 11,932 in the geographic file. The short file is
+TopLine.
+
+Recounted 21 September 2026. The TopLine shortfalls first recorded here, Kenya 283,804, Thailand
+223,636, Panama 66,155, Jamaica 61,969, El Salvador 51,873, Guatemala 47,070, Uganda 45,949 and
+Honduras 31,849, are wrong. Those figures added TX_CURR's four quarters together, which counts
+the same patients up to four times, and added the shortfalls of different years together as well.
+Read the way the panel reads TX_CURR, at the one quarter each country-year is read at, the
+shortfall in people on treatment is 49,973 in Kenya in FY2018, 42,393 in Thailand in FY2019 and
+25,780 in FY2018, 13,625 in Panama in FY2019 and 11,925 in FY2018, 12,531 in Guatemala in FY2018
+and 8,438 in FY2019, 10,985 in Uganda in FY2021, 10,938 in El Salvador in FY2019, 9,512 in Jamaica
+in FY2018 and 5,032 in FY2019, 6,429 in Trinidad and Tobago in FY2018, and 6,005 in Honduras in
+FY2019, with eight smaller country-years below 2,500. On new diagnoses and initiations 51
+agency-years fall short, the largest Kenya's USAID HTS_TST_POS in FY2018 at 10,402. Connector 25
+now logs the shortfall country-year by country-year, and never adds TX_CURR across quarters or
+across years.
+
+Jason left the decision on correcting TopLine to rigour on 21 September 2026, and the TopLine
+values stay as TopLine publishes them. Replacing a value with another file's figure would leave a
+reader unable to say which file a number came from, and would mix two releases of PEPFAR's
+partner data in one series. Every `pepfar_panorama` and `pepfar_agency` row whose annual value
+differs from `Partner_Performance` by more than 0.5 carries the `Partner_Performance` figure
+beside its own in `extra.partner_file_differs`, with the difference, the ratio and a note saying
+the TopLine value is a floor. The threshold is 0.5 and not the geographic check's five per cent,
+because the two files add the same partners together and should agree exactly. The offline dry
+run of 21 September 2026 flags 62 `pepfar_panorama` rows and 26 `pepfar_agency` rows, all in
+FY2018, FY2019, FY2021 and FY2022, and `Partner_Performance` is the higher figure in every one of
+the 88 rows. 47 of the 62 `pepfar_panorama` rows already carried `geographic_total_differs`, and
+the other 15 rows would carry no warning without the new check, Kenya's FY2018 treatment cohort
+among them at 1,030,790 against 1,080,763. Where TopLine has no row for an agency that
+`Partner_Performance` reports, the other agencies' `pepfar_agency` rows for the same country,
+indicator and year carry `agency_missing_from_topline`, 47 rows over 43 country-indicator-years.
+Five country-indicator-years are in `Partner_Performance` with nothing in TopLine for any agency,
+Barbados, Suriname and Trinidad and Tobago on TX_CURR in FY2018 and El Salvador on TX_CURR and
+TX_NEW in FY2019, and those five have no row in the panel to carry a flag, so both connectors log
+the five by name on every run. The dry run leaves every key and every value of both connectors
+unchanged, 3,338 `pepfar_panorama` rows and 2,077 `pepfar_agency` rows, and adds keys to `extra`
+only. **The general rule. A connector that finds a defect in another file leaves the other file's
+values alone and puts the disagreeing figure on the row the defect touches, because a warning
+that sits only in a run log is a warning no reader of the panel ever sees.**
+
+USAID and CDC work the same province in about a third of the province-indicator-years the partner
+file carries. Both agencies appear in 3,190 of 9,099 province-indicator-years, 35.1 per cent, in
+261 of the 455 provinces over 28 countries, and 481 of the 1,331 province-indicator series change
+which agencies report them at least once, 36.1 per cent. The change of FY2025 is not a change like
+the others.
+USAID stops reporting in 151 province-indicator-years in FY2025 against nine in FY2024, and on
+TX_CURR alone USAID leaves 47 provinces in ten countries that held 1,953,646 USAID patients in
+FY2024. The count of 44 provinces first recorded here left out three provinces in which no agency
+reports TX_CURR in FY2025 at all, so PEPFAR's record of the cohort in those three provinces ends.
+Region 7 in the Dominican Republic held 1,144 patients in FY2024, and Maharashtra and Telangana in
+India held 102,745 and 66,403, with USAID holding 62,009 of the Maharashtra cohort and the whole
+Telangana cohort. `pepfar_snu` also ends in Region 7, Maharashtra and Telangana in FY2025. No
+FY2025 row exists in the three provinces to carry a warning, so the run log is the only record of
+the three provinces, and the panel cannot say whether those patients stayed in care after PEPFAR
+stopped counting them. In the other 44 provinces, over nine countries, USAID held 1,824,090
+patients in FY2024, and almost all of those patients stay in PEPFAR's count under another agency.
+The all-agency total in the same 44 provinces falls three per cent between FY2024 and FY2025, the
+median province keeps the whole cohort USAID had been reporting, and 27 of the 44 provinces keep
+more than 90 per cent of that cohort. The earlier wording, that the 1,824,090 patients did not
+leave care, claimed more than a count of PEPFAR's reporting can show, and the ladder now says
+only that the patients stayed in PEPFAR's count. Gauteng is the clearest case, USAID reporting
+537,283 on TX_CURR in FY2024 and nothing in FY2025 while CDC goes from 681,535 to 1,166,174.
+Every row whose province does not have the same agencies as the year
+before carries `extra.agencies_here`, which names the agencies reporting in both years and the value
+each arriving or departing agency carried, 1,878 rows in all. **The general rule. When one agency
+hands a province to another, one series ends and another grows by about the same amount, and a
+reader holding either series alone sees a collapse or a surge that never happened. The row has to
+carry the names of the other agencies in the same province, because the warning has to be where the
+reader is looking.**
+
+Targets (decided 21 September 2026). The partner file carries the target PEPFAR set for every
+agency, province, indicator and year in the country operational plan, which is agreed before the
+fiscal year begins. Jason left the decision on emitting targets to rigour, and a target is never
+emitted as a value, because a target is a plan and the panel holds measurements. Every row whose
+agency held a target carries the target in `extra.fy_target`, and where the result covers the
+whole year the row also carries `result_to_target`. For TX_CURR a whole year means the Q4 snapshot,
+and for a flow a whole year means a year with every quarter the release publishes and no
+truncation. In the offline dry run of 21 September 2026, 11,979 of connector 25's 12,705 rows
+carry a target and 10,686 of the 11,979 rows carry the ratio, the main exception being 921 FY2025
+flow rows, because the release publishes part of FY2025 only. In `pepfar_agency` 2,030 of 2,077
+rows carry a target and 1,813 carry the ratio. Both connectors take the target from
+`Partner_Performance` and not from TopLine, because TopLine's own target column is short of
+`Partner_Performance` in 124 cells. A row whose province lost an agency also carries the departing
+agency's target for the year in `agencies_here.left_target`.
+
+The targets answer a question the results cannot, which is whether an agency's exit from a
+province was in the plan. USAID left 47 provinces on TX_CURR in FY2025 and still held an FY2025
+target in 46 of the 47 provinces, 2,338,910 patients in total against the 1,953,646 USAID held in
+the 47 provinces in FY2024. The one province without a USAID target is South West Ethiopia, where
+USAID held 48 patients. Earlier exits look different. In FY2020 USAID left 43 provinces and CDC
+left ten, and neither agency held a target in any province the agency left. In FY2019 CDC held a
+target in one of the 17 provinces CDC left and USAID in two of the 20 provinces USAID left, and in
+FY2021 USAID held a target in two of the 21 provinces USAID left. So the FY2025 exits were not in
+the plan when the FY2025 targets were set, and the exits of FY2019 to FY2021 almost all were. The
+run log gives the count for every agency and year in which an agency left five or more provinces
+on TX_CURR.
+
+Nationally the same pattern holds. On the `pepfar_agency` rows carrying both a result and a
+target, USAID's TX_CURR result-to-target ratio sits between 0.81 and 0.94 in FY2021 to FY2024 and
+falls to 0.65 in FY2025, while CDC's sits between 0.99 and 1.03 and rises to 1.17. USAID's FY2025
+TX_CURR target on those rows, 8,179,443, is seven per cent below the FY2024 target, while USAID's
+FY2025 result, 5,328,202, is 28 per cent below the FY2024 result. In Kenya in FY2025 USAID reports
+413,032 against a target of 471,741 and CDC reports 844,340 against 825,326. Where an agency held
+a target and reported nothing in either PEPFAR file, the other agencies' rows carry
+`agency_held_target_without_result`, which in FY2025 names USAID in India with a target of 195,559,
+in Namibia with 6,274 and in Colombia with 2,465. The targets do not prove that the patients USAID
+stopped reporting moved to CDC, and where USAID's series falls and CDC's series rises by a similar
+amount, a transfer of patients still has to be ruled out before the fall is called a loss of
+patients. What the targets do show is that the size of
+USAID's FY2025 fall was not planned when the FY2025 targets were agreed.
 
 The offline dry run of 20 September 2026 emitted 108 `pepfar_vmmc` rows over 14 countries, with
 14,939,124 circumcisions, and Jason's run of the same day wrote the 108 rows into the panel.
@@ -2110,6 +2315,36 @@ every column, `extra` included, 20,040 rows on each side. The validator gives 14
 reconciliation gives 96 pairs with no pair lost and no column changed on the 95 pairs that were
 there before the run.
 
+The offline dry run of 21 September 2026 ran connector 25, `pepfar_agency` and `pepfar_panorama`
+with the TopLine check and the targets in place, on the files on disk, and compared the rows of
+each connector with the rows the same connector holds in the panel. Connector 25 gives 12,705
+rows, `pepfar_agency` 2,077 and `pepfar_panorama` 3,338, and for `pepfar_agency` and
+`pepfar_panorama` no key is added or lost, no value changes and no column outside `extra` differs
+except the retrieval stamp. The only keys `extra` gains are `partner_file_differs`, `fy_target`,
+`agency_missing_from_topline` and `agency_held_target_without_result`, and no key already in
+`extra` changes. Because `pepfar_agency` and `pepfar_panorama` now carry new keys in `extra`, the
+next run has to include both connectors, together with `pepfar_snu` and connector 25, as
+`python3 scripts/run_all.py --sources pepfar_panorama,pepfar_agency,pepfar_snu,pepfar_agency_snu
+--countries all -v`. The panel that run writes should hold 209,875 rows, the 184,359 of the run of
+20 September plus 12,811 new `pepfar_snu` rows and 12,705 connector 25 rows, with no key lost.
+
+Jason ran that command at 08:14 UTC on 21 September 2026, and the run reproduced the dry run.
+The panel holds 209,875 rows. Joined on the panel's full row key, no key is lost and the only
+keys added are the 12,811 `pepfar_snu` keys and the 12,705 connector 25 keys. On the 184,359 keys
+that the panel before the run and the panel after the run share, no value changed and no column
+outside `extra` differs except the retrieval stamp, and the 164,427 rows of the other 21 sources
+carry the same `extra`, compared as parsed JSON. The rows of connector 25, `pepfar_agency` and
+`pepfar_panorama` equal the dry run's rows in every value and every `extra` field. The validator
+gives 144 messages against 142 before the run. The two new messages are falls in the number of
+reporting countries, `prep_recipients` in `pepfar_snu` from 48 in FY2024 to 32 in FY2025 and
+`new_diagnoses_other_agency` in connector 25 from nine in FY2021 to six in FY2022. Rows flagged
+as far below scale rise from 346 to 411, and all 65 new rows belong to `pepfar_snu` or connector
+25. The validator also flags two new rows as far above scale, Udon Thani's FY2025 test count in
+`pepfar_snu` and CDC's FY2025 treatment cohort in Mpumalanga, 543,298, in the province USAID left
+with 566,088 patients in FY2024. The flag on the Mpumalanga row marks the handover and not a unit
+error. The reconciliation gives 96 pairs, and no pair involves `pepfar_snu` or connector 25,
+because the reconciliation compares national cells only.
+
 ---
 
 ## Status of the claims here
@@ -2134,7 +2369,8 @@ there before the run.
 | Strict resolution refuses aggregates and keeps countries | All 249 ISO3 codes pass through unchanged; all 60 CRS and all 44 World Bank aggregate codes refused |
 | PEPFAR publishes admin1 detail for 26 countries | `Enhanced_Geographical_Analysis`, run 2026-08-04: 61 countries, 35 of which publish only a country-wide "SNU"; 388 real units, 14,517 rows emitted |
 | Two countries carry no ISO3 in that file | Bahamas and Belize appear under "Caribbean Region" and "Central and South America Region" with `ISO3` blank; 31 rows, recoverable only from the country name |
-| Summing over modality and over ragged SNU depth does not double-count | Checked before any row was emitted: blank modality is how 2016–17 reported (named modalities zero) and named modalities are how 2018+ reports (blank zero), the two overlapping in 49 unit-years of 2025 worth 0.13% of the total; and 0 SNU2 groups carry a value on both the SNU3-named and SNU3-blank side |
+| Summing over modality and over ragged SNU depth does not double-count | Checked before any row was emitted, recounted 2026-09-20 at the level the connector emits. Blank modality is how FY2016 and FY2017 reported (78,545,152 and 87,552,680, named modalities zero) and named modalities are how FY2018 onward reports (blank zero), the two overlapping in 26 unit-years of 8,796, all FY2025 and all DOM or MOZ, worth 26,920 against 20,000,990 and 0.0038% of the two codes' total. On ragged depth, 1,160 unit-indicator-quarter cells carry a value on both the SNU3-named and the SNU3-blank side, 537 at SNU1 and 623 at SNU2, and the two sides are equal in five, each holding one named SNU3 unit at 3, 5, 7, 62 and 71. Elsewhere the blank side runs 0.002 to 221 times the named sum, so the blank rows are residuals and not totals |
+| ~~0 SNU2 groups carry a value on both the SNU3-named and SNU3-blank side~~, corrected 2026-09-20 in the row above | The count of 2026-08-04 is wrong. 1,160 cells carry a value on both sides. The conclusion it supported still stands, because five of the 1,160 are equal and all five are one small number beside another |
 | ~~PEPFAR has no agency × province anywhere~~, corrected 2026-09-19 in §9w | ~~Every geographic and partner file in the catalogue checked 2026-08-04: agency appears only in the partner files, which stop at the country~~. `Partner_Performance` names the funding agency of every partner in 1,188 priority sub-national units over 61 countries, FY2018 to FY2025 |
 | The snapshot indicators were inflated by mixed-quarter summation | 61 of 821 country-years in the panel of 2026-08-03, all `on_art_count`, all inflated; ZWE FY2024 1,753,641 against a Q4 figure of 1,214,535 |
 | The correction removes exactly the mechanisms that stopped reporting | All 821 country-years and all 1,408 agency-years: old − new equals the absent mechanisms' last reported total, worst gap 0 |
@@ -2348,11 +2584,22 @@ there before the run.
 | A 0 in the circumcision file is not emitted | NGA, BDI and SLE 0 in every year 2010 to 2017 and 22 procedures after 2019. NAM 2013 0 between 6,121 and 785, BWA 2011 0 between 534 and 8,590 |
 | PEPFAR's circumcisions are mostly a share of the national count | Against `unaids_aidsinfo`, all 108 country-years shared, LSO 2011 UNAIDS 0 against 199. At or below the national figure in 85 of 107, median 0.831. Above 1.25 in four, MWI 2013 1.65, SWZ 2012 1.45, TZA 2015 1.39, NAM 2012 1.26, unexplained |
 | `pepfar_panorama` flags rows away from the geographic file | Dry run of 2026-09-19: 3,338 rows checked, 3,101 within 5%, 157 above (NAM 33, KAZ 19, TJK 18, LAO 16, ...) and 79 below (THA 12, COL 10, GTM 9, ...), 69 of the 79 in FY2018 and FY2019. The run of 2026-09-20 wrote 236 rows carrying `geographic_total_differs` into the panel, the same 157 above and 79 below |
-| Kazakhstan's partner-summed TX_CURR is exactly double | Ratio 2.000 against the geographic file FY2021 to FY2025. Mechanisms 81234 and 85713 each report 5,234 in FY2023 |
+| Kazakhstan's partner-summed TX_CURR is exactly double | Ratio 2.000 against the geographic file FY2021 to FY2025. Mechanisms 81234 and 85713 each report 5,234 in FY2023. Connector 25 finds the same doubling province by province in five countries, KAZ FY2021 to FY2025, KGZ FY2021 to FY2024, TJK FY2021 to FY2023 and FY2025, NAM in FY2020 and FY2022 and VNM FY2018 to FY2020, 54 province-code-years at a ratio of exactly two (§9w) |
 | Most rows below the geographic file carried no warning | Panel of 2026-09-05: 56 of 80 rows more than 5% below had no warning in `extra`, 15 `partial_year`, six discontinuity, two `partners_absent`, one snapshot-quarter mismatch only. Corrects the survey note of 2026-09-19 |
-| `Partner_Performance` carries agency by priority sub-national unit | 1,188 PSNUs over 61 countries, 44 of the 59 with ISO3 having more than one PSNU. PSNU at SNU1 in 17, SNU2 in 22, SNU3 in four, MLI unmatched. Among `pepfar_snu`'s 26 countries, same names in 17 and district level in nine |
+| `Partner_Performance` carries agency by priority sub-national unit | 1,188 PSNUs over 61 countries, 44 of the 59 with ISO3 having more than one PSNU. Among `pepfar_snu`'s 26 countries, same names in 17 and district level in nine. Connector 25 recounts the placement over the three codes it reads: 1,015 PSNUs carry a value, 999 place and 16 do not, and the level settles at SNU1 in 17 countries, SNU2 in 22, SNU3 in four (BRA, IDN, MWI, SLE) and nowhere in the 15 refused. MLI places once accents are folded, so the survey's note that MLI matched no level is superseded (§9w) |
 | Partner_Performance province sums match the geographic file | FY2024, within 5% in 390 of 399 provinces (TX_CURR), 385 of 401 (TX_NEW), 387 of 394 (HTS_TST_POS), median 1.000, none below. 1,123 PSNUs placed in one province, none in two |
 | Exposure to the USAID closure varies inside countries | FY2024 TX_CURR, 399 provinces over 41 countries: 116 USAID alone, 167 CDC alone, 116 mixed. 15 countries with provinces from under 20% to over 80% USAID |
-| `pepfar_snu` skips 31 countries that publish provinces at SNU2 | 35 countries with one SNU1, BHS and BLZ resolved from `Country` because the file gives them no ISO3. In all 35 every valued row names an SNU2. 31 name two or more real SNU2 units carrying a value, 239 in all (THA 17, MMR 15, LAO 6, KHM 6, PHL 5, IDN 4, BLZ 3). PER, COL, BRB and BHS have no provincial split. Recounted 2026-09-20 from 238 over 30, which counted SNU2 names on rows with no value and missed BLZ |
+| Connector 25 writes PEPFAR's agency split at the province | Dry run of 2026-09-20: 12,705 rows over 455 provinces in 43 countries, FY2018 to FY2025, in 12 seconds. CDC 6,386 rows, USAID 5,776, other agency 543. 11,483 rows at an SNU1 province and 1,222 at an SNU2 province, 1,550 partial-year rows, snapshot quarter Q4 on 3,958 rows, Q3 on 36 and Q2 on one. No null, no negative, no duplicate key. FY2024 406 provinces over 42 countries, against `pepfar_snu`'s 487 over 50, which supersedes the earlier 339 over 26 and 399 over 41. *Built and dry-run 2026-09-20, run by Jason 2026-09-21* (§9w) |
+| Connector 25 refuses 15 countries and one heading | BRB, COL, GTM, GUY, HND, JAM, LAO, NIC, PAN, PER, PHL, SLV, SUR, THA and TTO name one PSNU, the country itself, and COD's `Data reported above PSNU Level` carries 43. 99.02% of the file's 527,123,747 on the three codes is placed. BHS, BLZ and KHM name a PSNU and carry no value on the three codes in any year, so the file's 58 valued countries give 43 emitted |
+| The province sums reproduce the partner file's own national figure | 5,860 of 7,593 country-code-agency-year-quarter cells exact, 0 above, 1,733 short, every short cell in a refused country or COD's heading. Against `pepfar_snu`'s deduplicated provinces over 9,060 province-code-years: 8,282 within 0.1%, 777 above, one below (COD Lualaba HTS_TST_POS FY2020, 0.994), largest ratio 2.167 |
+| `Public_Partner_MER_TopLine` is short in FY2018, FY2019, FY2021 and FY2022, so two connectors understate 20 countries in those years | Against `Partner_Performance` at the country-code-agency-year-quarter grain: 7,320 cells agree, 85 disagree with TopLine lower in all 85, 0 in TopLine only, 188 in `Partner_Performance` only carrying 518,523. The 273 cells fall 129 in FY2018, 114 in FY2019, 18 in FY2021, 12 in FY2022, none in FY2020 or from FY2023 on. TX_CURR shortfall read at the snapshot quarter, by country-year: KEN FY2018 49,973, THA FY2019 42,393, THA FY2018 25,780, PAN FY2019 13,625, GTM FY2018 12,531, PAN FY2018 11,925, UGA FY2021 10,985, SLV FY2019 10,938, JAM FY2018 9,512, 12 more below 9,000. 74 agency-years over 20 countries fall short, 51 of the 74 on new diagnoses and initiations, the largest KEN HTS_TST_POS USAID FY2018 10,402. The earlier figures (KEN 283,804 and seven more) summed TX_CURR over quarters and years and are withdrawn. *Recounted 2026-09-21* (§9w) |
+| USAID stopped reporting in 47 TX_CURR provinces in FY2025, and in 44 of the 47 the patients stayed in PEPFAR's count | 151 province-indicator-years lose USAID in FY2025 against nine in FY2024. On TX_CURR, 47 provinces in ten countries held 1,953,646 USAID patients in FY2024. In three of the 47 no agency reports TX_CURR in FY2025, DOM Region 7 (1,144), IND Maharashtra (102,745, USAID 62,009) and IND Telangana (66,403, all USAID), and `pepfar_snu` ends in the same three. In the other 44, over nine countries, USAID held 1,824,090, the all-agency total falls 3.0%, median province keeps the whole departed cohort, 27 of 44 keep over 90%. Gauteng USAID 537,283 to none, CDC 681,535 to 1,166,174. `extra.agencies_here` on 1,878 rows. The earlier row said 44 provinces and that the patients did not leave care, which PEPFAR's count cannot show. *Corrected 2026-09-21* (§9w) |
+| TopLine values are kept, and the `Partner_Performance` figure sits on the row | Decided 2026-09-21. `extra.partner_file_differs` (value, difference, ratio, note) where the annual value differs by more than 0.5, on 62 `pepfar_panorama` rows, 47 already carrying `geographic_total_differs`, and 26 `pepfar_agency` rows, all FY2018, FY2019, FY2021 or FY2022, `Partner_Performance` higher in all 88. `agency_missing_from_topline` on 47 `pepfar_agency` rows over 43 country-indicator-years. BRB, SUR, TTO TX_CURR FY2018 and SLV TX_CURR and TX_NEW FY2019 have no TopLine row for any agency and are logged by name. No key and no value changes in either connector. *Dry-run and run by Jason 2026-09-21* (§9w) |
+| Targets travel in `extra`, never as values | Decided 2026-09-21. `extra.fy_target` (value, result_to_target, note), the ratio only for a Q4 TX_CURR snapshot or a flow year with every published quarter and no truncation. In connector 25 11,979 of 12,705 rows carry a target, 10,686 the ratio, 921 FY2025 flow rows a target with no ratio. In `pepfar_agency` 2,030 of 2,077 carry a target, 1,813 with the ratio, `agency_held_target_without_result` on 25 rows. Targets from `Partner_Performance`, because TopLine's target column is short in 124 cells. *Dry-run and run by Jason 2026-09-21* (§9w) |
+| USAID's FY2025 exits were not in the FY2025 plan | USAID held an FY2025 TX_CURR target in 46 of the 47 provinces USAID left, 2,338,910 against 1,953,646 held in FY2024, the exception South West Ethiopia (48). Earlier exits carried almost no target, FY2019 CDC one of 17 and USAID two of 20, FY2020 USAID none of 43 and CDC none of ten, FY2021 USAID two of 21. National USAID TX_CURR result to target 0.81 to 0.94 in FY2021 to FY2024 and 0.65 in FY2025, CDC 0.99 to 1.03 then 1.17. USAID's FY2025 target 7% below FY2024, result 28% below. Does not by itself rule out transfer to CDC (§9w) |
+| One province connector 25 emits is one `pepfar_snu` drops that year | PNG names one PSNU in the partner file, National Capital District, which is a district and not the country's name, so the district places and carries 24 rows over 189,816. `pepfar_snu` emits PNG in FY2016 and FY2017 only, the later years dropped by its own two-unit test. PNG is the only country where connector 25 emits a single province |
+| `pepfar_snu` reads 29 countries at SNU2 and 26 at SNU1 | 35 countries with one SNU1, BHS and BLZ resolved from `Country` because the file gives them no ISO3. In all 35 every valued row names an SNU2. Over the six MER codes the connector reads, 29 name two or more real SNU2 units carrying a value, 203 in all (GTM 19, THA 17, MMR 14, HND 12, SLV 12, PAN 12, GHA 10, NIC 10, LAO 6, KHM 6, PHL 5, IDN 4, BLZ 3). BHS, BRB, COL, GUY, PER and TTO have no provincial split to read. *Built and dry-run 2026-09-20, run by Jason 2026-09-21* (§9w) |
+| ~~`pepfar_snu` skips 31 countries that publish provinces at SNU2, 239 units~~, corrected 2026-09-20 | 239 units over 31 countries counts all 35 indicators in the file, and 203 over 29 is the count over the six the connector reads. GUY and TTO reach two units only on indicators it does not read. An earlier count of 238 over 30 counted SNU2 names on rows with no value and missed BLZ |
 | The panel carried partial-year warnings the fix of 7 September removed, until the run of 20 September | Panel of 2026-09-05, rows retrieved before §9j. Dry run of 2026-09-20 on the files on disk: same rows and values for `pepfar_panorama` (3,338), `pepfar_snu` (14,517) and `pepfar_agency` (2,077). Partial-year warnings cleared on 101 `pepfar_panorama` rows and 379 `pepfar_snu` rows, none added, 14 cleared `prep_recipients` rows gaining a discontinuity flag. Like-quarter comparisons added on 439, 984 and 231 rows. The run of 2026-09-20 wrote every cleared warning and every quarterly value into the panel |
+| Reading SNU2 and adding TX_NEW and HTS_TST changes no row the panel already holds | Dry run of 2026-09-20. 27,328 rows over 591 units in 55 countries, against 14,517 over 388 in 26. All 14,517 keys kept, none lost, no value changed and no `extra` changed beyond the new `unit_level` key. 6,595 new rows are TX_NEW and HTS_TST at SNU1, 6,216 are the 203 SNU2 units. The emitted SNU2 units reproduce the geographic file's own national figure exactly in all 1,047 country-code-years, none above and none below. Validator 142 to 143 messages, reconciliation unchanged at 96 pairs |
 | The run of 20 September changed no value outside the 108 new rows | Panel 184,251 to 184,359, 108 keys added and no key lost. The 164,319 rows of the other 20 sources identical to `hiv_panel.prev.csv` in every column. On the 19,932 rows shared by the panel before the run and the panel after the run, no column outside `extra` and the retrieval stamp differs. 10,129 rows carry a changed `extra`. The four connectors' rows match the dry run's rows in every column, `extra` included. Validator 142 messages, 346 rows far below the scale of their own series. Reconciliation 96 pairs, no pair lost, no column changed on the 95 earlier pairs |
