@@ -566,6 +566,13 @@ per-unit price is the only thing in the file that reveals it.
 activity/date/value keys appear under more than one of them. A connector has to pick one
 vocabulary and dedupe against the others, or it double-counts disbursements.
 
+*Corrected 2026-09-21 in §9x.* The IATI trap above is wrong. IATI's transaction types form one
+codelist, in which d-portal shows codes 1 to 10 as letters and leaves 11, 12 and 13 as numbers.
+Among Nigeria's HIV-sector rows, 524 of 19,525 activity, date and value keys sit under more than
+one code, mostly a commitment beside a disbursement of the same amount on the same day, and no key
+pairs a disbursement with an expenditure. Disbursements and expenditures are different flows and
+are summed. The count of 1,834 of 46,964 keys was not reproduced.
+
 ### 7h. What round two costs, and what it says to the next region
 
 The first pass cost a day and produced four candidates; the second cost a day and produced
@@ -2345,6 +2352,297 @@ with 566,088 patients in FY2024. The flag on the Mpumalanga row marks the handov
 error. The reconciliation gives 96 pairs, and no pair involves `pepfar_snu` or connector 25,
 because the reconciliation compares national cells only.
 
+### §9x. A split an aggregator makes is not the split a publisher publishes, a copied commitment is not a disbursement, and a rise in a donor series can be a change of purpose code
+
+Work item #16 surveyed IATI, the International Aid Transparency Initiative, the standard under
+which donor governments, multilateral agencies, foundations and NGOs publish records of each
+organisation's own activities and transactions. The survey read the IATI records through d-portal, IATI's own open viewer,
+using d-portal's query service `https://d-portal.org/q` and d-portal's XML export, on 20 and 21
+September 2026. The survey wrote only to the session scratchpad, and no connector is written. The
+design of connector 26, `iati`, waits on Jason's decision in section 5 item 17 of `RESUME.md`.
+Money below is in US dollars by calendar year unless a US fiscal year is named, and the HIV sector
+means DAC purpose code 13040, STD control including HIV/AIDS.
+
+The first probe, on 15 August 2026, left §7g and two claim rows below saying that `sum()` in the
+query service returns zero, that the transaction-type column mixes several vocabularies, and that
+a connector has to pick one code or count a disbursement twice. The survey overturns the `sum()`
+claim, the vocabulary claim and the double-count claim. `SUM()` works in single precision, so
+Nigeria's 2024 HIV-sector disbursements come back as 395,198,700 against 395,198,777 summed row by
+row. The transaction-type column holds one IATI codelist, in which d-portal shows codes 1 to 10 as
+letters, 1 incoming funds (`IF`), 2 commitment (`C`), 3 disbursement (`D`), 4 expenditure (`E`), 5
+interest payment (`IR`), 6 loan repayment (`LR`), 7 reimbursement (`R`), 8 purchase of equity
+(`QP`), 9 sale of equity (`QS`) and 10 credit guarantee (`CG`), and leaves 11 (incoming
+commitment), 12 and 13 as numbers. Among Nigeria's 20,415 HIV-sector transaction rows, 524 of
+19,525 activity, date and value keys sit under more than one code. The largest overlaps are a
+commitment beside a disbursement of the same amount on the same day, 288 keys, and an incoming
+commitment beside incoming funds and a commitment, 181 keys, and no key pairs a disbursement with
+an expenditure. The count of 1,834 of 46,964 keys in §7g was not reproduced. IATI defines a
+disbursement as money passed to another organisation and an expenditure as money the publisher
+spends directly. In the four sampled publishers that report both codes, three of about 66,100
+expenditure rows match a disbursement row in the same activity on date and value, two at the UK's
+FCDO and one at UNICEF. A connector therefore sums disbursements and expenditures, and counts no
+commitment, incoming funds, interest payment or loan repayment as spending.
+
+d-portal stores each transaction already split by country and by sector, and a read through
+d-portal's activity-level country and sector tables multiplies rows. Nigeria's 2024 disbursements
+read 3,168m over 24,551 rows through the activity-level join, against 395.2m over 807 rows without
+the join, and 350.5m once the join's percentages are applied. d-portal's own code,
+`src_dstore_db.js` lines 843 to 1039, departs from the percentages publishers publish in three
+ways. Recipient-region percentages are left out of the pool, so the share an activity gives a
+region is handed to the activity's countries. A country listed with no percentage is given a
+weight of one, which splits the activity equally, and a negative percentage is made positive.
+Sector vocabularies 1 (five-digit DAC codes) and 2 (three-digit DAC codes) are pooled and rescaled
+together, so a publisher listing the three-digit code 130 beside 13040 halves the 13040 share. The
+Gates Foundation shows the size of the region rule. Of the Gates Foundation's 734 HIV activities,
+40 give part of the money to a region. Split by the published percentages with each regional share
+left with the region, Gates disbursements come to 53.88m in 2021, 74.32m in 2022, 112.18m in 2023,
+83.50m in 2024, 107.90m in 2025 and 36.37m in 2026 so far, and d-portal's split gives 55.48m,
+82.37m, 130.38m, 94.43m, 119.86m and 38.73m, between three and 16 per cent higher. For 2024
+d-portal gives Kenya 12.40m of Gates money against 9.39m published.
+
+d-portal also writes a copy of every commitment as a disbursement, flagged `trans_flags=1`, for any
+publisher whose commitments outnumber the publisher's disbursements and expenditures together
+(`fake_trans` in `src_dstore_pg.js`). In the HIV sector the copies number 32 rows carrying 627m.
+Pact (`US-EIN-13-2702768`), which publishes commitments only, holds 30 of the copied rows and
+627,097,700, and Enabel, the Belgian development agency, holds two copied rows and 22,607.84. The
+Pact copies read as 317.6m of disbursements in 2019 and 198.1m in 2020. Of Pact's 30 HIV
+activities, 29 name USAID as the funder and one names the Global Fund, so counting the Pact copies
+would count US and Global Fund commitments a second time as disbursements. Nigeria holds two of the
+copied rows, 6,464,864 over all years. The Nigerian yearly totals in
+[`PHASE4_FEASIBILITY_WCA.md`](PHASE4_FEASIBILITY_WCA.md) and in the claim rows were read without a
+`trans_flags=0` filter, so the two Nigerian copied rows may sit inside one of the Nigerian yearly
+totals. Pact also publishes one activity under a doubled identifier,
+`US-EIN-US-EIN-13-2702768-P2000`. d-portal's XML export carries no copied rows. **The general
+rule. A figure an aggregator has split, joined or copied is the aggregator's reading of a
+publisher's record. A connector reads the publisher's own percentages and transaction codes from
+the publisher's own record, and carries the aggregator's figure in `extra`, so that a reader can
+see how far the aggregator's split departs from the published percentages.**
+
+d-portal marks no HIV-sector activity as published by a secondary reporter, a publisher reporting
+money another organisation manages, because `act.flags=1` returns nothing, and the XML sample
+carries the `secondary-reporter` attribute only as absent or 0. The survey found no parent activity
+and child activity reporting the same transactions.
+
+Five US government publishers, US-GOV-1, 7, 10, 11 and 14, publish HIV disbursements and no
+expenditures. Summed by US fiscal year over the countries that both IATI and the panel's
+`foreign_assistance` series hold, the US IATI figures equal `foreign_assistance` with a median
+ratio of 1.0 in every year from FY2016 to FY2024, and between 65 and 70 of the 70 to 80 shared
+country-years agree within two per cent in each year. Under §9f the US IATI series is a
+republication of ForeignAssistance.gov and adds no evidence about US money. FY2025 departs from
+the pattern, 3,357m in IATI against 3,093m in the panel's file over 71 shared country-years, 8.5
+per cent higher, with 28 of the 71 within two per cent. IATI holds 2,162m for FY2026. The panel
+holds no FY2026 row, because `run_all.py` stops at `--end 2025` by default, and the docstring of
+`foreign_assistance` records 613m for FY2026 in the downloaded file, a part year. The panel's copy of ForeignAssistance.gov is dated 18 July 2026, so the
+likeliest reading is that the panel's copy is out of date, and a fresh download would settle
+whether the FY2025 gap closes. US agencies also book HIV money to recipient codes that are not
+countries, mostly 998, developing countries unspecified, 454m in 2019, 475m in 2020, 666m in 2021,
+2,836m in 2022, 3,346m in 2023, 3,835m in 2024 and 2,614m in 2025. The rise from 2022 is not
+surveyed.
+
+The Global Fund publishes 1,246 HIV activities, all in US dollars, with sector vocabulary 1 only,
+disbursements from 2002 to 2026 and no expenditures. The Global Fund's sector coding changed with
+the grants that began in 2018. HIV grants (component H) and joint HIV and TB grants (component C)
+that began from 2010 to 2016 are coded 13040 alone, and nearly every H or C grant that began in
+2018 or later is split between 13040, 12110 (health policy and administrative management) and
+12263 (TB control). The only H or C grants that began in 2017 and carry a split are three H grants.
+d-portal's 13040 figure for the Global Fund therefore counts only part of each newer grant.
+
+The panel's OECD CRS series for the Global Fund, donor 9OTH012, books the whole H or C grant to
+HIV. The whole disbursement of H and C grants, plus the 13040 share of the Global Fund's other
+grants, matches the CRS series with a median ratio of 1.0 in every year from 2012 to 2024, and
+within five per cent in 95 of 98 shared country-years in 2020, 89 of 96 in 2021, 87 of 93 in 2022,
+79 of 91 in 2023 and 81 of 91 in 2024. The 13040 share alone falls to between 0.52 and 0.59 of the
+CRS series from 2020, and the 13040 share plus the 12110 share gives between 0.90 and 1.0. Under
+§9f the Global Fund's IATI figures and the CRS series are one reporter's figures published twice.
+IATI extends the Global Fund series past the CRS series. For 2025 IATI gives 1,859m of whole-grant
+disbursements, of which 1,188m is the 13040 share, and for 2026 so far 723m, of which 479m is the
+13040 share. Country-years in IATI with no CRS row number 10, nine, 16, 19, 26, three, six, eight,
+nine and 11 over 2015 to 2024.
+
+The CRS series appears to change classification in 2020. In the country-years where a C grant
+disbursed and the CRS series holds a row, the Global Fund's whole-grant figure exceeds CRS from 2015
+to 2019, 241m against 123m in 2015, 678m against 457m in 2016, 656m against 341m in 2017, 390m
+against 241m in 2018 and 546m against 375m in 2019, and many C-grant countries have no CRS row at
+all, 24 of 37 in 2019. From 2020 every C-grant country has a CRS row, and the C-grant countries'
+whole-grant figure equals CRS, 1,302m against 1,303m in 2020. Before 2020 CRS appears to have
+booked part or all of each joint HIV and TB grant under another purpose code, and the survey did
+not check the other purpose codes. Over all countries the panel's CRS series rises from 1,061m in
+2019 to 2,100m in 2020, while the Global Fund's whole-grant figure rises from 1,753m to 2,100m, so
+692m of the CRS rise of 1,039m has no counterpart in the Global Fund's own disbursements. **The
+general rule. A step in a donor series that the donor's own disbursement records do not show is a
+change in how the series is classified until the donor's records show otherwise. A comparison that
+crosses the step has to be made against the donor's own records, and the step has to be recorded
+on the series and never read as a change in money.**
+
+The Global Fund's reimbursement rows (type 7) are negative in every year from 2016, between 16.0m
+and 82.8m a year to 2024 and 179.8m in 2025, and the survey did not establish what the
+reimbursement rows record. The 13040 share of the Global Fund's multi-country and no-country grants
+fell from 59.7m in 2017 to 5.3m in 2025. The 515 activities with the Global Fund's older numeric
+identifiers are coded 13040 alone and carry 11,725m of disbursements. For Nigeria's H grant to the
+National Agency for the Control of AIDS, NGA-H-NACA, the Global Fund's own data service and IATI
+differ by 3.9 per cent, and the gap is unexplained. The Global Fund's data service,
+`fetch.theglobalfund.org/v4.2/odata`, lists 32 financial indicators over 16 datasets in the entity
+`AllFinancialIndicators`, among them disbursements, commitments, grant budgets, expenditure by
+intervention, allocations and pledges. The panel's `global_fund` connector reads only
+`AllProgrammaticIndicators` and `Geographies` from the same service, so the Global Fund's
+financial datasets are unread.
+
+The table groups HIV-sector money by the reporting organisation's declared type, in millions, with
+d-portal's split and single-precision sums, over recipient codes that are countries. The
+multilateral group excludes the Global Fund, and "not sampled" covers 55 publishers outside the 21
+in the XML sample.
+
+| Group | Code | 2019 | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 |
+|---|---|---|---|---|---|---|---|---|
+| US government | D | 3,766 | 3,330 | 3,382 | 3,667 | 3,509 | 3,966 | 3,121 |
+| Global Fund | D | 1,236 | 1,442 | 1,647 | 1,544 | 1,495 | 1,470 | 1,187 |
+| Multilateral (type 40) | D | 47 | 533 | 541 | 358 | 145 | 99 | −89 |
+| Multilateral (type 40) | E | 106 | 127 | 318 | 390 | 414 | 292 | 293 |
+| Gates Foundation (type 60) | D | 0 | 0 | 55 | 82 | 130 | 94 | 120 |
+| Governments (type 10) | D | 44 | 44 | 32 | 34 | 29 | 25 | 31 |
+| Governments (type 10) | E | 7 | 6 | 7 | 5 | 4 | 3 | 2 |
+| Not sampled | D | 14 | 8 | 16 | 12 | 13 | 15 | 13 |
+| Not sampled | E | 3 | 2 | 6 | 2 | 2 | 5 | 7 |
+| Pact's copied commitments | D | 318 | 198 | 1 | 11 | 41 | 0 | 0 |
+
+Six publishers make up the multilateral group. Counting disbursements and expenditures together,
+UNAIDS spends between 55.0m and 76.3m a year, UNDP between 177.6m and 280.7m a year from 2021,
+UNICEF between 30.3m and 57.2m and WHO between 1.6m and 26.8m. The Asian Development Bank disbursed
+462.5m in 2020, 536.4m in 2021 and 355.3m in 2022 and shows a net negative 112.9m in 2025. The World
+Bank's HIV-sector disbursements fall from 53.6m in 2020 to 1.5m or less a year from 2021 to 2024,
+and reach 14.7m in 2025. Of UNDP's HIV disbursements and expenditures, 89.2 per cent, in 73 of 134
+activities, sit in activities that name the Global Fund as a funder, so counting UNDP beside the
+Global Fund would count the same money twice. Of the 1,554.9m that d-portal assigns the Asian
+Development Bank in the HIV sector, 90.1 per cent sits under activity titles naming COVID. Titles
+carrying no HIV term hold 98.1 per cent of WHO's HIV-sector money, 85.7 per cent of UNAIDS's, 75.5
+per cent of the money of Germany's development ministry, BMZ (DE-1), 57.0 per cent of the Gates
+Foundation's and 38.8 per cent of UNICEF's. WHO and UNAIDS titles are strategy lines such as
+"Strategic Direction 1. Leadership and Advocacy". BMZ's leading titles are voluntary contributions
+to the Global Fund, which is money the Global Fund's own disbursements already count. A title with
+no HIV term does not make an activity unrelated to HIV, because Gates titles such as the MK-8527
+prevention trial name an HIV drug without naming HIV. The largest publishers outside the sample
+average 5.2m a year from 2019 to 2025, the Netherlands Enterprise Agency, followed by Norad at 3.0m,
+Aidsfonds at 2.9m and UNOPS at 1.5m. Among the sampled governments, France's development agency AFD
+(FR-3) averages 10.6m a year, BMZ 6.0m and Global Affairs Canada (CA-3) 4.3m. The panel's
+`external_hiv_oda_total` reads CRS donor code ALLD, which `oecd_crs` describes as all official
+donors, so the government and multilateral money in the table already sits inside
+`external_hiv_oda_total` up to 2024. For government and multilateral publishers IATI adds a split
+by publisher up to 2024 and new money only for 2025 and 2026. The Gates Foundation is a private
+donor and should fall outside ALLD, and the survey did not check whether ALLD holds Gates money.
+**The general rule.
+A purpose code records what a publisher chose to report under the code, and a publisher can pass
+on money a funder already in the panel reports. Money a publisher passes on from the Global Fund or
+the US government, and money under titles that name another disease and no HIV term, has to be taken
+out by the funder named and by the title, and counted in the log.**
+
+The XML sample fetched up to 300 HIV activities from each of 21 publishers. Sida, the UK's FCDO,
+UNAIDS, UNICEF and WHO reached the cap, so figures read from the XML for Sida, FCDO, UNAIDS, UNICEF
+and WHO cover the first 300 activities only. The Gates Foundation was fetched in three pages, 734
+activities. The group table, the title shares and the Global Fund's 1,246 activities cover every
+activity.
+
+---
+
+### §9y. A documented endpoint can be the wrong path, a public API can be closed to every client that is not a browser, a filter documented as an array can take one value, and the same publisher can leave the same data open somewhere else
+
+*Surveyed 23 September 2026, after Jason pointed at the ForeignAssistance.gov Data API as a
+replacement for the Complete Data Set download.*
+
+ForeignAssistance.gov publishes an OpenAPI description at `/api-docs` covering six endpoints, one
+transaction-level and five aggregated. The description is accurate about the data and wrong about
+the address. Every documented path begins `/data-api/`, and every one of those paths returns
+nginx's 404 page. The paths that answer begin `/api/data-api/`, a prefix stated nowhere on the
+site and found by trying candidates. A connector written from the documentation alone would fail
+at the first request and the 404 would look like a withdrawn service.
+
+The description's security block names an OAuth scheme whose own description says the API is
+get-only public data needing no password or authentication, and whose authorisation and token
+URLs point at api.example.com and test.com. The transaction endpoint carries an empty security
+list. So the block is boilerplate, the documented 401 and 403 responses are unused, and no key
+exists to request.
+
+The API is nonetheless closed to the connector. Cloudflare answers 403 with the header
+`cf-mitigated: challenge` to every client that is not a browser. The survey was refused with
+curl, with curl carrying a current Chrome user agent, an Accept header and a Referer, and with
+Python's `urllib`. The same challenge covers the bulk file at `/static/us_foreign_aid_complete.csv`.
+So the manual download step in `foreign_assistance` is a consequence of the challenge and not of a
+missing API, and moving the connector to the API does not remove the step. The address the
+documentation gives for questions is FAgovInquiries@state.gov.
+
+**The general rule.
+A source is reachable only from the client that will do the reading. A path that answers a browser
+says nothing about whether the connector can call it, and an access claim recorded from a browser
+probe has to name the client that made the probe.**
+
+The challenge closes ForeignAssistance.gov's own servers and closes nothing else. Every US
+government agency publishes the same transactions as IATI XML, and the IATI Registry gives the
+address of each file. USAID's 208 files, the Department of State's 207 and Health and Human
+Services' 72 sit on three Amazon S3 buckets, `s3.amazonaws.com/files.explorer.devtechlab.com`,
+`iati-reporting.s3.amazonaws.com` and `iati-reporting.s3.us-east-1.amazonaws.com`. Every file
+probed answered curl with 200 and no challenge. The files are ForeignAssistance.gov's own output,
+because the State and Health and Human Services files carry elements in the namespace
+`https://foreignassistance.gov`, among them a `treasury-account` element naming the appropriation
+and a `fiscal-funding-year` child.
+
+The S3 files reproduce the API's figures. For Nigeria, with Health and Human Services as the
+reporting organisation and the US fiscal year derived from the transaction date, HIV disbursements
+in millions run 75.35, 152.07, 129.99, 98.43 and 101.90 for FY2021 to FY2025 against the API's
+`HHS/CDC` figures of 76.19, 152.22, 130.53, 98.46 and 101.90. The two readings agree at FY2025 to
+the cent and differ by 1.1 per cent at FY2021.
+
+The S3 route does not reach the whole history. Health and Human Services Nigeria holds 147, 135,
+145, 135 and 118 transactions for the calendar years 2021 to 2025 and between one and 11 a year
+for 2012 to 2019. State Nigeria reaches back to 2013 and forward to 2026. So the S3 files cover
+FY2021 onwards in full, cover earlier years unevenly by agency, and cannot replace the bulk file
+for 2001 to 2020.
+
+**The general rule.
+A publisher refusing one address has not refused the data. Before recording a source as closed to
+machine clients, look for the same publisher's other outlets, and treat the IATI Registry as a
+directory of file addresses for any government donor. An access claim naming a site is a claim
+about the site, not about the data.**
+
+Read from a browser, the API describes itself well. Each transaction carries 51 fields, including
+`country_code` already in ISO3 form, the managing agency and sub-agency acronyms, the DAC sector
+code and purpose name, the USG sector and category names, the transaction type, the fiscal year
+and both a current and a constant amount. `page_info` carries `total_records` and `total_pages`.
+Two documented behaviours are wrong. Every filter is documented as an array, and a repeated
+parameter keeps the last value and discards the first, `country_code=NGA&country_code=KEN`
+returning Kenya alone, while a comma list matches nothing. `per_page` is documented with a maximum
+of 10,000 and is capped at 1,000.
+
+**The general rule.
+A filter documented as an array has to be tested with two values before a connector relies on it. A
+query that silently answers on one of the two values returns a well-formed page and a wrong
+total.**
+
+The connector's HIV test, which admits a row when any of four columns names HIV, reproduces on the
+API as the union of two queries, because one USG sector name of the 51 in use contains HIV and one
+DAC sector does, code 134, and no USG category name does. The two queries disagree in both
+directions, so neither alone is the panel's series. For FY2024 disbursements the USG query holds
+2,564 rows and 10,223.6m, the DAC query holds 2,620 rows and 10,265.2m, 75 rows worth 62.3m carry
+the USG HIV label without DAC 134 and many of those carry a COVID-19 control purpose, and 131 rows
+worth 103.9m carry DAC 134 under a USG label of Malaria, Tuberculosis, Maternal and Child Health or
+Direct Administrative Costs. The union is 2,695 rows.
+
+One code in the country column is not a country. `WLD`, standing for World, holds 6,625.4m of the
+FY2024 union total of 10,327.5m, and the connector drops the code because the name resolves to no
+ISO3 code. The FY2026 total over all codes including World is 2,093.0m, which sits beside the
+2,162m §9x records IATI holding for FY2026. So the gap §9x reported between IATI and
+ForeignAssistance.gov for FY2026 was the July snapshot the panel holds and the country-only
+reading, and not a disagreement between the two publishers, which strengthens the §9f judgement
+that US IATI republishes ForeignAssistance.gov.
+
+Against the July download the panel holds, the data of 31 August 2026 is higher everywhere.
+Countries only, current dollars, millions, the API first and the connector's docstring second.
+FY2024 3,702.1 against 3,659.4, FY2025 3,117.9 against 3,084.6, FY2026 1,012.3 against 613. FY2025
+by agency, USAID 1,402.0 against 1,379.2, CDC 1,364.5 against 1,356.8, State 273.2 against 270.7,
+other agencies 78.3 against 77.9. FY2026 is almost all State, 999.7 of the 1,012.3, with USAID at
+2.0 and CDC at zero. Whether the differences of about one per cent at FY2024 and FY2025 are a
+restatement between the July and August releases or a difference between the two-query rule and the
+four-column rule was not settled, because settling it means scanning the July file, which Jason
+moved out of `data/raw/foreign_assistance/` on 21 September 2026.
+
 ---
 
 ## Status of the claims here
@@ -2415,8 +2713,22 @@ because the reconciliation compares national cells only.
 | Its zeros mean "not reported" | MLI 2024: 3,184,591 USD domestic, 0 international, while `data.api.theglobalfund.org` shows active disbursing HIV grants in Mali that year. GMB 2024 totals 33,054 USD; TCD reports 21.7m USD international with no donor split |
 | GAM and the national NASA reports agree, and that is not triangulation | BEN 2024: 14,757,867 USD against 9,292,143,634 FCFA in the NASA report (3–5% apart, inside the exchange rate). COD 2021: 223,877,209 / 163,912,882 USD against 227.8m / 167,861,131 in Tableau LVI (under 3%). Both pairs are one national exercise published twice — fidelity, not corroboration |
 | IATI is open through d-portal and is current to this month | `d-portal.org/q?from=act,trans`, sector 13040, no key, read 2026-08-15: 26 publishers reporting HIV activity in Nigeria including UNAIDS itself, Gates, FCDO and NGOs; latest WCA disbursement dated 2026-08-15, against OECD CRS running 12–18 months behind |
-| Its transaction-type column mixes vocabularies | `D`, `E`, `C`, `11`, `IF`, `R`, `IR`, `LR` returned by the same query; 1,834 of 46,964 distinct activity/date/value keys appear under more than one code |
-| `sum()` in the d-portal query API returns zero silently | Every aggregate query returned 0 or null; the same rows pulled raw and summed in Python give NGA HIV disbursements 395,198,777 (2024) → 330,726,636 (2025) |
+| ~~Its transaction-type column mixes vocabularies~~, corrected 2026-09-21 in §9x | ~~`D`, `E`, `C`, `11`, `IF`, `R`, `IR`, `LR` returned by the same query; 1,834 of 46,964 distinct activity/date/value keys appear under more than one code~~. The codes are one IATI codelist. The count of 1,834 of 46,964 keys was not reproduced. Nigeria's HIV-sector rows give 524 of 19,525 activity, date and value keys under more than one code, and no key pairs a disbursement with an expenditure |
+| ~~`sum()` in the d-portal query API returns zero silently~~, corrected 2026-09-21 in §9x | `SUM()` works in single precision. Read on 20 and 21 September 2026, NGA HIV-sector disbursements come back as 338,180,200 (2023), 395,198,700 (2024), 330,811,580 (2025) and 230,015,260 (2026 so far), against 395,198,777 summed row by row for 2024. The 2025 total read 330,726,636 on 15 August 2026, so a closed year can still change. The four totals were read without a `trans_flags=0` filter and may include the two Nigerian rows d-portal copied from commitments, 6,464,864 over all years |
+| d-portal's country split departs from the percentages publishers publish | d-portal's `src_dstore_db.js`, lines 843 to 1039, leaves recipient-region percentages out of the pool, gives a country with no percentage a weight of one, makes a negative percentage positive and pools sector vocabularies 1 and 2. Gates Foundation disbursements split by d-portal run between three and 16 per cent above the published split in every year from 2021 to 2026, 94.43m against 83.50m in 2024, and Kenya's 2024 Gates money reads 12.40m against 9.39m. *Surveyed 2026-09-21* (§9x) |
+| Money read through d-portal's activity-level join is multiplied | NGA 2024 disbursements read 3,168m over 24,551 rows through the join to the activity-level country and sector tables, 395.2m over 807 rows without the join and 350.5m once the join's percentages are applied. *Surveyed 2026-09-21* (§9x) |
+| Disbursements and expenditures are distinct flows and are summed | In the four sampled publishers that report both codes, three of about 66,100 expenditure rows match a disbursement row in the same activity on date and value, two at FCDO and one at UNICEF. WHO 0 of 52,413 and the World Bank trust funds 0 of 32. *Surveyed 2026-09-21* (§9x) |
+| d-portal invents disbursements by copying commitments | Rows flagged `trans_flags=1` (`fake_trans` in `src_dstore_pg.js`) number 32 in the HIV sector and carry 627m. Pact (`US-EIN-13-2702768`) holds 30 rows and 627,097,700, read as 317.6m of disbursements in 2019 and 198.1m in 2020, and 29 of Pact's 30 HIV activities name USAID as the funder. Enabel holds two rows and 22,607.84. The XML export carries no copied rows. *Surveyed 2026-09-21* (§9x) |
+| No HIV-sector activity comes from a secondary reporter, and no parent activity repeats a child activity's transactions | `act.flags=1` returns nothing, and the `secondary-reporter` attribute is absent or 0 in all 21 sampled publishers. *Surveyed 2026-09-21* (§9x) |
+| US government IATI is a republication of ForeignAssistance.gov | By US fiscal year over shared country-years, median ratio 1.0 in every year from FY2016 to FY2024, with 65 to 70 of 70 to 80 country-years within two per cent in each year. *Surveyed 2026-09-21* (§9x) |
+| The panel's copy of ForeignAssistance.gov is probably out of date | The copy is dated 18 July 2026. FY2025 reads 3,357m in IATI against 3,093m in the copy over 71 shared country-years, 8.5 per cent higher, with 28 of the 71 within two per cent, and IATI holds 2,162m for FY2026, where the connector's docstring records 613m in the copy. A fresh download would settle the FY2025 gap. *Surveyed 2026-09-21* (§9x) |
+| The Global Fund recoded HIV and joint HIV and TB grants from the grants that began in 2018 | H and C grants that began from 2010 to 2016 are coded 13040 alone. Nearly every H or C grant that began in 2018 or later is split between 13040, 12110 and 12263, and the only split grants that began in 2017 are three H grants. *Surveyed 2026-09-21* (§9x) |
+| The Global Fund's whole-grant IATI figure equals the CRS series, donor 9OTH012 | Whole H and C grants plus the 13040 share of other grants give a median ratio of 1.0 to CRS in every year from 2012 to 2024, within five per cent in 95 of 98 shared country-years in 2020 and 81 of 91 in 2024. The 13040 share alone gives 0.52 to 0.59 of CRS from 2020, and the 13040 and 12110 shares together 0.90 to 1.0. One reporter published twice under §9f. *Surveyed 2026-09-21* (§9x) |
+| The CRS series for the Global Fund appears to change classification in 2020 | Where a C grant disbursed and CRS holds a row, the Global Fund's whole-grant figure exceeds CRS in every year from 2015 to 2019, 546m against 375m in 2019, and 24 of 37 C-grant countries have no CRS row in 2019. In 2020 the C-grant countries read 1,302m in IATI against 1,303m in CRS. Over all countries CRS rises from 1,061m to 2,100m between 2019 and 2020 and IATI from 1,753m to 2,100m, so 692m of the CRS rise of 1,039m has no counterpart. The CRS series' other purpose codes were not checked. *Surveyed 2026-09-21* (§9x) |
+| Most of UNDP's HIV-sector money is Global Fund money | 89.2 per cent of UNDP's HIV disbursements and expenditures sit in 73 of 134 activities that name the Global Fund as a funder. *Surveyed 2026-09-21* (§9x) |
+| Most of the Asian Development Bank's HIV-sector money is COVID money | 90.1 per cent of the 1,554.9m that d-portal assigns the bank in the HIV sector sits under activity titles naming COVID. *Surveyed 2026-09-21* (§9x) |
+| Much HIV-sector money sits under titles with no HIV term | WHO 98.1 per cent, UNAIDS 85.7, BMZ (DE-1) 75.5, the Gates Foundation 57.0 and UNICEF 38.8. WHO and UNAIDS titles are strategy lines, and BMZ's leading titles are voluntary contributions to the Global Fund. Gates titles such as the MK-8527 prevention trial name an HIV drug without naming HIV, so a title test alone cannot exclude an activity. *Surveyed 2026-09-21* (§9x) |
+| The Global Fund's financial datasets are unread | `AllFinancialIndicators` on `fetch.theglobalfund.org/v4.2/odata` lists 32 financial indicators over 16 datasets, among them disbursements, commitments, grant budgets and expenditure by intervention. The `global_fund` connector reads only `AllProgrammaticIndicators` and `Geographies`. *Surveyed 2026-09-21* (§9x) |
 | UNICEF SDMX is mostly a republication | `HIV_AIDS` dataflow, 139,446 rows, read 2026-08-15: of 26,242 WCA rows, 21,460 are sourced "UNAIDS 2025 estimates" and 1,270 to Global AIDS Monitoring; the additive slice is 3,512 MICS/DHS rows with `WEALTH_QUINTILE` and `RESIDENCE`, latest MICS 2019 and latest DHS 2022 |
 | IHME DAH is open but behind a user agreement | GHDx record `ihme-data/dah-1990-2026-20260611`, released 2026-06-11, 1990–2026; downloads route through `ghdx.healthdata.org/download-access/login` under a free non-commercial user agreement — a manual drop into `data/raw/`, the same pattern as the UNAIDS AIDSinfo CSVs |
 | Nigeria's national dashboard is public and unreachable by machine | `wallboard.nascp.gov.ng`, refreshed 2026-02-20: 1,593,757 on ART, 953,709 suppressed, state selector, PrEP/HTS/ART/PMTCT tabs. `modelsAndExploration`, `explore/…/exploration` and `conceptualschema` all return 403 to scripted requests with the correct cluster and resource key and matching Origin and Referer; renders correctly in a browser |
@@ -2603,3 +2915,17 @@ because the reconciliation compares national cells only.
 | The panel carried partial-year warnings the fix of 7 September removed, until the run of 20 September | Panel of 2026-09-05, rows retrieved before §9j. Dry run of 2026-09-20 on the files on disk: same rows and values for `pepfar_panorama` (3,338), `pepfar_snu` (14,517) and `pepfar_agency` (2,077). Partial-year warnings cleared on 101 `pepfar_panorama` rows and 379 `pepfar_snu` rows, none added, 14 cleared `prep_recipients` rows gaining a discontinuity flag. Like-quarter comparisons added on 439, 984 and 231 rows. The run of 2026-09-20 wrote every cleared warning and every quarterly value into the panel |
 | Reading SNU2 and adding TX_NEW and HTS_TST changes no row the panel already holds | Dry run of 2026-09-20. 27,328 rows over 591 units in 55 countries, against 14,517 over 388 in 26. All 14,517 keys kept, none lost, no value changed and no `extra` changed beyond the new `unit_level` key. 6,595 new rows are TX_NEW and HTS_TST at SNU1, 6,216 are the 203 SNU2 units. The emitted SNU2 units reproduce the geographic file's own national figure exactly in all 1,047 country-code-years, none above and none below. Validator 142 to 143 messages, reconciliation unchanged at 96 pairs |
 | The run of 20 September changed no value outside the 108 new rows | Panel 184,251 to 184,359, 108 keys added and no key lost. The 164,319 rows of the other 20 sources identical to `hiv_panel.prev.csv` in every column. On the 19,932 rows shared by the panel before the run and the panel after the run, no column outside `extra` and the retrieval stamp differs. 10,129 rows carry a changed `extra`. The four connectors' rows match the dry run's rows in every column, `extra` included. Validator 142 messages, 346 rows far below the scale of their own series. Reconciliation 96 pairs, no pair lost, no column changed on the 95 earlier pairs |
+| FA.gov's documented API paths all return 404, and the working prefix is undocumented | Every `/data-api/…` path in the OpenAPI description answers with nginx's 404 page. `/api/data-api/complete-data.json` answers with JSON, found by trying candidate prefixes. *Surveyed 2026-09-23* (§9y) |
+| The FA.gov API needs no key, and its OAuth block is boilerplate | The security scheme describes itself as get-only public data needing no authentication and points its authorisation and token URLs at api.example.com and test.com. The transaction endpoint carries an empty security list. *Surveyed 2026-09-23* (§9y) |
+| Neither the FA.gov API nor the FA.gov bulk CSV can be fetched by the connector | 403 with `cf-mitigated: challenge` to curl, to curl carrying a current Chrome user agent with Accept and Referer headers, and to Python's `urllib`, on `/api/data-api/complete-data.json` and on `/static/us_foreign_aid_complete.csv`. Both answer a browser on the same machine. *Surveyed 2026-09-23* (§9y) |
+| FA.gov filters documented as arrays take one value, and `per_page` caps below its documented maximum | `country_code=NGA&country_code=KEN&fiscal_year=2024` returns 1,706 records all Kenyan, which is Kenya's own count, and `country_code=NGA,KEN` returns none. `per_page=10000` is answered with `per_page` 1,000 in `page_info`. *Surveyed 2026-09-23* (§9y) |
+| The connector's four-column HIV rule reproduces on the API as the union of two queries | One USG sector name of 51 contains HIV and one DAC sector does, code 134, and no USG category name does. FY2024 disbursements, USG query 2,564 rows and 10,223.6m, DAC query 2,620 rows and 10,265.2m, 75 rows and 62.3m in the USG query alone with COVID-19 control among their purposes, 131 rows and 103.9m in the DAC query alone under USG labels of Malaria, Tuberculosis, Maternal and Child Health and Direct Administrative Costs, union 2,695 rows and 10,327.5m. *Surveyed 2026-09-23* (§9y) |
+| FA.gov's World row is two thirds of the FY2024 HIV total, and the panel never holds it | `WLD` holds 6,625.4m of the FY2024 union total of 10,327.5m and resolves to no ISO3 code. The FY2026 total over all codes is 2,093.0m against the 2,162m IATI holds, so the FY2026 gap §9x reported was the July snapshot and the country-only reading. *Surveyed 2026-09-23* (§9y) |
+| The data of 31 August 2026 is above the July file the panel holds in every year | Countries only, current dollars, millions, API against the connector's docstring. FY2024 3,702.1 against 3,659.4, FY2025 3,117.9 against 3,084.6, FY2026 1,012.3 against 613. FY2025 by agency, USAID 1,402.0 against 1,379.2, CDC 1,364.5 against 1,356.8, State 273.2 against 270.7, other 78.3 against 77.9. FY2026 State 999.7, USAID 2.0, CDC 0. Restatement and rule difference are not separated, which needs a scan of the July file. *Surveyed 2026-09-23* (§9y) |
+| Every US agency publishes ForeignAssistance.gov's own data as IATI XML on Amazon S3, outside the Cloudflare challenge | The IATI Registry lists 208 packages for USAID, 207 for the Department of State and 72 for Health and Human Services, 487 files in all, on `s3.amazonaws.com/files.explorer.devtechlab.com`, `iati-reporting.s3.amazonaws.com` and `iati-reporting.s3.us-east-1.amazonaws.com`. Every file probed answered curl with 200 and no challenge. The State and Health and Human Services files carry elements in the namespace `https://foreignassistance.gov`, among them `treasury-account` with a `fiscal-funding-year` child, which names ForeignAssistance.gov as the generator. *Surveyed 2026-09-23* (§9y) |
+| The S3 files reproduce the FA.gov API's figures | Nigeria, Health and Human Services as reporting organisation, HIV disbursements in millions by US fiscal year derived from the transaction date, S3 file first and API `HHS/CDC` second. FY2021 75.35 against 76.19, FY2022 152.07 against 152.22, FY2023 129.99 against 130.53, FY2024 98.43 against 98.46, FY2025 101.90 against 101.90. The differences are at or below 1.1 per cent and are not yet separated into fiscal-year derivation and content. *Surveyed 2026-09-23* (§9y) |
+| The S3 files carry every field the FA.gov connector now derives from text columns | A transaction holds `transaction-type` code 3 for a disbursement, `transaction-date`, `value` in US dollars, `recipient-country` as a two-letter code, `sector` vocabulary 99 whose narrative is the USG sector name, among them HIV/AIDS, and `sector` vocabulary 1 whose code is the DAC purpose code, among them 13040. The reporting organisation reference gives the managing agency, `US-GOV-14` being Health and Human Services. *Surveyed 2026-09-23* (§9y) |
+| The S3 window reaches the current fiscal year and varies by agency before 2021 | Health and Human Services Nigeria holds transactions in 2012 (2), 2014 (1), 2015 (1), 2016 (6), 2017 (7), 2018 (11) and 2019 (5), then 147, 135, 145, 135 and 118 for 2021 to 2025, and none for 2026. State Nigeria holds transaction dates from 2013 to 2026, with 234 in 2020 and 79 in 2026. So the S3 route covers FY2021 onwards in full and cannot replace the bulk file for 2001 to 2020. *Surveyed 2026-09-23* (§9y) |
+| USAID's S3 files are a month older than the other agencies' and some are empty | USAID files answer Last-Modified 3 August 2026, State 5 September 2026 and Health and Human Services 4 September 2026. USAID Grenada is 0 bytes. The FA.gov site states data last updated 31 August 2026. *Surveyed 2026-09-23* (§9y) |
+| Throughput from S3 to this machine is low enough to shape the design | A clean single fetch of a 69,679-byte State file ran at 3,893 bytes a second. A sample of 12 of the 487 files gives a mean of 4.0 megabytes, which implies about 2 gigabytes in all, and the mean is unstable because two files in the sample are about 40 megabytes. The figures are from this machine on 23 September 2026 and need repeating on Jason's. *Surveyed 2026-09-23* (§9y) |
+| data.gov's catalogue API is unreachable, so a data.gov mirror of the FA.gov file stays unchecked | `catalog.data.gov/api/3/action/package_search` and `catalog.data.gov/api/action/package_search` both answer 404 with the body `{"detail":{},"message":"Not Found"}`. *Surveyed 2026-09-23* (§9y) |

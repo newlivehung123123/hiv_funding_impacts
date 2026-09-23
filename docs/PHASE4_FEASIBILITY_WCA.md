@@ -669,6 +669,28 @@ activity/date/value keys appear under more than one of them, so summing without 
 code double-counts. And `sum()` in the query API silently returns zero: aggregation has to be
 done locally over raw rows.
 
+**Correction, 21 September 2026.** Work item #16 read d-portal again in full, and
+[access ladder §9x](ACCESS_LADDER.md) holds the evidence. The table above counts disbursements
+(code D) only, splits each transaction by d-portal's own rules, includes the US government and was
+read without filtering the rows d-portal copies from commitments. US government IATI republishes
+ForeignAssistance.gov, with a median ratio of 1.0 by US fiscal year in every year from FY2016 to
+FY2024, so the US government's part of each figure adds nothing to the panel. The Global Fund's
+IATI figure equals the panel's OECD CRS series once whole HIV grants and whole joint HIV and TB
+grants are counted. d-portal's 13040 figure gives only 0.52 to 0.59 of CRS from 2020, because the
+Global Fund split the grants that began in 2018 across three purpose codes. The Global Fund's IATI
+figure therefore adds 2025 and 2026, which CRS does not yet reach, and no independent check on the
+years CRS covers. The paragraph on two traps is wrong about the transaction codes and wrong about
+`sum()`. IATI's transaction types form one codelist, disbursements and expenditures are distinct
+flows that a connector sums, and `sum()` works in single precision. Read again on 20 and 21
+September 2026, Nigeria's HIV-sector disbursements come to 338,180,200 in 2023, 395,198,700 in
+2024, 330,811,580 in 2025 and 230,015,260 in 2026 so far. Government and multilateral money
+published to IATI already sits inside the panel's CRS all-official-donor total up to 2024, so for
+FCDO, AFD, UNAIDS and the other official publishers IATI adds a split by publisher and the years
+2025 and 2026. IATI adds new money for the Gates Foundation, provided the CRS all-official-donor
+total holds no Gates money, which the survey did not check. An IATI series for official publishers
+has to exclude UNDP's Global Fund money, the Asian Development Bank's COVID money and Germany's
+contributions to the Global Fund before anyone reads the series.
+
 ## UNICEF SDMX — checked, and mostly a republication
 
 `sdmx.data.unicef.org/ws/public/sdmxapi/rest/` is open and undocumented-friendly; the `HIV_AIDS`
