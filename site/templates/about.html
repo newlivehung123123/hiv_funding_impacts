@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}About the project — {{ site.name }}{% endblock %}
-{% block description %}Who runs the project, why it exists, and what it will cover next.{% endblock %}
+{% block description %}Who runs the project, why the project exists, and what the project will cover next.{% endblock %}
 
 {% block main %}
 <div class="wrap paper__head">
@@ -14,70 +14,80 @@
 </div>
 
 <div class="wrap prose">
-  <h2>Why this project exists</h2>
+  <h2>Why our project exists</h2>
   <p>
-    In 2025 the United States began replacing its previous global health assistance arrangements
-    with country-by-country agreements under the America First Global Health Strategy. A total of
-    {{ stats.n_mou }} agreements have been signed so far and {{ stats.n_mou_hiv }} cover HIV. The
-    consequences for treatment, testing and prevention will show up in national programme data
-    over several years, in different places and at different speeds.
+    In 2025 the United States government began replacing the earlier arrangements for United
+    States global health assistance with country-by-country agreements under the America First
+    Global Health Strategy. A total of {{ stats.n_mou }} agreements have been signed so
+    far{% if stats.n_mou_scoped == stats.n_mou %} and {{ stats.n_mou_hiv }} cover HIV{% endif %}.
+    The consequences for treatment, testing and prevention will
+    show up in national programme data over several years, in different places and at different
+    speeds.
   </p>
   <p>
-    Most of the figures needed to reflect this <em>status quo</em> already exist. These figures are
+    Most of the figures needed to reflect the <em>status quo</em> already exist. The figures are
     scattered across donor reporting systems, international estimates and national programme
-    reports, each published on its own schedule, in its own vocabulary, and at its own level of
-    detail. Assembling them by hand for one country takes days and is out of date by the time it
-    is finished. Our pipeline does that assembly programmatically, and we ensure that the
-    resulting figures can be checked by reporting the data origins (i.e., original data sources).
+    reports, and the publishers differ in schedule, in vocabulary and in level of detail.
+    Assembling the figures by hand for a single country takes days, and the hand-assembled
+    figures are out of date by the time the assembly is finished. Our pipeline assembles the
+    figures programmatically, and we ensure that the resulting figures can be checked by
+    reporting the data origins (i.e., original data sources).
   </p>
 
-  <h2>Who runs this project</h2>
+  <h2>Who runs our project</h2>
   <p>
-    Dr. Adrian Smith (Associate Professor, Director of Clinical Studies; Nuffield Department of
+    Dr. Adrian Smith (Associate Professor, Director of Clinical Studies, Nuffield Department of
     Population Health, Oxford), who specialises in HIV epidemiology, recently presented how HIV
     funding cuts from the United States affect LMICs. Dr. Jason Hung, who is a technically enabled
     social and health data scientist partly trained in quantitative health sociology, relocated to
-    the Global South upon finishing his PhD at Cambridge. Upon discussion and given their common
-    interests in HIV/STI research in the Global South contexts, they decided to jointly build and
-    run this project. Adrian is
+    the Global South upon finishing his PhD at Cambridge. Upon discussion and given the common
+    interests of Adrian and Jason in HIV/STI research in Global South contexts, Adrian and Jason
+    decided to jointly build and run our project. Adrian is
     responsible for developing the research design and contextual framing. Jason, on the other
-    hand, is responsible for building the pipeline and this site.
+    hand, is responsible for building the pipeline and the website.
   </p>
   <div class="note">
     The project is not published by, or affiliated to, any research institution.
   </div>
 
-  <h2>Where this project has got to</h2>
+  <h2>Where our project has got to</h2>
   <p>
-    We built the aggregator layer already, which is complete and near-global, covering panel data
-    from UNAIDS, the WHO Global Health Observatory, the World Bank, the OECD Creditor Reporting
-    System, United States self-reported disbursements and PEPFAR programme results. On top of
-    that, we successfully built four Southeast Asian country connectors at the country layer.
+    We have already built the aggregator layer, meaning the figures from international and donor
+    bodies that compile figures across many countries. The aggregator layer is complete and
+    near-global, covering panel data from UNAIDS, the WHO Global Health Observatory, the World
+    Bank, the OECD Creditor Reporting System, United States self-reported disbursements and
+    PEPFAR programme results. On top of the aggregator layer, we successfully built 11 connectors,
+    meaning programs that read a single national source, at the country layer, namely four for
+    Southeast Asia, a single connector for Eastern and Southern Africa and six for Western and
+    Central Africa.
   </p>
   <p>
     We decided to choose Southeast Asia data collection as the pilot because Jason specialises in,
     and is most familiar with, data science research in Southeast Asian contexts. We already built
-    the aggregator-level connector that covers Southeast Asia and the other seven LMIC regions.
-    What we lack is the country-level data collection and assessment for the remaining seven LMIC
-    regions.
+    the aggregator-level connectors, which cover all eight LMIC regions on the website. What we
+    lack is the country-level data collection and assessment for South Asia, East Asia and the
+    Pacific, Latin America and the Caribbean, the Middle East and North Africa, and Eastern
+    Europe and Central Asia.
   </p>
 
   <h2>What comes next</h2>
   <ul>
-    <li>Extend the country-level assessment region by region, beginning with Eastern and Southern
-      Africa, which carries the largest share of both the epidemic and the signed agreements.</li>
-    <li>Separate United States funding by the agency that disbursed it, so that changes at USAID
-      can be told apart from changes at the Centers for Disease Control and Prevention.</li>
-    <li>Publish the pipeline, the codebook and the assembled panel so that the figures on this
-      site can be regenerated independently.</li>
+    <li>Extend the country-level assessment, region by region, to South Asia, East Asia and the
+      Pacific, Latin America and the Caribbean, the Middle East and North Africa, and Eastern
+      Europe and Central Asia.</li>
+    <li>Separate United States funding by the agency that disbursed the funding, so that changes
+      at USAID can be told apart from changes at the Centers for Disease Control and
+      Prevention.</li>
+    <li>Publish the pipeline, the codebook and the assembled panel so that the figures on the
+      website can be regenerated independently.</li>
   </ul>
 
   <h2>Corrections</h2>
   <p>
-    If a figure here does not match what a source publishes, the discrepancy is worth reporting
-    and will be investigated against the stored retrieval record. The panel keeps the URL (for the
-    data source) and the date for every row, so it is usually possible to establish whether the
-    source changed or the pipeline read it wrongly.
+    If a figure on the website does not match what the source publishes, the discrepancy is worth
+    reporting and will be investigated against the stored retrieval record. The panel keeps the
+    URL of the data source and the retrieval date for every row, so our project can usually
+    establish whether the source changed the figure or the pipeline misread the figure.
   </p>
 
   <h2>How to cite</h2>

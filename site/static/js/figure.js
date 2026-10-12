@@ -165,7 +165,7 @@
     // a bar chart has no points on a line to aim at, so it is not offered a readout it
     // has not got
     cv.querySelector('[data-cview-hint]').textContent =
-      clone.querySelector('.hit') ? 'Tap a point for its value' : '';
+      clone.querySelector('.hit') ? 'Tap a point to see the value' : '';
     return true;
   }
 

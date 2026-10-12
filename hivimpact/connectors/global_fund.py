@@ -36,24 +36,54 @@ Three traps, all of which would enter the panel silently.
     marks it as partial, and no range check would catch it because 1,531 is a perfectly
     ordinary number for a small country. `geographicCoverage` is the only field that
     separates the two, so only National rows are emitted and the rest are counted and named
-    in the log.
+    in the log. 160 of the 17,538 rows read on 1 October 2026 state no coverage at all, and
+    those are counted apart from the subnational ones, because nothing in the data says what
+    a blank coverage means and a coverage nobody stated cannot be read as national.
 
   * Sixty-three of the 300 geographies are Multicountry, and a regional grant's results
     would land on whichever country the code resolved to. Only geographies the service
-    itself grades as Country are accepted.
+    itself grades as Country are accepted, and that filter and not the coverage test is what
+    guarantees a panel row is a country. The two tests are not interchangeable and the
+    coverage test is the weaker of them, because the service publishes Zanzibar under code
+    `QNB` with `geographicCoverage` set to `National` while grading Zanzibar Subnational in
+    the geography table. So the coverage field means national within whatever unit reported,
+    and a connector testing coverage alone would have written Zanzibar's results under a
+    country code. Zanzibar carries one row in each year of the HIV testing series and 104 of
+    the 127 rows declined on 1 October 2026 for naming a geography the service does not grade
+    Country, the rest being the Caribbean at 13, Oceania at 7 and Western Asia at 3.
 
-Annual_Results is not an HIV dataset. It is 15,313 rows covering every indicator the
-institution's grants report, so malaria, drug-resistant TB and the cross-cutting
-health-systems lines arrive in the same response and are named in _UNMAPPED_OTHER_DISEASE
-rather than skipped silently. The whole dataset arrives at once with no nextLink, so there
-is no paging to get wrong.
+Annual_Results is not an HIV dataset. It was 15,313 rows and is 17,538 as of 2026-10-01,
+covering every indicator the institution's grants report, so malaria, drug-resistant TB and
+the cross-cutting health-systems lines arrive in the same response and are named in
+_UNMAPPED_OTHER_DISEASE instead of being skipped silently. The whole dataset arrives at once
+with no nextLink, so there is no paging to get wrong.
 
 Measured on the run of 2026-09-05: 4,797 rows emitted over nine canonical indicators, 2,034
 subnational rows left out and 80 rows whose geography is not a country. The count of
 reporting countries in `new_diagnoses` falls from 22 in 2023 to eight in 2024, which is
-grant reporting arriving late rather than diagnoses collapsing, so every Global Fund series
-has to be read on the countries reporting both years. `writers._reporter_drops` says so in
-the validation log.
+grant reporting arriving late and not diagnoses collapsing, so every Global Fund series has
+to be read on the countries reporting both years. `writers._reporter_drops` says so in the
+validation log. `new_diagnoses` has since fallen again, to two reporting countries in 2025,
+so the series thins year on year without ever stopping and no stopped-series warning will
+fire for it.
+
+Every drop path is accounted for, measured on the 17,538 rows saved on 2026-10-01 by
+`scripts/survey_global_fund_results.py`. 8,294 rows carried an indicator name this connector
+does not map, 2,168 stated a coverage below National, 160 stated no coverage at all, 127
+named a geography the service does not grade Country, and 6,789 were emitted. Zero rows
+carried an unreadable year and zero carried an unreadable numerator, so the two counters for
+those exits have never yet been anything but zero and exist so that a reader can tell a count
+of zero from a count nobody took. No row of that dataset reaches the panel carrying one of
+the service's aggregate codes.
+
+The Global Fund retired `Total number of HIV tests` after the 2024 reporting year. The
+service holds no 2025 row for that indicator at any coverage, while publishing 2025 for every
+other HIV indicator here and for every disaggregated HIV testing count it reports, including
+testing among sex workers, prisoners, men who have sex with men, people who inject drugs and
+transgender people. So `hiv_tests_performed` from this source ends at 2024, where 66 countries
+reported 41,041,341 tests, and the end of the series is a change in the publisher's reporting
+framework and not a fall in testing. §9ad of docs/ACCESS_LADDER.md holds the measurement and
+the two other publishers that end the same measure in the same year.
 
 One row in that run is a different quantity from its own series. Ethiopia's 2017 testing
 figure is 7,919,182 against roughly 300,000 in every other year from 2018 to 2024, a 27-fold
@@ -77,6 +107,53 @@ log = logging.getLogger("hivimpact")
 
 _BASE = "https://fetch.theglobalfund.org/v4.2/odata"
 _DATASET = "Annual_Results"
+
+#: Global Fund country codes that are not ISO 3166-1 alpha-3, mapped to the code the rest of
+#: this panel uses. Both Global Fund connectors import this map, so the two cannot drift apart.
+#:
+#: THIS MAP MUST NOT MOVE INTO hivimpact/normalize.py, for the reason item 18(y) keeps the
+#: ForeignAssistance.gov code `SF` out of the shared normaliser. `QNA` sits inside the ISO
+#: 3166-1 user-assigned block QMA to QZZ, where any publisher may assign any meaning it likes,
+#: and the Global Fund is plainly using that block as its own private range, since the same
+#: geography table calls the World `QMZ` and Zanzibar `QNB`. A `QNA` entry in the shared
+#: normaliser would silently rewrite a different publisher's private code the first time
+#: another source used the code.
+#:
+#: Kosovo is `XKX` here because `XKX` is what hivimpact/normalize.py sets as the panel's
+#: convention (lines 91, 152, 158 and 162) and what `iati`, `oecd_crs` and `world_bank`
+#: already write. Before this map existed the panel held Kosovo under two codes, 64 Global
+#: Fund rows under `QNA` and 99 rows elsewhere under `XKX`, so the Global Fund rows joined to
+#: no World Bank denominator and corroborated nothing (section 5c item 32, 1 October 2026).
+GF_CODE_ALIASES: Dict[str, str] = {
+    "QNA": "XKX",  # Kosovo, which the service also marks isO2 XK
+}
+
+#: Global Fund country codes that are not ISO 3166-1 alpha-3 and are refused rather than
+#: mapped, with the reason. A refused code emits no row. Every Country-level code the service
+#: publishes was tested against ISO 3166-1 on 1 October 2026 and exactly two failed, being the
+#: `QNA` mapped above and the `ANT` refused here. `ANT` reaches no panel row from either
+#: connector today, and the entry is here so that a later filing against `ANT` is refused in
+#: writing instead of entering the panel under a country that no longer exists.
+GF_CODES_REFUSED: Dict[str, str] = {
+    "ANT": ("the Netherlands Antilles, dissolved in 2010 into Curacao, Sint Maarten and three "
+            "Dutch municipalities, so the code maps onto no one modern country and splitting "
+            "the money between the successors would be this project inventing a figure"),
+}
+
+
+def gf_country_code(code: str) -> Tuple[Optional[str], Optional[str]]:
+    """Read one Global Fund geography code. Returns (iso3, refusal reason), one of them None.
+
+    A code of any length other than three is refused, because a Global Fund country code is
+    always three characters and anything else means the row is not the country row it looks
+    like.
+    """
+    text = str(code or "").strip().upper()
+    if text in GF_CODES_REFUSED:
+        return None, GF_CODES_REFUSED[text]
+    if len(text) != 3:
+        return None, f"country code {text!r} is not three characters"
+    return GF_CODE_ALIASES.get(text, text), None
 
 
 @dataclass(frozen=True)
@@ -196,6 +273,16 @@ _UNMAPPED_OTHER_DISEASE = {
     "Structures covered by Indoor Residual Spraying",
     "Suspected malaria cases that receive a parasitological test",
     "TB patients tested using WHO recommended rapid tests",
+    # New on the run of 1 October 2026, carrying 15 rows, and not a new indicator. The set
+    # already holds "Percentage of TB patients with DST result for at least Rifampicin", and
+    # the two names differ by that prefix alone, so the Global Fund has restated one
+    # drug-susceptibility-testing indicator as a count where the earlier publication gave a
+    # proportion. Both spellings are listed, because the earlier spelling still carries the
+    # earlier years. The indicator is drug-resistant tuberculosis either way and so sits
+    # outside this panel under reason two, and the change of measure is recorded here because
+    # a percentage silently becoming a count is the kind of change that would corrupt a series
+    # had the panel been carrying the series.
+    "TB patients with DST result for at least Rifampicin",
 }
 
 _KNOWN_UNMAPPED = frozenset(_UNMAPPED_HIV | _UNMAPPED_OTHER_DISEASE)
@@ -224,18 +311,34 @@ class GlobalFundConnector(BaseConnector):
             rows = self.get_json(url).get("value", [])
             kept = {}
             levels: Dict[str, int] = {}
+            aliased: Dict[str, str] = {}
+            refused: Dict[str, str] = {}
             for r in rows:
                 level = str(r.get("level") or "")
                 levels[level] = levels.get(level, 0) + 1
                 if level != "Country":
                     continue
                 code = str(r.get("code") or "").strip().upper()
-                if len(code) == 3:
-                    kept[str(r.get("id"))] = (code, str(r.get("name") or ""))
+                iso3, reason = gf_country_code(code)
+                if iso3 is None:
+                    # A three-character code that is refused is named in the log. A code of
+                    # another length is the old silent skip and stays silent, because the
+                    # service has never published one.
+                    if code in GF_CODES_REFUSED:
+                        refused[code] = str(reason)
+                    continue
+                if iso3 != code:
+                    aliased[code] = iso3
+                kept[str(r.get("id"))] = (iso3, str(r.get("name") or ""))
             self._geographies = kept
             log.info("global_fund: %d geographies, %d of them countries (%s)",
                      len(rows), len(kept),
                      ", ".join(f"{k or 'unlabelled'} {v}" for k, v in sorted(levels.items())))
+            for code, iso3 in sorted(aliased.items()):
+                log.info("global_fund: country code %s read as %s, the code this panel uses",
+                         code, iso3)
+            for code, reason in sorted(refused.items()):
+                log.info("global_fund: country code %s refused, %s", code, reason)
         return self._geographies
 
     # -- the results -----------------------------------------------------------
@@ -260,7 +363,11 @@ class GlobalFundConnector(BaseConnector):
 
         emitted = 0
         subnational = 0
-        unresolved = 0
+        coverage_blank = 0
+        not_a_country = 0
+        off_list = 0
+        bad_year = 0
+        no_value = 0
         unmapped: Dict[str, int] = {}
         per_indicator: Dict[str, int] = {}
 
@@ -271,33 +378,52 @@ class GlobalFundConnector(BaseConnector):
                 unmapped[name] = unmapped.get(name, 0) + 1
                 continue
 
-            # One grant's catchment, wearing a country's code. See the docstring.
-            if str(r.get("geographicCoverage") or "").strip() != "National":
-                subnational += 1
+            # One grant's catchment, wearing a country's code. See the docstring. A row stating
+            # no coverage at all is counted apart from a row stating a coverage below the
+            # national level, because nothing in the data says what a blank coverage means and
+            # the two are different facts about the publisher.
+            coverage = str(r.get("geographicCoverage") or "").strip()
+            if coverage != "National":
+                if coverage:
+                    subnational += 1
+                else:
+                    coverage_blank += 1
                 continue
 
+            # Not a lookup failure. geographies() keeps only the geographies the service grades
+            # Country, so a region or a subnational unit resolves perfectly well and is declined
+            # here. Zanzibar is the one to know about, because the service publishes Zanzibar
+            # with geographicCoverage National and so the coverage test above lets it through.
             resolved = geo.get(str(r.get("recordId")))
             if resolved is None:
-                unresolved += 1
+                not_a_country += 1
                 continue
             iso3, country_name = resolved
             if wanted and iso3 not in wanted:
+                off_list += 1
                 continue
 
             year = r.get("resultValueYear")
             try:
                 year = int(year)
             except (TypeError, ValueError):
+                bad_year += 1
                 continue
             if year < start_year or year > end_year:
                 continue
 
+            # A row published with no number is a different fact from a row never published,
+            # and the panel cannot carry either, so the count is logged. Measured at zero on
+            # the whole dataset on 1 October 2026, which is why the count had no counter until
+            # then and why a count that stops being zero is worth seeing.
             value = r.get("resultValueNumerator")
             if value is None:
+                no_value += 1
                 continue
             try:
                 value = float(value)
             except (TypeError, ValueError):
+                no_value += 1
                 continue
 
             canonical = CANONICAL_INDICATORS.get(spec.canonical)
@@ -325,8 +451,20 @@ class GlobalFundConnector(BaseConnector):
 
         for canonical, n in sorted(per_indicator.items(), key=lambda kv: -kv[1]):
             log.info("global_fund: %-24s %5d rows", canonical, n)
-        log.info("global_fund: %d rows emitted, %d subnational rows left out, "
-                 "%d rows whose geography is not a country", emitted, subnational, unresolved)
+        # Every exit from the loop above is named here, and the named counts plus the rows
+        # dropped for an unmapped name plus the rows outside the requested years add back to
+        # the rows read. A reader who cannot make the arithmetic close has found a drop path
+        # nobody counted, which is the defect this line exists to prevent.
+        unmapped_rows = sum(unmapped.values())
+        out_of_range = (len(rows) - emitted - subnational - coverage_blank - not_a_country
+                        - off_list - bad_year - no_value - unmapped_rows)
+        log.info("global_fund: %d rows emitted of %d read, and of the rest %d carried an "
+                 "unmapped indicator name, %d stated a coverage below National, %d stated no "
+                 "coverage at all, %d named a geography the service does not grade Country, "
+                 "%d named a country outside the requested list, %d fell outside %d to %d, "
+                 "%d carried an unreadable year and %d carried no usable value",
+                 emitted, len(rows), unmapped_rows, subnational, coverage_blank, not_a_country,
+                 off_list, out_of_range, start_year, end_year, bad_year, no_value)
 
         new_names = {n: c for n, c in unmapped.items() if n not in _KNOWN_UNMAPPED and n}
         if new_names:

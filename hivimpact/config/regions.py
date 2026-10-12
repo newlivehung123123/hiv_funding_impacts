@@ -3,7 +3,7 @@ Regional grouping of low- and middle-income countries, used by the site build.
 
 The panel itself is keyed on ISO3 and knows nothing about regions. This module supplies
 the regional layer the interface needs: which countries belong to each region, which
-region the pilot covers, and which regions are still to be assessed.
+regions are published, and which regions are still to be assessed.
 
 Regions follow the UNAIDS reporting groupings, with two departures made for this project.
 Asia and the Pacific is split into Southeast Asia, South Asia, and East Asia and the
@@ -36,8 +36,8 @@ REGIONS: List[Dict] = [
         "status": LIVE,
         "phase": "Phase 1.1",
         "iso3": list(SEA_ISO3),
-        "note": ("Nine countries. Four national programmes are read at source; the remainder "
-                 "are covered by the aggregator layer."),
+        "note": ("Cambodia, the Philippines and Thailand are read at source, and Indonesia "
+                 "has reports from community-led monitoring."),
     },
     {
         "slug": "south-asia",
@@ -45,7 +45,7 @@ REGIONS: List[Dict] = [
         "status": PLANNED,
         "phase": "Phase 3",
         "iso3": ["AFG", "BGD", "BTN", "IND", "MDV", "NPL", "PAK", "LKA"],
-        "note": "Aggregator coverage is already available. No country-level assessment yet.",
+        "note": "No country in the region has yet been assessed for national sources.",
     },
     {
         "slug": "east-asia-and-the-pacific",
@@ -54,28 +54,28 @@ REGIONS: List[Dict] = [
         "phase": "Phase 3",
         "iso3": ["CHN", "MNG", "PRK", "PNG", "FJI", "SLB", "VUT", "WSM", "TON",
                  "KIR", "TUV", "FSM", "MHL"],
-        "note": "Aggregator coverage is already available. No country-level assessment yet.",
+        "note": "No country in the region has yet been assessed for national sources.",
     },
     {
         "slug": "eastern-and-southern-africa",
         "name": "Eastern and Southern Africa",
-        "status": PLANNED,
+        "status": LIVE,
         "phase": "Phase 3",
         "iso3": ["AGO", "BWA", "BDI", "COM", "ERI", "SWZ", "ETH", "KEN", "LSO", "MDG",
                  "MWI", "MUS", "MOZ", "NAM", "RWA", "SOM", "ZAF", "SSD", "TZA", "UGA",
                  "ZMB", "ZWE"],
-        "note": ("The region carries the largest share of the global epidemic and of the "
-                 "bilateral agreements signed to date."),
+        "note": ("South Africa is read at source, through the Thembisa model of the "
+                 "University of Cape Town."),
     },
     {
         "slug": "western-and-central-africa",
         "name": "Western and Central Africa",
-        "status": PLANNED,
-        "phase": "Phase 3",
+        "status": LIVE,
+        "phase": "Phase 4",
         "iso3": ["BEN", "BFA", "CPV", "CMR", "CAF", "TCD", "COG", "COD", "CIV", "GNQ",
                  "GAB", "GMB", "GHA", "GIN", "GNB", "LBR", "MLI", "MRT", "NER", "NGA",
                  "STP", "SEN", "SLE", "TGO"],
-        "note": "Aggregator coverage is already available. No country-level assessment yet.",
+        "note": "Nigeria, Cameroon, Niger, Guinea and Chad are read at source.",
     },
     {
         "slug": "latin-america-and-the-caribbean",
@@ -85,7 +85,7 @@ REGIONS: List[Dict] = [
         "iso3": ["ARG", "BLZ", "BOL", "BRA", "COL", "CRI", "CUB", "DOM", "ECU", "SLV",
                  "GTM", "GUY", "HTI", "HND", "JAM", "MEX", "NIC", "PAN", "PRY", "PER",
                  "SUR", "TTO", "VEN"],
-        "note": "Aggregator coverage is already available. No country-level assessment yet.",
+        "note": "No country in the region has yet been assessed for national sources.",
     },
     {
         "slug": "middle-east-and-north-africa",
@@ -94,7 +94,7 @@ REGIONS: List[Dict] = [
         "phase": "Phase 3",
         "iso3": ["DZA", "DJI", "EGY", "IRN", "IRQ", "JOR", "LBN", "LBY", "MAR", "SDN",
                  "SYR", "TUN", "PSE", "YEM"],
-        "note": "Aggregator coverage is already available. No country-level assessment yet.",
+        "note": "No country in the region has yet been assessed for national sources.",
     },
     {
         "slug": "eastern-europe-and-central-asia",
@@ -103,7 +103,7 @@ REGIONS: List[Dict] = [
         "phase": "Phase 3",
         "iso3": ["ALB", "ARM", "AZE", "BLR", "BIH", "GEO", "KAZ", "KGZ", "MDA", "MNE",
                  "MKD", "SRB", "TJK", "TKM", "TUR", "UKR", "UZB"],
-        "note": "Aggregator coverage is already available. No country-level assessment yet.",
+        "note": "No country in the region has yet been assessed for national sources.",
     },
 ]
 

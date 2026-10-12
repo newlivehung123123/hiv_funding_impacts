@@ -8,7 +8,7 @@
   <h1>How the panel is assembled</h1>
   <p class="paper__lede">
     We build a pipeline that reads published figures from structured feeds and from published
-    tables, keeps each source's own data value, and records where every figure came from (i.e.,
+    tables, keeps the data value of every source, and records where every figure came from (i.e.,
     the data source). Our pipeline does not estimate, interpolate or reconcile away differences
     between sources.
   </p>
@@ -19,10 +19,11 @@
 
   <p>
     Our project follows the effect of the reorganisation of United States global health
-    assistance on HIV services in LMICs. Measuring that effect requires data that represent two
-    things: (1) what donors report spending, and (2) what the services themselves report doing.
-    Neither alone is enough, because funding data are timely but say nothing about delivery,
-    while programme data describe delivery but its trackability is not real-time and is unevenly
+    assistance on HIV services in LMICs. Measuring the effect of the reorganisation on HIV
+    services requires data that represent two things, namely (1) what donors report spending,
+    and (2) what the HIV services report doing. Funding data alone are not enough, and programme
+    data alone are not enough, because funding data are timely but say nothing about delivery,
+    while programme data describe delivery but are not available in real time and are unevenly
     distributed geographically.
   </p>
 
@@ -34,40 +35,46 @@
     <li>
       <strong>Structured sources only.</strong> Figures come from machine-readable feeds and from
       published tables that can be read deterministically. Prose is never parsed for numbers.
-      Scanned documents are out of scope, because reading them reliably would require optical
-      character recognition and manual checking that the project cannot guarantee at scale.
+      Scanned documents are out of scope, because reading scanned documents reliably would
+      require optical character recognition and manual checking that the project cannot
+      guarantee at scale.
     </li>
     <li>
       <strong>No language models anywhere in the pipeline.</strong> Every figure is traceable to a
-      field in a file or a cell in a published table. An honest record that a country does not
+      field in a file or an entry in a published table. An honest record that a country does not
       publish in a usable form is more useful than a plausible number without a traceable origin.
       Language models are not used for data extraction to minimise data contamination and to
       maximise the validity and reliability of our project.
     </li>
     <li>
-      <strong>Data origin on every row.</strong> Each observation carries its source, the URL it
-      was read from, the source's own indicator code and the date of retrieval.
+      <strong>Data origin on every row.</strong> Every observation carries the name of the
+      source, the URL the observation was read from, the indicator code the source uses and the
+      date of retrieval.
     </li>
     <li>
-      <strong>Uncertainty is kept.</strong> Modelled estimates carry lower and upper bounds and
-      those bounds are stored and drawn. The point estimates for the 95-95-95 targets in
-      particular carry intervals wide enough that a single number misrepresents them.
+      <strong>Uncertainty is kept.</strong> Modelled estimates carry lower and upper bounds, and
+      the panel stores and draws the bounds. The point estimates for the 95-95-95 targets, the
+      UNAIDS targets for the shares of people living with HIV who are diagnosed, on treatment and
+      virally suppressed, carry intervals wide enough that a single number misrepresents the
+      estimate.
     </li>
   </ul>
 
   <h2>What is read, and from where</h2>
   <p>
-    We designed the pipeline to build the panel with two layers. The aggregator layer is
-    near-global and gives the panel its skeleton. Data in this layer are sourced primarily from
-    UNAIDS AIDSinfo, the WHO Global Health Observatory, the World Bank, the OECD Creditor
-    Reporting System, and United States self-reported disbursements from ForeignAssistance.gov
-    and programme results from PEPFAR Panorama. The country layer is the national programme
-    record, read directly where a country publishes it in a usable form.
+    We designed the pipeline to build the panel with two layers. The aggregator layer holds the
+    figures published by international and donor bodies that compile figures across many
+    countries, covers almost every country, and provides the near-global base of the panel. Data
+    in the aggregator layer are sourced primarily from UNAIDS AIDSinfo, the WHO Global Health
+    Observatory, the World Bank, the OECD Creditor Reporting System, and United States
+    self-reported disbursements from ForeignAssistance.gov and programme results from PEPFAR
+    Panorama. The country layer is the national programme record, read directly where a country
+    publishes the record in a usable form.
   </p>
   <div class="tbl-scroll">
     <table class="tbl">
       <thead>
-        <tr><th>Source</th><th>What it provides</th><th>Type</th><th class="num">Rows</th><th class="num">Years</th></tr>
+        <tr><th>Source</th><th>What the source provides</th><th>Type</th><th class="num">Rows</th><th class="num">Years</th></tr>
       </thead>
       <tbody>
         {% for s in sources %}
@@ -85,30 +92,38 @@
 
   <h2 id="feasibility" style="scroll-margin-top:84px">Going to source, country by country</h2>
   <p>
-    The question we encountered at the pilot stage was whether national programme data can
-    realistically be read at source, country by country. The answer varies notably, and the
-    variation is itself a finding. All nine Southeast Asian countries run a national HIV
-    programme database. Data exist in every country, but some do not allow foreign or
-    non-institutional access.
+    A country is read at source when our project takes the figures for the country directly from
+    a national publisher, for example the national HIV programme, the health ministry, the
+    national statistics office or an official national HIV model, and not only from the
+    international and donor bodies that compile figures across many countries. The question we
+    encountered at the pilot stage was whether national programme data can realistically be read
+    at source, country by country. The answer varies from country to country, and the variation
+    between countries is a finding of our project. All nine Southeast Asian countries run a
+    national HIV programme database. Data exist in every Southeast Asian country, but several
+    countries do not allow foreign or non-institutional access, and access to the national data
+    takes three forms, from fully open to closed.
   </p>
   <ul>
     <li>An open structured feed, as in Thailand, where the national programme's data mart answers
       queries directly.</li>
     <li>An open born-digital report whose tables can be read without interpretation, as in
       Cambodia and the Philippines.</li>
-    <li>A closed database that releases only scanned documents or its submission to the
-      international aggregators. For these countries the realistic route is an institutional
-      data-sharing agreement, not public collection.</li>
+    <li>A closed database that releases only scanned documents or the national submission to the
+      international aggregators. For a country with a closed database, the realistic route is an
+      institutional data-sharing agreement, not public collection.</li>
   </ul>
   <p>
-    We decided whether a national report is worth reading at all by one factor. A report only adds
-    something if it carries data the aggregators do not already receive, such as sub-national
-    detail, more recent periods, key-population breakdowns, or programme flows. The Philippine
-    quarterly surveillance report, for example, qualifies. It is regional, quarterly, and richer
-    than the annual report the Philippines submits to UNAIDS. Malaysia's national report does not,
-    because that report is itself the country's annual submission to UNAIDS, so reading it would
-    return figures already in the panel through UNAIDS.
+    We decided whether a national report is worth reading at all by a single test. A national
+    report adds information only if the report carries data the aggregators do not already
+    receive, for example sub-national detail, more recent periods, figures for key populations
+    (groups at higher risk of HIV, for example sex workers and people who inject drugs), or
+    programme counts. The Philippine quarterly surveillance report, for example, passes the test.
+    The Philippine report is regional, quarterly, and more detailed than the annual report the
+    Philippines submits to UNAIDS. Malaysia's national report does not pass the test, because the
+    Malaysian report is the annual submission of Malaysia to UNAIDS, so reading the Malaysian
+    report would return figures already in the panel through UNAIDS.
   </p>
+  <h3 id="feasibility-southeast-asia" style="scroll-margin-top:84px">Southeast Asia</h3>
   <div class="tbl-scroll">
     <table class="tbl">
       <thead>
@@ -127,55 +142,82 @@
     </table>
   </div>
   <p>
-    In the pilot stage (i.e., exclusively extracting data from the Southeast Asia region), three
-    national cascades and one community layer are now read at source, by three different routes.
-    These are a live programme interface in Thailand, published report tables in Cambodia and the
-    Philippines, and a community-led monitoring interface covering Indonesia.
+    In the pilot stage (i.e., exclusively extracting data from the Southeast Asia region), the
+    national treatment cascades of Thailand, Cambodia and the Philippines, meaning the numbers of
+    people diagnosed, on treatment and virally suppressed, are read at source. Thailand is read
+    through a live programme interface, and Cambodia and the Philippines through published report
+    tables. Indonesia is covered by a community-led monitoring interface, which reports what
+    service users say about a small number of facilities.
   </p>
+
+  {% for fr in feasibility_regions %}
+  <h3 id="feasibility-{{ fr.slug }}" style="scroll-margin-top:84px">{{ fr.name }}</h3>
+  <p>{{ fr.summary }}</p>
+  <div class="tbl-scroll">
+    <table class="tbl">
+      <thead>
+        <tr><th>Country</th><th>National source</th><th>Access</th><th>Position</th></tr>
+      </thead>
+      <tbody>
+        {% for f in fr.rows %}
+        <tr>
+          <td><strong>{{ f.country }}</strong></td>
+          <td>{{ f.source }}</td>
+          <td>{{ f.access }}</td>
+          <td>{% if f.built %}<span class="pill-ok">{{ f.status }}</span>{% else %}<span class="pill-no">{{ f.status }}</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
 
   <h2>Reporting periods</h2>
   <p>
     Funding and programme data are filed in periods, and a period that is still open for data
     collection is likely subject to a figure drop when the data collected are only provisional but
     not full. For example, United States disbursements for fiscal year {{ flagpolicy.open_fy }} are
-    still being reported, and PEPFAR results for {{ flagpolicy.pepfar_year }} cover
-    {{ flagpolicy.pepfar_quarters }} of the {{ flagpolicy.pepfar_of }} quarters the year before it
-    published. Points from an incomplete period are drawn
-    with an open red marker and named in the note under every figure. They are never compared with
-    complete years.
+    still being reported, and PEPFAR results for {{ flagpolicy.pepfar_year }} cover only
+    {{ flagpolicy.pepfar_quarters }} of the {{ flagpolicy.pepfar_of }} quarters of
+    {{ flagpolicy.pepfar_year }}. Points from an incomplete period are drawn with an open red
+    marker, are named in the note under every figure, and are never compared with complete years.
   </p>
   <div class="note">
     A total of {{ stats.n_flagged_explicit }} rows in the panel carry an explicit data-quality
-    flag. Most are breaks in PEPFAR reporting scope, where a change in which implementing partners
-    report makes one year incomparable with the next. The flag text is stored on the row and shown
-    on the country page.
+    flag. Most flagged rows mark breaks in PEPFAR reporting scope, where a change in the
+    implementing partners that report, meaning the organisations PEPFAR funds to deliver
+    services, makes a year incomparable with the following year. The flag text is stored on the
+    row and shown on the country page.
   </div>
 
   <h2>Comparing sources</h2>
   <p>
-    Where two sources report the same country, indicator and year, both values are kept and the
-    pair is compared. The comparison is classified before it is read, because agreement between
-    two sources that publish the same underlying estimate is arithmetic, not corroboration.
-    The classification method, the thresholds and every verdict with its evidence are set out on
-    the <a href="{{ rel }}reconciliation/">reconciliation page</a>.
+    Where two sources report the same country, indicator and year, the panel keeps the value
+    from every source and compares the values. A comparison between two sources is classified
+    before the comparison is read, because agreement between two sources that publish the same
+    underlying estimate is arithmetic, not corroboration. The classification method, the
+    thresholds, and the classification of every source pair with the basis for the
+    classification are set out on the <a href="{{ rel }}reconciliation/">reconciliation page</a>.
   </p>
 
   <h2>What the panel does not support</h2>
   <p>
-    The figures describe reported funding and reported service activity. They do not, on their
-    own, establish that a change in one caused a change in the other. Reporting lags differ by
-    source and by country, so a decline that appears in one series and not another may be a
-    difference in filing but not in delivery. Programme footprints are not national totals. Here,
-    PEPFAR reports what PEPFAR-supported sites did, which is a part of a country's response, not
-    the entirety of it. Community-led monitoring covers a small number of facilities and is a
-    sentinel signal, not a representative sample.
+    The figures in the panel describe reported funding and reported service activity. The
+    figures alone do not establish that a change in funding caused a change in services.
+    Reporting lags differ by source and by country, so a decline that appears in a first series
+    and not in a second series may reflect a difference in filing and not a difference in
+    delivery. Programme results are not national totals. PEPFAR reports what PEPFAR-supported
+    sites did, which is part of the national HIV response of a country and not the whole national
+    response. Community-led monitoring covers a small number of selected facilities and is not a
+    representative sample.
   </p>
 
   <h2>Reproducing the panel</h2>
   <p>
-    We design the pipeline as a Python package with one connector per source and a single assembly
-    step. The pipeline writes the panel to CSV, Parquet and SQLite, runs the reconciliation, and
-    then we build this site from those files alone. The panel on this site was last assembled on
+    We design the pipeline as a Python package with a separate connector, a short program that
+    reads a single source, for every source, and a single assembly step. The pipeline writes the
+    panel to CSV, Parquet and SQLite, runs the reconciliation, and then we build the website from
+    the CSV, Parquet and SQLite files alone. The panel on the website was last assembled on
     {{ stats.built_on }}.
   </p>
 </div>

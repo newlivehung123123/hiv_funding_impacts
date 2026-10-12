@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Iterable, List
+from typing import Dict, Iterable, List, Optional
 
 import pandas as pd
 
@@ -257,29 +257,113 @@ def _floor_values(df: pd.DataFrame) -> List[str]:
     return out
 
 
-def _reporter_drops(df: pd.DataFrame) -> List[str]:
-    """Series where the set of reporting countries shrinks sharply between two years.
+def _periodic_stride(years: List[int]) -> Optional[int]:
+    """The stride of a series published on a cycle longer than a year, else None.
 
-    Reported as a warning and not a correction: the panel keeps what each source
-    published, and it is the comparison that has to be made on a balanced set, not the
-    data that has to be trimmed. The warning exists so nobody totals two years of a
-    changed reporter set and reads the difference as a change in the world.
+    An allocation cycle is the case this exists for. The Global Fund communicates one
+    allocation per country per three-year cycle, so `global_fund_hiv_allocation_cycle`
+    holds 2017, 2020, 2023 and 2026 and holds nothing in between, and the empty years are
+    correct and not a reporting gap. Three observed years are the fewest that can establish
+    a stride, because two years establish a distance and nothing more, and a series whose
+    observed years are unevenly spaced is read as annual with gaps.
+    """
+    if len(years) < 3:
+        return None
+    steps = {b - a for a, b in zip(years[:-1], years[1:])}
+    if len(steps) == 1:
+        step = steps.pop()
+        if step > 1:
+            return step
+    return None
+
+
+def _source_current_years(d: pd.DataFrame) -> Dict[str, int]:
+    """The latest year more than half of each source's own series reach.
+
+    The plain maximum will not do. WHO's TB data publishes four forward-looking budget
+    series a year ahead of every measured series, so the plain maximum for `who_tme` is
+    2025 while 13 of 17 `who_tme` series stop at 2024, and reading 2025 as that source's
+    current year would report all 13 as withdrawn. A majority of the source's series is the
+    test, so one series published ahead of the rest cannot make the rest look truncated.
+    """
+    now: Dict[str, int] = {}
+    for src, part in d.groupby("source_id", dropna=False):
+        n_series = int(part["indicator_id"].nunique())
+        per_year = part.groupby("year")["indicator_id"].nunique()
+        reached = [int(y) for y, n in per_year.items() if int(n) * 2 > n_series]
+        now[src] = max(reached) if reached else int(part["year"].max())
+    return now
+
+
+def _reporter_drops(df: pd.DataFrame) -> List[str]:
+    """Three ways a series loses reporters, all of them walked along the calendar.
+
+    Reported as warnings and not corrections: the panel keeps what each source published,
+    and it is the comparison that has to be made on a balanced set, not the data that has to
+    be trimmed. The warnings exist so nobody totals two years of a changed reporter set and
+    reads the difference as a change in the world.
+
+    A fall is a year-on-year drop in the reporting countries. An interior gap is a year the
+    series skips entirely and then resumes after. A stopped series is one that ends while the
+    source it comes from goes on publishing.
+
+    The walk is along the calendar and not along the years the series happens to hold, and
+    the difference matters three times over. A missing year raises nothing at all under a
+    walk over the years present, which is how the Global Fund's absent 2025 HIV testing
+    result reached the panel without a single warning. Two years either side of a gap print
+    as though the years were adjacent, which is how `late_hiv_diagnosis_pct/unaids_aidsinfo`
+    came to report 70 countries in 2020 falling to 19 in 2024 with no mention of 2021, 2022
+    and 2023 holding nothing. A series that simply stops is invisible to a walk over the
+    years present, because a walk over the years present has nowhere left to step.
     """
     out: List[str] = []
     d = df.dropna(subset=["value"])
     if d.empty:
         return out
+    source_now = _source_current_years(d)
     for (ind, src), part in d.groupby(["indicator_id", "source_id"], dropna=False):
         counts = part.groupby("year")["country_iso3"].nunique().sort_index()
-        for prev_year, this_year in zip(counts.index[:-1], counts.index[1:]):
-            before, after = int(counts[prev_year]), int(counts[this_year])
-            if before < MIN_REPORTERS or after >= before:
+        have = {int(y): int(counts[y]) for y in counts.index}
+        years = sorted(have)
+        stride = _periodic_stride(years)
+        step = stride or 1
+        first, last = years[0], years[-1]
+
+        for prev_year in range(first, last, step):
+            this_year = prev_year + step
+            before, after = have.get(prev_year, 0), have.get(this_year, 0)
+            if before < MIN_REPORTERS:
+                continue
+            if after == 0:
+                # The gap runs to the next year the series holds, and the count on the far
+                # side of the gap is stated because a gap can hide a fall. The warning above
+                # about late_hiv_diagnosis_pct is exactly that case.
+                resumes = next((y for y in years if y > this_year), None)
+                if resumes is None:  # a trailing gap, handled after the walk
+                    continue
+                empty = (f"{this_year}" if resumes - this_year == step
+                         else f"{this_year} to {resumes - step}")
+                out.append(
+                    f"{ind}/{src}: {before} reporting countries in {prev_year}, none in "
+                    f"{empty}, {have[resumes]} again in {resumes}, so the years either side "
+                    f"of the gap are not comparable and the gap is not a fall"
+                )
+                continue
+            if after >= before:
                 continue
             if (before - after) / before >= REPORTER_DROP_SHARE:
                 out.append(
                     f"{ind}/{src}: reporting countries {before} ({prev_year}) -> "
                     f"{after} ({this_year}); compare on the {after} reporting both years"
                 )
+
+        now = source_now.get(src, last)
+        if now - last >= step and have[last] >= MIN_REPORTERS:
+            out.append(
+                f"{ind}/{src}: {have[last]} reporting countries in {last} and nothing after "
+                f"{last}, while {src} reaches {now} across most of its series, so check "
+                f"whether the series was withdrawn, renamed or published on a later calendar"
+            )
     return out
 
 

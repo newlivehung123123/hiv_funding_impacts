@@ -171,9 +171,10 @@ def main() -> int:
                     help="open the large PEPFAR archives to count indicator codes")
     args = ap.parse_args()
 
-    from hivimpact.connectors import (clm_asia, dhs, global_fund, oecd_crs, pepfar_agency,
-                                      pepfar_panorama, pepfar_snu, unaids_aidsinfo,
-                                      unaids_gam_expenditure, who_gho, who_tme, world_bank)
+    from hivimpact.connectors import (clm_asia, dhs, global_fund, global_fund_allocations,
+                                      oecd_crs, pepfar_agency, pepfar_panorama, pepfar_snu,
+                                      unaids_aidsinfo, unaids_gam_expenditure, who_gho, who_tme,
+                                      world_bank)
 
     print("Connector input coverage")
     print("========================")
@@ -243,16 +244,41 @@ def main() -> int:
         },
         note="ten connectors share one directory")
 
+    # The connector downloads its own IATI XML into foreign_assistance/iati/ on every run, and
+    # this audit walks the top level only, so the subdirectory is deliberately out of scope:
+    # auditing files a connector fetched for itself would report the connector against itself.
+    # What is left at the top level is the one hand-made extract.
     audit_directory("foreign_assistance", "foreign_assistance",
-                    used=["us_foreign_aid_complete.csv"], note="reads every CSV present")
+                    used=["history_fa_gov.csv"],
+                    declared={"history_fa_gov.json":
+                              "provenance for the extract beside it, written by "
+                              "scripts/extract_fa_history.py and opened by no connector"},
+                    note="the IATI XML the connector fetches itself lives in iati/ and is not "
+                         "audited here")
     audit_directory("south_africa_thembisa", "thembisa", used=["ProvOutputs5_0.xlsx"])
 
     # data/raw/global_fund holds four manual downloads and no connector opens any of them. The
-    # Global Fund connector reads the OData API instead, so calling these files skipped would
-    # misdescribe the situation. They are unattached downloads, which is a different problem
-    # with the same cause, namely material sitting on disk that nobody decided about.
+    # Global Fund connectors read the OData API instead, so calling these files skipped would
+    # misdescribe the situation. Each of the four was opened and read by hand on 30 September
+    # 2026 and the reason each one answers no question this panel asks is recorded below, so
+    # the four are decisions on the record and not material nobody has looked at.
     audit_directory("(no connector)", "global_fund", used=[],
-                    note="global_fund reads the OData API, not this directory")
+                    declared={
+                        "annual-results.csv":
+                            "65 rows of Year, Component, Indicator and Amount, naming no "
+                            "country, so the file carries no country-year series",
+                        "expenditures.csv":
+                            "250 rows of Principal Recipient, Component, Amount and Percentage, "
+                            "naming neither a country nor a year",
+                        "funding-requests.csv":
+                            "900 rows of Geography, Components, grant identifier and period "
+                            "dates, carrying no amount at all",
+                        "pledges-and-contributions.csv":
+                            "donor-side money, naming who gave and never naming the country "
+                            "that received, the same refusal the Pledges_Contributions dataset "
+                            "carries in global_fund_allocations.DECLARED_DATASETS",
+                    },
+                    note="the Global Fund connectors read the OData API, not this directory")
 
     _rule("Wide file pickers")
 
@@ -315,6 +341,42 @@ def main() -> int:
     print(f"{'global_fund':22s} maps {len(global_fund._SERIES):3d} series and declares "
           f"{len(global_fund._UNMAPPED_HIV) + len(global_fund._UNMAPPED_OTHER_DISEASE):3d} "
           f"out of scope.\n{'':22s} Counts the rest at run time. This is the pattern to copy.")
+
+    # The money side of the same service. AllFinancialIndicators holds 1,269,005 rows over
+    # exactly 16 datasets, and the whole entity would otherwise sit in this report as one
+    # unread line. Two probes run on 30 September and 1 October 2026 asked every one of the 16
+    # what `recordId` resolves to, and the answers are in RESUME section 6. The counts below
+    # come from the service's own $apply=groupby, so a dataset the service renames or retires
+    # shows up as a name this audit knows and the service no longer serves, which is the
+    # failure this whole script exists to make visible.
+    gfa = global_fund_allocations
+    read_sets = [gfa._DATASET]
+    declared_sets = gfa.DECLARED_DATASETS
+    rows_read = sum(gfa.DATASET_ROWS[n] for n in read_sets)
+    rows_declared = sum(gfa.DATASET_ROWS[n] for n in declared_sets)
+    unexamined = [n for n in gfa.DATASET_ROWS if n not in read_sets and n not in declared_sets]
+    print(f"{'global_fund_allocations':22s} {len(read_sets):3d} of {len(gfa.DATASET_ROWS):3d} "
+          f"financial datasets read, {len(declared_sets)} declared out of scope, "
+          f"{len(unexamined)} unexamined")
+    print(f"{'':22s} {rows_read:,} rows read of {rows_read + rows_declared:,} in "
+          f"AllFinancialIndicators")
+    for n in unexamined:
+        print(f"    unexamined  {n}  ({gfa.DATASET_ROWS[n]:,} rows)")
+    # Tallied by reason, because 13 datasets refused on one finding are one decision and not
+    # 13, and the two refused on their own grounds are the two a reader should actually read.
+    dataset_reasons = Counter(declared_sets.values())
+    for reason, n in dataset_reasons.most_common():
+        names = sorted(d for d, r in declared_sets.items() if r == reason)
+        money = sum(gfa.DATASET_ROWS[d] for d in names)
+        print(f"    declared  {n:3d} dataset(s), {money:>9,d} rows  {reason}")
+        if n > 1:
+            print(f"{'':14s}{', '.join(names)}")
+    for m in sorted(set(read_sets) | set(declared_sets)):
+        if m not in gfa.DATASET_ROWS:
+            print(f"    NAMED BUT ABSENT  {m}")
+    print(f"{'':22s} Components inside the one dataset read: 1 mapped (HIV), "
+          f"{len(gfa.DECLARED_COMPONENTS)} declared out of scope. The connector counts any "
+          f"other\n{'':22s} component at run time and names it in the log.")
 
     print(f"{'who_tme':22s} maps {len(who_tme.COLUMNS):3d} columns. The source files download "
           f"at run time, so\n{'':22s} the unmapped column count is not measurable offline. "

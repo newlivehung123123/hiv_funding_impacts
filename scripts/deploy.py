@@ -49,12 +49,16 @@ EXPECTED = [
     ("/downloads/hiv_panel.csv", "content-disposition", "attachment"),
 ]
 
-PAGES = ["/", "/about/", "/methods/", "/data/", "/reconciliation/",
-         "/regions/southeast-asia/",
-         "/countries/idn/", "/countries/khm/", "/countries/lao/", "/countries/mmr/",
-         "/countries/mys/", "/countries/phl/", "/countries/tha/", "/countries/tls/",
-         "/countries/vnm/",
-         "/static/css/site.css", "/static/js/rack.js"]
+# The region pages and the country pages are taken from the region configuration, so a region set
+# live there is checked from the first publication that carries the region's pages.
+sys.path.insert(0, str(ROOT))
+from hivimpact.config.regions import REGIONS                         # noqa: E402
+
+_LIVE = [r for r in REGIONS if r["status"] == "live"]
+PAGES = (["/", "/about/", "/methods/", "/data/", "/reconciliation/"]
+         + [f'/regions/{r["slug"]}/' for r in _LIVE]
+         + [f"/countries/{iso3.lower()}/" for r in _LIVE for iso3 in r["iso3"]]
+         + ["/static/css/site.css", "/static/js/rack.js"])
 
 REDIRECTS = [("/index.html", "/"), ("/methods/index.html", "/methods/")]
 

@@ -15,7 +15,7 @@ cropped and how large it is worth keeping:
 |------------|-----------------------------------------------------------|-------|
 | `region-`  | the eight regions on the home page rack                    | 8     |
 | `domain-`  | the six data categories on the home page                   | 6     |
-| `country-` | the nine Southeast Asian countries, by ISO3                | 9     |
+| `country-` | the countries of every live region, by ISO3                | 42 of 55 |
 | `rel-`     | the three source relationships on the reconciliation page  | 3     |
 | `panel-`   | the six files on the downloads page                        | 6     |
 

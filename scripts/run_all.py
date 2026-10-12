@@ -160,7 +160,8 @@ def main() -> int:
     # than trusting anyone to remember a second command. Failure must not invalidate the panel.
     recon_stats = None
     try:
-        log.info("=== reconcile : which sources measure the same thing, decided from the numbers ===")
+        log.info("=== reconcile : which sources measure the same thing, declared where the "
+                 "provenance is known and inferred from the numbers where it is not ===")
         recon_stats = reconcile.run(str(panel_csv), args.out)
     except Exception as exc:
         log.warning("reconcile failed, so the tables in %s are older than the panel: %s",

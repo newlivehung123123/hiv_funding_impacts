@@ -909,30 +909,113 @@ the Power BI wallboard's query backend returns 403 to every scripted request. Th
 wrong, and it was wrong in the direction that matters: it understated what the national programme
 publishes.
 
-The National Data Repository has an **open JSON API**. Three endpoints answer:
+The National Data Repository has an **open JSON API**. Round three recorded three endpoints.
+Building task #23 found five, because reading the wallboard's own source revealed two the round
+three survey had missed:
 `ndr.nascp.gov.ng/public/GetRecencyData/` (state-level recency yield with numerators,
 denominators, age bands and RITA, plus a monthly viral-load series from March 2020),
 `ctd.nascp.gov.ng/facilitydata/` (all 37 states with `txcurr`, `pl_estimate` and `tx_coverage`,
-dated December 2025), and `ndr.nascp.gov.ng/public/surveillance-report` (28 monthly national
-reports).
+dated December 2025), `ndr.nascp.gov.ng/public/surveillance-report` (28 monthly national
+reports), `ndr.nascp.gov.ng/public/GetCBSData/` (1,456 bytes, not yet inspected), and
+**`ndr.nascp.gov.ng/public/GetDashboardSummary` (163,573 bytes, the richest payload in the whole
+source)**, which carries treatment by state, sex and age band, viral load tests and suppressed
+results by state and by month, and a monthly treatment-initiation series.
 
 **A `Referer` header is the whole gate.** Plain `curl` returns HTTP 000; the same request with
 `--http1.1`, a browser user agent, `Referer: https://ndr.nascp.gov.ng/public/wallboard` and
 `X-Requested-With: XMLHttpRequest` returns the data. This is the round-two method — read the
 application and not the page — applied to a host that round two had already judged and closed.
 **A source graded once is not graded forever**, and the 403 that produced grade 3.5 was one path
-into a system with three open ones.
+into a system with five open ones.
 
 National treatment stands at **1,672,219 on treatment against 1,904,364 PLHIV**, 87.8 per cent,
-December 2025. GHO's reported ART for Nigeria 2025 is 1,550,000: about eight per cent apart, two
-instruments that do not share an origin, so `reconcile.py` has to classify them independent.
+December 2025. GHO's reported ART for Nigeria 2025 is 1,550,000, about eight per cent apart.
+Round three called those two independent instruments. **That classification was wrong.** NASCP
+runs the National Data Repository and also prepares the global reporting that feeds UNAIDS and
+WHO GHO, so the two figures descend from the same facility registers and agreement between them
+is one measurement published twice. PEPFAR MER and the repository stand in the same relation,
+differing in which sites are included (the repository covers 2,432 facilities, PEPFAR-supported
+or not) and in deduplication. The honest classification is **partially overlapping**, where the
+repository minus PEPFAR bounds treatment outside PEPFAR-supported sites instead of triangulating
+it. `ng_ndr` tags every row accordingly.
 
-The state table carries a trap of its own, and the source ships the fix. State TX_CURR exceeds
-the state PLHIV estimate in several states — **Bauchi 158 per cent, Adamawa 121, Benue 115** —
-because patients are counted where they are treated and not where they live. The residence matrix
-(`txcurr_res_state`, `txcurr_res_outof_state`) is what corrects it. A state coverage figure
-computed without it is wrong, and the connector either loads the matrix or refuses to publish a
-state coverage number. Task #23.
+**The clearest additive contribution is coverage, not corroboration.** `pepfar_snu` reports 33
+Nigerian states for 2025 while the repository reports 37. The four PEPFAR omits are **Anambra
+49,779, Ebonyi 15,508, Gombe 26,681 and Kwara 14,963, together 106,931 people on treatment**.
+Because the repository exceeds PEPFAR nationally by only 71,424, PEPFAR reports about 35,507 more
+than the repository across the 33 shared states.
+
+The state table carries a trap of its own, and round three said the source ships the fix. **The
+source does not ship the fix.** State TX_CURR exceeds the state PLHIV estimate in **14 of 37
+states** on the published numerator (Niger 158 per cent, Bauchi 158, Kogi 141, Plateau 138,
+Ebonyi 130). Round three attributed that to patients being counted where they are treated and not
+where they live, and named the residence matrix (`txcurr_res_state`, `txcurr_res_outof_state`) as
+the correction. Recomputing every state's numerator on a residence basis still leaves **13 states
+above 100 per cent**, and Niger moves the wrong way, from 158 to 165 per cent. The largest
+geography effect anywhere in the table is the Federal Capital Territory at 18.6 percentage points.
+So the first-order defect is **the state allocation of the PLHIV estimate**, not patient-counting
+geography, and `ng_ndr` refuses every state coverage percentage, publishing the treatment count
+and the state estimate as separate flagged rows instead. Task #23, built 1 October 2026.
+
+**Six integrity defects in the dashboard payload**, each now carrying a specific refusal in the
+connector rather than waiting to be found as a silent corruption.
+
+1. `txCurr90Today` reads 1,791,837 against a state sum of 1,678,165, a gap of 113,672. The state
+   sum is emitted and the headline is recorded as unreconciled.
+2. `txNewOneYear` reads 84,388 against four decompositions clustering at 80,343 to 80,349, so the
+   headline is the outlier by about 4,042.
+3. `tx_new_trend_map_months` is corrupt, carrying future months and a repeated label, against
+   `monthData` lengths of 8, 9 and 10. The block is refused.
+4. `tx_pvls_state` sums to 1,360,296 tests while `numberOfPvlsTotalCount` says 2,893,501, a factor
+   of two on volume although the two agree on the rate at 96.48 and 96.06. The rate is emitted
+   with the reconciled counts as numerator and denominator; the headline count is refused.
+5. `tx_pvls_month` holds 11 months against `tx_pvls_state_map`'s 12 labels with 11 data points, so
+   a blind zip misaligns.
+6. The TX_CURR sex sum of 1,665,329 is 12,836 below the state sum and the age sum of 1,665,330 is
+   one above the sex sum. Both decompositions are emitted with the shortfall stated on each row.
+
+**A period rule, settled here and reusable.** `txNewOneYear` covers November 2025 to October 2026,
+straddling two calendar years, and the current month is radically incomplete (3 initiations against
+`firstOfCurrentMonth` of 10/01/2026). So `ng_ndr` emits a **count** only for a calendar year whose
+every month is present and which excludes the month in progress, and no such year exists yet, so
+`art_initiations` is refused and will begin emitting 2026 on any run in or after January 2027
+without a code change. A **rate** may come from a documented partial window, because a ratio over
+part of a year is an estimate with a stated window, while a partial-year total labelled as a year
+is simply wrong.
+
+**The recency endpoint contributes nothing to a year panel**, which is why `ng_ndr` does not request
+it. The decisive reason is the schema, settled on 1 October 2026. `PanelRow.year` is a required int
+with no default, so an undated figure cannot enter the panel at all and no flag in `extra` can
+stand in for a missing year. `rc_result` is internally sound, with the state block and the age
+block both summing to 9,617 recent of 220,423 tested and both RITA blocks to 3,403 of 9,617, but
+the page fixes `rc_result` as a rolling "Last 3 months" window with no parameter to move it, so
+every one of those figures would need an invented year. `rc_overview` is undated as well and
+degenerate on the public call, reporting 168 tested and 1 recent against `rc_result`'s 220,423 and
+9,617, understating RTRI testing by a factor of about 1,312. `vl` returns empty lists.
+
+`vl10.vl_month` is the one dated block, and the block is cleaner than the round-three note
+recorded. The block holds 76 monthly points from March 2020 to June 2026 across nine named series,
+the three percentages sum to 100 in all 76 months, the three denominators are identical in all 76,
+the three numerators sum to the denominator in all 76, and five calendar years hold 12 months,
+being 2021 to 2025. So the schema would accept the block and the calendar-year rule would admit
+five year values. The block is refused on two other grounds. The block measures recency viral-load
+sample collection for RITA confirmation and not treatment viral load, established by the waterfall
+labels and confirmed by single-digit early denominators against `tx_pvls_month`'s 109,176 for
+November 2025, and no indicator in the panel's vocabulary covers that process measure, so
+admitting the block would mean a new indicator with no reconciliation partner. The yearly
+denominator also runs 554, 1,731, 3,516, 2,012, 1,566, 237 and 1 over 2020 to 2026, with the
+available-result share falling from 61.9 per cent in 2024 to 21.5 in 2025, and nothing in the
+payload separates a real fall from reporting lag.
+
+**All 37 state names join the panel exactly.** `pepfar_snu` and `pepfar_agency_snu` each hold 37
+Nigerian admin1 units, and the repository's names match them with zero differences on either side,
+so no name mapping is needed.
+
+**A state-level change warning for whoever reads two snapshots together.** Between December 2025 and
+October 2026 Imo rises 118.6 per cent (18,710 to 40,894), Yobe 30.8 and Jigawa 25.8, against
+Bayelsa down 19.2, Abia down 17.7 and Rivers down 12.0. Imo's December 2025 coverage was 28.5 per
+cent, far below every other state, so the December 2025 Imo figure looks like an under-report that
+later corrected rather than genuine growth.
 
 ## Negative findings, so nobody researches them twice
 
@@ -959,3 +1042,134 @@ Round two's ranked list stands unchanged. Three things join it, and one moves.
 And the thing to say to Adrian that round two could not. The answer to *"can we go to source?"*
 for Nigeria is now yes, by machine, at state level. That is the country this log opened by
 recording as the hardest in the region.
+
+---
+
+# Round four, 1 October 2026 — sweeping classes instead of countries
+
+Jason asked whether another round was worth running before the national-connector ruling was
+written. The round was run, and the round changed the ruling, so the nine-country list round two
+produced is superseded. The method was the one change that mattered. Rounds two and three swept
+one country at a time and stopped each class once the round had enough to report. Round four swept
+a whole class across all 24 countries and graded every country in the class against the panel
+rather than against the class's own existence.
+
+## The correction round four makes to round two
+
+Round two's negative findings were right. No NASA report exists for Cabo Verde, Central African
+Republic, Congo, Equatorial Guinea, Gabon, Gambia, Guinea, Guinea-Bissau or Senegal, and the
+UNAIDS index confirms every one of those nine absences.
+
+Round two's positive findings were badly incomplete. The index holds reports for **14 of the 24
+countries** and round two recorded three, being Benin, Togo and Ghana. Round two recorded nothing
+about Burkina Faso, Cameroon, Chad, Côte d'Ivoire, DR Congo, Liberia, Mali, Mauritania, Niger,
+Nigeria or Sierra Leone, all 11 of which have at least one report. This is the same failure the
+Nigeria overturn recorded in round three, in the opposite direction. **Round three learned that a
+source graded once is not graded forever. Round four adds that a class sampled once is not a class
+swept.**
+
+## The NASA class, graded against the panel and not against itself
+
+The GAM workbook already on disk holds 59,947 rows, and for these 24 countries the panel's
+`unaids_gam_expenditure` coverage matches the workbook country for country and year for year, 18
+countries and 817 panel rows. That identity is what makes the grading possible, because a NASA
+year inside the workbook's range is a year the panel already publishes.
+
+- **Cameroon is the only build in the class.** Zero GAM years, so Cameroon is absent from the
+  panel's expenditure coverage altogether, against eight NASA years at 2007, 2009, 2011, 2012,
+  2016, 2017, 2020 and 2021. Cameroon is the one country of the 24 where a NASA report is the only
+  expenditure measurement anywhere in the pipeline.
+- **Counting from 2019 the whole class adds six country-years**, being Cameroon 2020 and 2021, DR
+  Congo 2019 and 2020, and Togo 2022 and 2023.
+- **The three reports round two extracted by hand are the three least additive.** Benin's panel
+  coverage runs 2018 to 2024 unbroken and Ghana's runs 2014 to 2023 unbroken, so Benin 2024 and
+  Ghana 2022 were both already held. The cross-check above, agreeing to within 3 to 5 per cent, is
+  the proof of that duplication and not the corroboration it reads as. **Benin drops out of the
+  build list.**
+- **Most remaining additive NASA years fall before 2011**, outside the workbook by construction
+  because the workbook starts at expenditure year 2011. Whether the panel wants domestic HIV
+  spending before 2011 is a scope question and not a feasibility question, since every one of
+  those years is hand extraction with no machine path.
+
+## The institute class, narrowed by the panel before any host was probed
+
+The panel holds 52,840 rows carrying `admin1` across 55 countries, and **every sub-national row in
+this region comes from PEPFAR**, through `pepfar_snu` and `pepfar_agency_snu` and nothing else.
+Twelve countries have PEPFAR coverage at `admin1`, being Benin, Burkina Faso, Cameroon, Côte
+d'Ivoire, DR Congo, Ghana, Liberia, Mali, Nigeria, Senegal, Sierra Leone and Togo. The other 12
+hold zero sub-national rows, being Cabo Verde, Central African Republic, Chad, Congo-Brazzaville,
+Equatorial Guinea, Gabon, Gambia, Guinea, Guinea-Bissau, Mauritania, Niger and São Tomé. Probing
+only those 12 turned a speculative hunt across ten hosts into three leads, and it confirms round
+two aimed correctly at Chad, which holds zero sub-national rows.
+
+**Guinea, build, verified by reading the yearbook.** `stat-guinee.org` serves health statistics
+yearbooks for 2007 to 2022 openly. The 2018 edition is 88 pages of extractable text, six pages
+carrying HIV content and three of those naming four or more regions.
+
+- **Tableau 4.2**, TB/HIV co-infection by health district, with tested counts, positivity and
+  share on ART, rolling to regional totals at Région Boké 715 tested, Région Conakry 6,904 and
+  Région Faranah 439.
+- **Tableau 4.19**, the stronger table, antenatal counselling and testing by health district, with
+  women counselled, women accepting a test, women tested, women receiving a result, **women
+  testing HIV positive**, syphilis tested and positive, and **partners tested, positive and
+  receiving a result**. Boffa reports 9,147 first antenatal visits against 93 women HIV positive,
+  and Boké Préfecture reports 553 positive.
+
+**Niger, build, verified by reading the yearbook.** `stat-niger.org` serves the health statistics
+yearbooks openly. The 2019 edition is 208 pages, 37 pages mentioning HIV and eight naming four or
+more regions.
+
+- **Tableau 99**, TB/HIV co-infection by district and region at 31 December 2019, with total
+  cases, co-infections, co-infection rate, HIV test rate among tuberculosis patients, cotrimoxazole
+  and ARV, rolling to regional totals at Région Agadez 291 cases and 11 on ARV and Région Niamey
+  1,685 cases and 55 on ARV.
+- **Tableaux 58 and 59** carry something the pipeline holds nowhere else, a per-district reporting
+  completeness and promptitude rate for the HIV care form itself, which measures how complete the
+  underlying HIV reporting is. An instrument that measures the reporting rather than the epidemic
+  is worth having on its own terms, because it bounds how far a district absence can be read as a
+  district zero.
+
+**The classification rule, carried over from the Ghana rule above.** The TB/HIV tables in both
+yearbooks are `derived` against WHO TME at national level, because round three dropped the GHO
+TB/HIV block as TME republished. WHO TME publishes no sub-national breakdown, so the district
+detail stays additive even where the national aggregate is derived, and both connectors must carry
+that distinction row by row. Guinea's antenatal testing table is not a TB/HIV table and has no
+counterpart anywhere in the pipeline, so that table is independent outright.
+
+## Negative findings, round four, so nobody researches them twice
+
+- **Gambia.** The Gambia Bureau of Statistics publishes no health statistics yearbook. The
+  2019-2020 DHS the bureau ran is already served by the DHS connector. The only district HIV
+  figures, Basse and Bansang at 2.7 per cent down to Brikama at 0.98 per cent, sit in the National
+  Strategic Plan for HIV 2021-2025, published once every five years. A five-year planning document
+  is not a repeating structured series, which is the test region two applied to 18 of its 19
+  countries.
+- **Gabon.** `instatgabon.org/uploads/folder_1/autres_publications/ANNUAIRE-DU-GABON-2020.pdf`
+  redirects 302 to `new.instatgabon.org/fr`, so the published PDF is gone and the institute has
+  reorganised. The institute's HIV content is prevalence under demographic indicators republished
+  through the `gabon.opendataforafrica.org` Knoema portal, which makes the Gabon figures `derived`
+  against UNAIDS and not additive.
+- **Central African Republic and Mauritania, leads not pursued.** ICASEES publishes an Annuaire
+  Statistique 2018-2021 carrying new AIDS cases and runs a NADA microdata catalogue at
+  `icasees.org/nada/`, but Central African Republic HIV prevalence comes from MICS which the
+  project already serves. Mauritania's health figures trace to an Annuaire statistique 2015 with no
+  current series behind roughly 6,000 people living with HIV, the weakest lead in the region. Both
+  stay open at low priority and neither blocks the region.
+- **Five countries are comprehensively dark, and the darkness is a result.** Cabo Verde,
+  Congo-Brazzaville, Equatorial Guinea, Guinea-Bissau and São Tomé hold zero GAM years, no NASA
+  report and zero sub-national rows. No expenditure measurement and no sub-national measurement
+  exists for any of the five, and that is a finding for the paper and not a gap to keep searching.
+
+## What round four changes
+
+The build list replaces round two's nine-country list. **Nigeria** through the National Data
+Repository API, **Cameroon** through the NASA reports, **Chad** through the INSEED publications
+API, **Guinea** through the `stat-guinee.org` yearbooks and **Niger** through the `stat-niger.org`
+yearbooks. Senegal, Burkina Faso, Mali and Benin are refused for the cuts window. DR Congo 2019
+and 2020 and Togo 2022 and 2023 stay open as a four-country-year decision about whether four PDF
+extractions are worth four country-years.
+
+The round added two connectors, removed one piece of hand extraction that would have reproduced
+published figures, and closed five countries on evidence. Against the other regions, region one
+holds three national connectors across nine countries and region two holds one across 19, so
+region three at five across 24 is the strongest of the three on national coverage.

@@ -18,9 +18,12 @@ Three relationships exist between two sources reporting the same country-indicat
                programme register against a modelled estimate; OECD donor reporting against
                US self-reporting). Only here does a divergence carry information.
 
-Classifications are inferred FROM THE DATA, not hardcoded, and every one is written out with
-the evidence behind it (cell count, median relative difference, agreement share, direction
-consistency) so the call can be audited or overridden.
+A classification is inferred from the data wherever the provenance of the two figures is not
+known, and declared in DECLARED_RELATIONSHIPS wherever the provenance is known, because the
+numbers alone cannot say whether two figures come from one accounting record. Every
+classification is written out with the evidence behind it (cell count, median relative
+difference, agreement share, direction consistency) and with a `basis` column saying whether
+the verdict was declared or inferred, so the call can be audited or overridden.
 
 Outputs (data/panel/):
   reconciliation_pairs.csv  one row per indicator x source-pair: the relationship map
@@ -59,6 +62,87 @@ MATERIALITY = {"USD": 1_000_000.0, "count": 100.0, "percent": 1.0}
 MATERIALITY_DEFAULT = 0.0
 
 _KEY = ["country_iso3", "indicator_id", "population_group", "sex", "age_group", "year"]
+
+# --- declared provenance -------------------------------------------------------------------
+# Item 27. `classify_pairs` reads the relationship off the numbers, and the numbers cannot say
+# where a figure came from. Two publications of one accounting record that differ in scope or
+# in dating disagree widely enough to fall through the derived and subset tests and land on
+# `independent`, which is the verdict that tells a reader the divergence carries information.
+# On the panel of 30 September 2026 the Global Fund's own two returns did exactly that, and
+# 2,002 cells were counted as independent evidence of a disagreement between one reporter and
+# itself.
+#
+# So a pair whose provenance is known is declared here and read instead of inferred. The key
+# is the indicator and the two source identifiers in the order `build_comparisons` sorts them
+# into, and the entry carries the reason in prose beside the verdict. Every classified pair
+# also reports whether the verdict was declared or inferred, so that a reader can tell one
+# from the other without reading this file.
+#
+# Only what is known goes in. The two `unaids_gam_expenditure` pairs look independent and have
+# not been established as independent, so no entry claims either way and both keep an inferred
+# verdict until Adrian Smith and the UNAIDS documentation settle the question.
+DECLARED_RELATIONSHIPS: Dict[tuple, tuple] = {
+    ("global_fund_hiv_disbursements", "iati", "oecd_crs"): (
+        "derived",
+        "The Global Fund publishes the same disbursements to the IATI registry and to the "
+        "OECD Creditor Reporting System, where the Global Fund is reporter 9OTH012, so the "
+        "iati and oecd_crs figures for this indicator are two publications of one accounting "
+        "record and agreement between them is arithmetic. The two figures differ because the "
+        "IATI reading dates money by transaction date while the OECD CRS reading dates money "
+        "by reporting year, and because the IATI connector counts the whole value of an H or "
+        "C grant where the OECD CRS return carries purpose code 13040 alone. A difference "
+        "produced by two treatments of one record is not two measurements disagreeing.",
+    ),
+    # RESUME.md item 46. Read from data/panel/hiv_panel.csv on 2 October 2026.
+    ("on_art_count", "ne_annuaire", "who_gho"): (
+        "derived",
+        "The Niger health yearbook's national count of people on ART equals the WHO GHO figure "
+        "exactly in seven of 12 years from 2013 to 2024, and an exact match on a five-digit "
+        "count cannot come from two separate counts. Both figures are the one count of the "
+        "national HIV and hepatitis programme (PNLSH), printed in the health ministry's "
+        "yearbook and reported to WHO, so agreement is duplication and not corroboration. "
+        "RESUME.md item 46 records as findings the years the two publications differ, with "
+        "WHO GHO lower in 2016, 2017, 2021 and 2022 and higher by 14 in 2024.",
+    ),
+    ("on_art_count", "global_fund", "ne_annuaire"): (
+        "derived",
+        "The Global Fund's reported result for Niger equals the Niger health yearbook's national "
+        "count of people on ART exactly in five of the eight years both report from 2017 to "
+        "2024, so both figures are the one count of the national HIV and hepatitis programme "
+        "(PNLSH), printed in the health ministry's yearbook and reported to the Global Fund as "
+        "a grant result. The "
+        "Global Fund figure is lower by 4,426 in 2018, higher by 842 in 2022 and lower by 12 in "
+        "2024, and RESUME.md item 46 records those three years as findings.",
+    ),
+    ("on_art_count", "ne_annuaire", "unaids_aidsinfo"): (
+        "derived",
+        "The UNAIDS AIDSinfo count of people on ART in Niger is the WHO GHO count rounded to the "
+        "nearest thousand in every year from 2013 to 2024, and the WHO GHO count is the Niger "
+        "health yearbook's national count in seven of those 12 years. The UNAIDS figure is "
+        "therefore the national programme's one count, rounded, and agreement with the yearbook "
+        "is duplication and not corroboration.",
+    ),
+    # RESUME.md item 47. Read from data/panel/hiv_panel.csv on 2 October 2026.
+    ("pmtct_arv_count", "gn_annuaire", "unaids_aidsinfo"): (
+        "derived",
+        "The Guinea statistics yearbook's 2023 national count of pregnant women on ARVs, 3,802, "
+        "equals the UNAIDS AIDSinfo figure exactly, and an exact four-digit match cannot come "
+        "from two separate counts, so both figures are the national health information "
+        "system's one count. The evidence is thinner than for Niger, with three shared years, "
+        "and the yearbook sits 6 per cent above UNAIDS in 2022 and 16 per cent above UNAIDS in "
+        "2024. RESUME.md item 47 records both gaps as findings, because declaring the pair "
+        "derived keeps the gaps out of the divergence report.",
+    ),
+    ("pmtct_arv_count", "gn_annuaire", "who_gho"): (
+        "derived",
+        "WHO GHO prints the same Guinea count of pregnant women on ARVs as UNAIDS AIDSinfo in "
+        "every Guinea year, and the Guinea statistics yearbook's 2023 national count, 3,802, "
+        "equals the WHO GHO figure exactly. The WHO GHO pair therefore carries the same single "
+        "count as the UNAIDS pair, with the same 2022 and 2024 gaps recorded in RESUME.md item "
+        "47. The Global Fund pair is left inferred, because the Global Fund's Guinea results "
+        "match the yearbook in no year.",
+    ),
+}
 
 
 def load_panel(path: str | Path) -> pd.DataFrame:
@@ -112,7 +196,11 @@ def classify_pairs(cmp_df: pd.DataFrame) -> pd.DataFrame:
         a_smaller = float((g["value_a"] < g["value_b"]).mean())
         direction = max(a_smaller, 1 - a_smaller)
 
-        if n < MIN_CELLS:
+        declared = DECLARED_RELATIONSHIPS.get((ind, a, b))
+        if declared is not None:
+            verdict = declared[0]
+            why = f"declared, not inferred. {declared[1]}"
+        elif n < MIN_CELLS:
             verdict, why = "insufficient", f"only {n} overlapping cell(s)"
         elif med_rel is not None and agree_share is not None \
                 and med_rel <= DERIVED_MEDIAN_RELDIFF and agree_share >= DERIVED_AGREE_SHARE:
@@ -133,7 +221,8 @@ def classify_pairs(cmp_df: pd.DataFrame) -> pd.DataFrame:
             "indicator_id": ind, "source_a": a, "source_b": b, "n_cells": n,
             "median_rel_diff": med_rel, "agree_share_within_2pct": agree_share,
             "median_ratio_a_over_b": med_ratio, "direction_consistency": direction,
-            "relationship": verdict, "evidence": why,
+            "relationship": verdict, "basis": "declared" if declared else "inferred",
+            "evidence": why,
         })
     return pd.DataFrame(out).sort_values(["relationship", "indicator_id", "source_a", "source_b"])
 
@@ -193,6 +282,8 @@ def run(panel: str | Path = "data/panel/hiv_panel.csv",
         *[f"  {k:14s} {v}" for k, v in sorted(by_rel.items(), key=lambda x: -x[1])],
         "",
         f"independent pairs: {int((pairs['relationship'] == 'independent').sum())}",
+        f"pairs whose relationship was declared and not inferred: "
+        f"{int((pairs['basis'] == 'declared').sum())}",
         "",
         "independent-pair cells by comparability:",
         *[f"  {k:18s} {v}" for k, v in sorted(by_status.items(), key=lambda x: -x[1])],

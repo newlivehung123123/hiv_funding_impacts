@@ -47,9 +47,9 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   "World Bank SH.DYN.AIDS.ZS (UNAIDS-derived) — a triangulation duplicate of UNAIDS."),
 
     # -- treatment cascade (the 95-95-95) --------------------------------------
-    IndicatorSpec("know_status_pct", "% of PLHIV who know their status (1st 95)", "percent",
+    IndicatorSpec("know_status_pct", "% of PLHIV who have been diagnosed (first 95)", "percent",
                   SourceType.MODELLED_ESTIMATE, "cascade"),
-    IndicatorSpec("art_coverage_pct", "% of PLHIV on ART (2nd 95, PLHIV base)", "percent",
+    IndicatorSpec("art_coverage_pct", "% of PLHIV on ART (second 95, PLHIV base)", "percent",
                   SourceType.MODELLED_ESTIMATE, "cascade"),
     IndicatorSpec("on_art_count", "Number of people on ART (PEPFAR MER TX_CURR)", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade"),
@@ -106,7 +106,7 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "DOD, HRSA, Peace Corps, State. Pooled so the three series still sum to the "
                   "PEPFAR country total."),
-    IndicatorSpec("viral_suppression_pct", "% of people on ART who are virally suppressed (3rd 95)", "percent",
+    IndicatorSpec("viral_suppression_pct", "% of people on ART who are virally suppressed (third 95)", "percent",
                   SourceType.MODELLED_ESTIMATE, "cascade",
                   "The strict third 95 (denominator = people on treatment)."),
     IndicatorSpec("community_viral_suppression_pct", "% of ALL PLHIV who are virally suppressed", "percent",
@@ -118,12 +118,27 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
     IndicatorSpec("kp_hiv_prevalence", "HIV prevalence among a key population", "percent",
                   SourceType.SURVEY, "epi",
                   "Denominator = the key population (set via population_group). Adrian's section 2."),
-    IndicatorSpec("know_status_count", "Number of PLHIV who know their HIV status", "count",
+    IndicatorSpec("know_status_count", "Number of PLHIV who have been diagnosed with HIV", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "Count (not %) — national programme figure. Reconcile vs know_status_pct × plhiv."),
     IndicatorSpec("viral_suppression_count", "Number of PLHIV virally suppressed (VL<1000)", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "Count (not %) — national programme figure."),
+    IndicatorSpec("viral_load_tests_performed", "People on ART with a viral-load result in the year",
+                  "count", SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "The DENOMINATOR of viral_suppression_pct, carried as a count in its own right "
+                  "because viral-load testing volume is itself a funding-cut signal (reagents and "
+                  "platform maintenance are donor-funded). Added 2026-10-01 for cm_cnls, which "
+                  "prints a regional viral-load cascade no existing indicator covered. Equivalent "
+                  "to the PEPFAR MER TX_PVLS denominator. NOT the number of tests run — a person "
+                  "tested twice in the year is counted once."),
+    IndicatorSpec("viral_load_coverage_pct", "% of people on ART with a viral-load result in the year",
+                  "percent", SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "Numerator = viral_load_tests_performed, denominator = on_art_count. The "
+                  "measurement coverage of the 3rd 95, distinct from viral_suppression_pct, which "
+                  "is the result among those measured. Keeping the two apart matters after a "
+                  "funding cut, because suppression can look stable while coverage collapses "
+                  "(Cameroon 2023: coverage 45.3%, suppression 85.9%). Added 2026-10-01 for cm_cnls."),
     IndicatorSpec("prep_recipients", "People receiving PrEP", "count",
                   SourceType.ROUTINE_PROGRAMME, "prevention",
                   "Carried at two grains and the grain decides whether two rows may be added. "
@@ -463,17 +478,18 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
     # NCHADS Cambodia "Boosted CoPCT" quarterly report. These are PERIOD FLOWS (activity
     # during a quarter), summed to an annual value; the sharpest funding-cut signal because
     # KP outreach/testing is the most PEPFAR/Global-Fund-dependent service.
-    IndicatorSpec("kp_reached", "Key-population people reached by outreach (period flow)", "count",
+    IndicatorSpec("kp_reached", "Key-population people reached by outreach (count over the period)", "count",
                   SourceType.ROUTINE_PROGRAMME, "prevention",
                   "Community outreach reach among a key population (set via population_group). "
                   "Quarterly programme flow summed to annual; NCHADS Boosted CoPCT."),
-    IndicatorSpec("kp_tested", "Key-population people tested for HIV (period flow)", "count",
+    IndicatorSpec("kp_tested", "Key-population people tested for HIV (count over the period)", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "HIV tests delivered to a key population (population_group). Quarterly flow -> annual."),
-    IndicatorSpec("kp_hiv_positive", "Key-population people newly testing HIV-positive (period flow)", "count",
+    IndicatorSpec("kp_hiv_positive",
+                  "Key-population people newly testing HIV-positive (count over the period)", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "Confirmed HIV-positive among a key population (population_group). Quarterly flow -> annual."),
-    IndicatorSpec("kp_art_enrolled", "Key-population people newly enrolled on ART (period flow)", "count",
+    IndicatorSpec("kp_art_enrolled", "Key-population people newly enrolled on ART (count over the period)", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "Newly enrolled on ART among a key population (population_group). Quarterly flow -> annual."),
 
@@ -482,28 +498,32 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
     # NOT nationally representative — a ground-truth disruption signal, source_type=CLM.
     # Each is a pooled proportion of survey respondents; numerator+denominator retained.
     # `higher_is` in the row's `extra` says whether a rising value is good or bad.
-    IndicatorSpec("clm_arv_stockout_pct", "CLM: left facility without ARV/OI due to stockout (last 3mo)", "percent",
+    IndicatorSpec("clm_arv_stockout_pct",
+                  "Left facility without ARV or OI medicines because of a stockout "
+                  "in the last three months (CLM)", "percent",
                   SourceType.COMMUNITY_LED_MONITORING, "service_access",
                   "Supply-side disruption. Rising = worse. VS__arv_stockout / 'yes'."),
-    IndicatorSpec("clm_treatment_interruption_pct", "CLM: ever stopped antiretroviral treatment", "percent",
+    IndicatorSpec("clm_treatment_interruption_pct", "Ever stopped antiretroviral treatment (CLM)", "percent",
                   SourceType.COMMUNITY_LED_MONITORING, "service_access",
                   "Treatment interruption. Rising = worse. VS__stop_arv / 'yes'."),
-    IndicatorSpec("clm_out_of_pocket_pct", "CLM: paid out of pocket for medicines/tests (last 6mo)", "percent",
+    IndicatorSpec("clm_out_of_pocket_pct",
+                  "Paid out of pocket for medicines or tests in the last six months (CLM)", "percent",
                   SourceType.COMMUNITY_LED_MONITORING, "service_access",
                   "Cost barrier (rises as free/donor-funded services are cut). Rising = worse. PS__out_of_pocket_pay / 'yes'."),
-    IndicatorSpec("clm_facility_open_ontime_pct", "CLM: facility opens and closes on time", "percent",
+    IndicatorSpec("clm_facility_open_ontime_pct", "Facility opens and closes on time (CLM)", "percent",
                   SourceType.COMMUNITY_LED_MONITORING, "service_access",
                   "Service availability. Rising = better. PS__open_ontime / 'yes'."),
-    IndicatorSpec("clm_enough_staff_pct", "CLM: enough staff to meet service-user needs", "percent",
+    IndicatorSpec("clm_enough_staff_pct", "Enough staff to meet the needs of service users (CLM)", "percent",
                   SourceType.COMMUNITY_LED_MONITORING, "service_access",
                   "Staffing adequacy (cut when funding drops). Rising = better. PS__enough_staff / 'yes'."),
-    IndicatorSpec("clm_stigma_pct", "CLM: faced stigma/discrimination at facility (last 6mo)", "percent",
+    IndicatorSpec("clm_stigma_pct",
+                  "Faced stigma or discrimination at the facility in the last six months (CLM)", "percent",
                   SourceType.COMMUNITY_LED_MONITORING, "service_access",
                   "Acceptability of services. Rising = worse. PS__stigma / 'yes'."),
-    IndicatorSpec("clm_psychosocial_support_pct", "CLM: psychosocial support available for PLHIV", "percent",
+    IndicatorSpec("clm_psychosocial_support_pct", "Psychosocial support available for PLHIV (CLM)", "percent",
                   SourceType.COMMUNITY_LED_MONITORING, "service_access",
                   "Support-service availability. Rising = better. VS__psychosocial_support / 'yes'."),
-    IndicatorSpec("clm_know_vl_pct", "CLM: service user knows own viral load", "percent",
+    IndicatorSpec("clm_know_vl_pct", "Service user knows own viral load (CLM)", "percent",
                   SourceType.COMMUNITY_LED_MONITORING, "service_access",
                   "VL-testing access proxy. Rising = better. PS__know_vl / 'yes'."),
 
@@ -651,6 +671,90 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   "its own health budget, so a government replacing withdrawn donor money "
                   "raises this even when its total health budget does not move."),
 
+    # -- national AIDS spending assessments, in the currency the assessment prints ---------
+    # Every financing indicator above is USD, because every source above either publishes in
+    # USD or publishes a USD conversion beside its own currency. A national AIDS spending
+    # assessment does neither. Cameroon's 2016-2017 and 2020-2021 assessments print every
+    # figure in CFA francs and state no exchange rate anywhere, and the panel holds no
+    # exchange-rate series to convert them with: `world_bank.py` pulls SP.POP.TOTL and
+    # SH.DYN.AIDS.ZS and nothing else. Picking a rate from outside the document would put a
+    # number in the panel that no source published and that no reader could trace, which is
+    # the one thing this panel does not do.
+    #
+    # So an assessment's levels enter in the assessment's own currency under these `_lcu`
+    # ids, with extra.currency carrying the ISO 4217 code (XAF for Cameroon) and
+    # extra.currency_note saying no rate was published. The ids are separate from the USD
+    # series above and MUST NEVER be pooled with them or summed into them. `LCU` is the World
+    # Bank's own term for a local currency unit, which is the vocabulary the conversion would
+    # use if one is added later: PA.NUS.FCRF is LCU per US dollar.
+    #
+    # Converting later is a derived step over two traceable panel series, the LCU level and
+    # the published exchange rate, which is a different and safer thing from a connector
+    # applying a rate it chose itself. Adding PA.NUS.FCRF to `world_bank.py` is what that
+    # would need, and is Jason's call because it changes an existing connector's output for
+    # every country in the panel.
+    #
+    # Two things to know about these ids downstream. `site/charts.py` formats an unrecognised
+    # unit as a plain grouped number with no currency symbol, which is right for a franc
+    # level. `reconcile.py` has no materiality floor for LCU (MATERIALITY_DEFAULT is 0.0), so
+    # if a second source ever publishes the same country's assessment in the same currency, a
+    # one-franc difference would read as a disagreement; a floor would have to be added then.
+    IndicatorSpec("hiv_expenditure_total_lcu",
+                  "HIV expenditure, all sources, national currency", "LCU",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "The assessment's headline total, all funding sources and all "
+                  "interventions. The local-currency counterpart of hiv_expenditure_total, "
+                  "never pooled with it."),
+    IndicatorSpec("hiv_expenditure_international_lcu",
+                  "International HIV expenditure, national currency", "LCU",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "All external money as the assessment accounts for it. The parent of the "
+                  "three donor series below, which sum to it exactly in both Cameroon "
+                  "assessments."),
+    IndicatorSpec("hiv_expenditure_us_gov_lcu",
+                  "United States government HIV expenditure, national currency", "LCU",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "What the country's own assessment attributes to the United States, "
+                  "against pepfar_expenditure, which is the donor's account of the same "
+                  "money over a US fiscal year."),
+    IndicatorSpec("hiv_expenditure_global_fund_lcu",
+                  "Global Fund HIV expenditure, national currency", "LCU",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "What the country's own assessment attributes to the Global Fund, against "
+                  "global_fund_hiv_disbursements, which is the donor's account of the same "
+                  "money."),
+    IndicatorSpec("hiv_expenditure_other_bilateral_lcu",
+                  "Other bilateral HIV expenditure, national currency", "LCU",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Bilateral donors other than the United States, the place any backfill by "
+                  "other governments would appear. France and Germany in the Cameroon "
+                  "assessments."),
+    IndicatorSpec("domestic_hiv_spend_lcu",
+                  "Domestic public HIV expenditure, national currency", "LCU",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "The country's own public money, the series that has to rise if a "
+                  "government replaces withdrawn donor funding. The local-currency "
+                  "counterpart of domestic_hiv_spend."),
+    IndicatorSpec("hiv_expenditure_domestic_private_lcu",
+                  "Private HIV expenditure, national currency", "LCU",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Domestic private money, including what households pay themselves, so a "
+                  "rise here beside a fall in the international series is the cost-shifting "
+                  "signal."),
+    IndicatorSpec("hiv_spend_treatment_lcu",
+                  "HIV spending on treatment, care and support, national currency", "LCU",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "The one intervention line that is defined the same way across Cameroon's "
+                  "two assessments, both of which print a single 'Soins et traitement' "
+                  "total. The other intervention lines are refused: see cameroon_nasa.py."),
+    IndicatorSpec("hiv_expenditure_international_share_pct",
+                  "International share of HIV expenditure", "percent",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "Donor money as a share of all HIV spending, recomputed from the levels "
+                  "and so free of currency. The exposure measure a reader of a funding-cuts "
+                  "panel wants, and the only financing figure from a local-currency "
+                  "assessment that is comparable across countries without an exchange rate."),
+
     IndicatorSpec("external_hiv_oda_total", "External HIV financing (all donors, ODA)", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
                   "OECD CRS purpose code 13040 (STD control incl. HIV/AIDS), all donors."),
@@ -672,29 +776,115 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
     # while its State line rises 47.6m and its country total goes UP.
     #
     # The four series partition external_hiv_oda_us for source_id=foreign_assistance.
+    #
+    # The HHS series was `external_hiv_oda_us_cdc` until 27 September 2026, when the connector
+    # moved off the hand-downloaded CSV and onto the IATI XML the same agencies publish on
+    # Amazon S3. The CSV carried a managing SUB-agency column and the XML carries none, so CDC
+    # can no longer be separated from the rest of the department. CDC is 38.5bn USD of HHS's
+    # 43.1bn, so the two are close and they are not the same measurement.
     IndicatorSpec("external_hiv_oda_us_usaid", "US HIV disbursements managed by USAID", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
                   "The arm that was dismantled. Read alongside _state before calling a fall a cut."),
-    IndicatorSpec("external_hiv_oda_us_cdc", "US HIV disbursements managed by HHS/CDC", "USD",
+    IndicatorSpec("external_hiv_oda_us_hhs", "US HIV disbursements managed by Health and Human Services", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
-                  "HHS restricted to sub-agency CDC, matching PEPFAR's own 'HHS/CDC' label. The "
-                  "within-country comparison arm: it continued while USAID did not."),
+                  "The whole department, which is CDC plus NIH and HRSA, because the IATI files "
+                  "carry no sub-agency. Close to but not identical with PEPFAR's own 'HHS/CDC' "
+                  "label. The within-country comparison arm: HHS continued while USAID did not."),
     IndicatorSpec("external_hiv_oda_us_state", "US HIV disbursements managed by the State Department", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
                   "Near zero before FY2025 and then the destination of USAID's global health "
                   "programmes (STATE/GHSD). Reclassification, not new money."),
     IndicatorSpec("external_hiv_oda_us_other_agency", "US HIV disbursements managed by other US agencies", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
-                  "DOD, Peace Corps, MCC, DOL, and the non-CDC parts of HHS (NIH, HRSA) — pooled "
-                  "so the four series still sum to the country total."),
+                  "DOD, Peace Corps, MCC, DOL and the African Development Foundation, pooled so "
+                  "the four series still sum to the country total. NIH and HRSA left this series "
+                  "for _hhs when the CDC split went."),
 
     IndicatorSpec("global_fund_hiv_disbursements", "Global Fund HIV disbursements to the country", "USD",
                   SourceType.EXPENDITURE_ACCOUNT, "financing",
-                  "Two independent measures of the same money, so filter on source_id before "
-                  "summing. OECD CRS (donor 9OTH012) is the Global Fund's disbursement as the "
-                  "donor community records it, and unaids_gam_expenditure is what the country's "
-                  "own expenditure return attributes to the Global Fund. Key for the "
-                  "backfill question (does the Global Fund rise as US/PEPFAR funding is cut?)."),
+                  "Three measures of the same money, not three independent measures, so filter "
+                  "on source_id before summing. OECD CRS (donor 9OTH012) is the Global Fund's "
+                  "disbursement as the "
+                  "donor community records it, unaids_gam_expenditure is what the country's "
+                  "own expenditure return attributes to the Global Fund, and iati is the Global "
+                  "Fund's own transaction-level filing to the IATI registry, which arrives within "
+                  "weeks instead of the CRS's 14 months and is the only one of the three that can "
+                  "see the 2025 collapse. Key for the "
+                  "backfill question (does the Global Fund rise as US/PEPFAR funding is cut?). "
+                  "All 1,491 Global Fund activity "
+                  "identifiers in the panel's iati rows match a grant in the Global Fund's own "
+                  "grant table, counted on 1 October 2026, so the iati reading and the CRS "
+                  "donor-9OTH012 reading are the same institution's filing reaching the panel "
+                  "by two routes. reconcile.py classifies the pair as derived for that reason, "
+                  "and a reader must not treat agreement between the two as corroboration."),
+
+    # An allocation is not a disbursement, and this series must never be added to the one
+    # above. The Global Fund tells a country at the start of a three-year cycle what the
+    # country may apply for, and the disbursement series records what the Global Fund then
+    # moved, so the two are the same money counted at two different moments. One row carries
+    # one WHOLE CYCLE and `year` holds the cycle's first year, because dividing an allocation
+    # by three would invent an annual profile the Global Fund does not publish and writing the
+    # cycle figure onto all three years would triple the money. Anyone summing this series
+    # across years is summing cycles.
+    IndicatorSpec("global_fund_hiv_allocation_cycle",
+                  "Global Fund HIV allocation for a whole three-year cycle, not an annual figure",
+                  # The unit says what one row covers, and the unit matches the string the
+                  # connector writes onto every row, so the site and the panel cannot disagree
+                  # about whether a figure is annual.
+                  "USD per three-year allocation cycle",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "CommunicatedAllocation_ReferenceRate from the Global Fund Data Service, the "
+                  "only one of the service's 16 financial datasets that reaches both a country "
+                  "and a disease component. A forward commitment, which no other source in this "
+                  "panel states at country level for the 2026-2028 cycle, and 2026-2028 is the "
+                  "first Global Fund allocation set after the PEPFAR and USAID withdrawals. The "
+                  "unit is held constant at 'USD per three-year allocation cycle' so the four "
+                  "cycles of a country stay one series, and extra.allocation_period names the "
+                  "cycle. Do not add to global_fund_hiv_disbursements."),
+
+    # -- the rest of the external money, transaction by transaction (iati only) ---------
+    # Three series that OECD CRS also covers, measured a different way. CRS is an annual return
+    # filed by official donors about 14 months after the year it describes, and the 2020 purpose
+    # code change moves money between codes in a way that no series read straight across the
+    # break can survive. IATI publishers file the day the money moved, within weeks, so a
+    # collapse that began in January 2025 is visible in IATI and is not yet in CRS at all.
+    #
+    # NEITHER external_hiv_bilateral_other NOR external_hiv_multilateral_other MAY BE ADDED TO
+    # external_hiv_oda_total. The three measure the same flows from different filings, so adding
+    # them counts the same disbursement twice. Every row carries do_not_add_to in `extra` as well.
+    #
+    # Both series exclude money the panel already holds from the donor that supplied it: the
+    # United States, whose eight IATI publishers are read and logged and never written because
+    # foreign_assistance and OECD CRS donor USA already carry them, and the Global Fund, which
+    # has its own series above. Each row's `extra.by_publisher` names every publisher that
+    # contributed to it, because the panel's row key ends at source_id and one row per publisher
+    # would be rejected as a duplicate.
+    IndicatorSpec("external_hiv_bilateral_other",
+                  "External HIV financing from governments other than the United States (IATI)", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "IATI purpose 13040, publishers whose reporting-org type is 10, 11 or 15, so "
+                  "governments, local governments and other public sector bodies. Sweden, the "
+                  "FCDO, Germany, Canada, Australia, the Netherlands, Switzerland and Ireland are "
+                  "the largest. Do not add to external_hiv_oda_total."),
+    IndicatorSpec("external_hiv_multilateral_other",
+                  "External HIV financing from multilateral bodies other than the Global Fund (IATI)", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "IATI purpose 13040, publishers whose reporting-org type is 40, with the Global "
+                  "Fund removed to its own series. WHO, UNAIDS, UNICEF and UNDP dominate. Much of "
+                  "this money is spent on behalf of a bilateral donor or the Global Fund, and an "
+                  "activity naming either as a funder is excluded, so the series is smaller than "
+                  "the publishers' own totals by design. WHO and UNAIDS strategy and coordination "
+                  "lines are kept and flagged, because a country office's technical support is "
+                  "money reaching that country. Do not add to external_hiv_oda_total."),
+    IndicatorSpec("external_hiv_foundation",
+                  "External HIV financing from private foundations (IATI)", "USD",
+                  SourceType.EXPENDITURE_ACCOUNT, "financing",
+                  "IATI purpose 13040, publishers whose reporting-org type is 60, which in the HIV "
+                  "corpus is overwhelmingly the Gates Foundation. HELD UNWRITTEN until it is "
+                  "settled whether the OECD CRS all-official-donor total already contains Gates "
+                  "money and from which year, because a series that double counts before one year "
+                  "and not after is worse than no series. The connector reads and logs the money "
+                  "on every run, so the totals are known before the hold is lifted."),
 
     # -- PEPFAR budget vs spend, and the same split by US funding agency ----------------
     # The money-side counterpart of on_art_count_usaid / _cdc. A budget is intent stated a year

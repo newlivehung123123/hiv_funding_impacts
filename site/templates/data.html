@@ -7,13 +7,14 @@
   <p class="crumb"><a href="{{ home }}">Home</a> &nbsp;/&nbsp; Data</p>
   <h1>Data and downloads</h1>
   <p class="lede">
-    All compiled, curated and harmonised datasets developed in this project are made publicly
-    accessible. For each dataset, one row is one figure, from one source, for one country,
-    indicator and year. Sources are not merged and duplicates are not removed, because the
-    differences between sources are part of what the project is measuring. Where two sources
-    report the same country and year, the two rows are alternative readings of one quantity
-    rather than two amounts, so any total has to be built from one source at a time. The
-    indicator tables below say which indicators this affects and how many rows it touches.
+    All compiled, curated and harmonised datasets developed in our project are made publicly
+    accessible. In every dataset, a row is a single figure from a single source for a single
+    country, indicator and year. Sources are not merged and duplicates are not removed, because
+    the differences between sources are part of what the project is measuring. Where two sources
+    report the same country and year, the two rows are alternative readings of the same figure
+    and not two amounts to add, so any total has to be built from a single source at a time. The
+    indicator tables below show which indicators have rows from two or more sources for the same
+    country and year, and how many rows are affected.
   </p>
 </section>
 
@@ -75,7 +76,7 @@
           <td class="muted">{{ i.sources }}
             {% if i.overlap %}<span title="{{ i.overlap }}"
               style="display:block;margin-top:3px;font-size:11px;color:var(--spec)">
-              {{ i.n_overlap }} rows overlap, do not add</span>{% endif %}
+              {{ i.n_overlap }} overlapping rows, not to be added</span>{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -118,11 +119,11 @@
     <h2 class="sec-title">Terms of use</h2>
   </div>
   <p style="font-size:13.5px;color:var(--steel-400);max-width:78ch;margin-top:14px;line-height:1.66">
-    The panel is a compilation of figures published by the bodies listed above. Each of those
-    bodies sets its own terms of use, and those terms are stated at the source URL recorded on
-    every row. Anyone quoting a figure from the panel should cite this compilation and also the
+    The panel is a compilation of figures published by the bodies listed above. Every body
+    listed above sets separate terms of use, and the terms are stated at the source URL recorded
+    on every row. Anyone quoting a figure from the panel should cite the compilation and also the
     body that published the figure, using the source name, the URL and the retrieval date
-    carried on that row.
+    carried on the row of the figure.
   </p>
   <p class="mono" style="font-size:12px;color:var(--steel-300);margin-top:18px;max-width:70ch;line-height:1.75;
      border-left:1px solid rgba(201,164,100,.4);padding-left:16px">{{ site.citation }}</p>

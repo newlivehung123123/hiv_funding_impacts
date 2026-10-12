@@ -17,7 +17,7 @@ it is cropped and how large a copy is worth keeping:
 
     region-*     the eight regions on the home page rack
     domain-*     the six data categories
-    country-*    the nine Southeast Asian countries, by ISO3
+    country-*    the countries of every live region, by ISO3
     rel-*        the three source relationships on the reconciliation page
     panel-*      the six files on the downloads page
 
@@ -30,7 +30,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "assets" / "photos"
@@ -81,7 +81,9 @@ def prepare(path: Path) -> tuple[Path, int]:
     slug = path.stem
     width, aspect = SHAPE.get(slug.split("-", 1)[0], SHAPE_DEFAULT)
 
-    im = Image.open(path)
+    # Some cameras store the pixels sideways and record the turn in an EXIF tag, which the
+    # WebP copy would not carry, so the turn is applied here.
+    im = ImageOps.exif_transpose(Image.open(path))
     if im.mode != "RGB":
         im = im.convert("RGB")
 
