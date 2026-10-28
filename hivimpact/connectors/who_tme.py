@@ -24,12 +24,12 @@ period the testing and outreach stop.
 
 Two things this connector deliberately does not do:
 
-  * It does not repair the currency errors. Gabon's 2024 TB/HIV expenditure is 325,375,873
-    in a column the dictionary declares to be US dollars, against an other-year median of
-    9,836 — CFA francs filed into a USD column, and the file has no currency field to
-    check against. The value is emitted as published, because a connector records what the
-    source said and validation says what it means; writers._unit_outliers is what catches
-    it. Note that most of the other large jumps in these money columns are not unit errors
+  * The connector does not repair the currency errors. Gabon's 2024 TB/HIV expenditure is
+    325,375,873 in a column the dictionary declares to be US dollars, against an other-year
+    median of 9,836, and the file has no currency field to check against. A connector
+    records what the source said, so a money value in the wrong unit is refused with a
+    logged reason and never converted, and writers._unit_outliers finds the money values
+    in the wrong unit. Most of the other large jumps in the money columns are not unit errors
     at all but real variation on budgets of a few thousand dollars, which is why the check
     that matters tests for a break in an otherwise stable series and not for a big ratio.
 
@@ -37,6 +37,23 @@ Two things this connector deliberately does not do:
     hiv_reg were retired in 2014 and counted all TB patients; newrel_hivtest and its
     siblings count new and relapse cases only. Mapping both onto one canonical id would
     put a definition change in the middle of every series and read as a jump in 2015.
+
+Refusals. `_REFUSED` lists the published values the connector refuses, with the reason for
+every refusal, and the connector logs every refusal. The Lithuanian TB/HIV incidence of
+2,800 for 2009 (e_inc_tbhiv_num, bounds 2,000 and 3,600) is refused, because the value
+exceeds the UNAIDS estimate of 2,000 people living with HIV in Lithuania for 2009 and would
+put 82 per cent of the 3,400 Lithuanian TB cases WHO estimates for 2009 among people with
+HIV, against 88 of 3,900 for 2008 and 74 of 3,100 for 2010. Ruling R27 of
+research/rulings_2026-10-15.md records the refusal, decided on 16 October 2026.
+
+Ruling R28 of the same file, decided on 16 October 2026, refuses seven money values which
+break an otherwise stable series by a factor of more than 20. The four Gabonese money values
+for 2024 in the expenditure file look like CFA francs, because the Global Fund TB money
+Gabon received in 2024 (731,795,829) is 573 times the 1,277,451 US dollars of Global Fund
+TB money Gabon expected for 2024. The Timorese Global Fund TB money received in 2024
+(309,530,584) and expected for 2025 (272,525,512) falls inside the range of every other
+year of the same series when divided by 100. The Global Fund TB money Vanuatu received in
+2019 (10,758,488) is 53 to 120 times every other year of the series above 1,000 US dollars.
 """
 from __future__ import annotations
 
@@ -124,6 +141,23 @@ COLUMNS: List[TMEColumn] = [
 
 DATASET_URL = "https://www.who.int/teams/global-tuberculosis-programme/data"
 
+# Published values refused, keyed by canonical id, ISO3 and year, with the reason logged
+# for every refusal (rulings R27 and R28 of research/rulings_2026-10-15.md, 16 October 2026).
+_REFUSED: Dict[Tuple[str, str, int], str] = {
+    ("tbhiv_incidence", "LTU", 2009): "the Lithuanian TB/HIV incidence of 2,800 for 2009 exceeds "
+                                      "the UNAIDS estimate of 2,000 people living with HIV in "
+                                      "Lithuania for 2009 and would make 82 per cent of Lithuanian "
+                                      "TB cases HIV-positive, against about two per cent in 2008 "
+                                      "and 2010",
+    ("tbhiv_expenditure", "GAB", 2024): "the Gabonese money values for 2024 in the expenditure file look like CFA francs, because the Global Fund TB money received in 2024 is 573 times the Global Fund TB money expected for 2024 in US dollars",
+    ("tbhiv_funding_received", "GAB", 2024): "the Gabonese money values for 2024 in the expenditure file look like CFA francs, because the Global Fund TB money received in 2024 is 573 times the Global Fund TB money expected for 2024 in US dollars",
+    ("tb_funding_received_gf", "GAB", 2024): "the Gabonese money values for 2024 in the expenditure file look like CFA francs, because the Global Fund TB money received in 2024 is 573 times the Global Fund TB money expected for 2024 in US dollars",
+    ("tb_funding_received_domestic", "GAB", 2024): "the Gabonese money values for 2024 in the expenditure file look like CFA francs, because the Global Fund TB money received in 2024 is 573 times the Global Fund TB money expected for 2024 in US dollars",
+    ("tb_funding_received_gf", "TLS", 2024): "the Timorese Global Fund TB money of 2024 falls inside the range of every other year of the series when divided by 100, and Timor-Leste uses the US dollar",
+    ("tb_funding_expected_gf", "TLS", 2025): "the Timorese Global Fund TB money of 2025 falls inside the range of every other year of the series when divided by 100, and Timor-Leste uses the US dollar",
+    ("tb_funding_received_gf", "VUT", 2019): "the Global Fund TB money Vanuatu received in 2019 is 53 to 120 times every other year of the series above 1,000 US dollars",
+}
+
 
 class WHOTMEConnector(BaseConnector):
     source_id = "who_tme"
@@ -194,6 +228,10 @@ class WHOTMEConnector(BaseConnector):
                     if value is not None:
                         filled += 1
                 if value is None:
+                    continue
+                reason = _REFUSED.get((spec.canonical, iso3, year))
+                if reason:
+                    log.info("who_tme: %s %s %d refused, %s", spec.canonical, iso3, year, reason)
                     continue
 
                 yield self.make_row(

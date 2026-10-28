@@ -111,9 +111,11 @@ _MAP: Tuple[Tuple[str, str, str, str, str], ...] = (
     ("Total children (<15) who are living with HIV",         "plhiv",         POP_ALL, "all",    "0-14"),
     ("Total people living with HIV, aged 15-24",             "plhiv",         POP_ALL, "all",    "15-24"),
     ("Total people living with HIV, aged 15-49",             "plhiv",         POP_ALL, "all",    "15-49"),
-    ("HIV prevalence in age group 15-49",                    "hiv_prevalence_15_49", POP_ALL, "all",    "15-49"),
-    ("HIV prevalence in males aged 15-49",                   "hiv_prevalence_15_49", POP_ALL, "male",   "15-49"),
-    ("HIV prevalence in females aged 15-49",                 "hiv_prevalence_15_49", POP_ALL, "female", "15-49"),
+    # hiv_prevalence_15_49 carries the age range in the id name, so age_group stays "all", the
+    # rule dhs, unaids_aidsinfo, unaids_naomi, unaids_phia and world_bank follow (ruling R18)
+    ("HIV prevalence in age group 15-49",                    "hiv_prevalence_15_49", POP_ALL, "all",    "all"),
+    ("HIV prevalence in males aged 15-49",                   "hiv_prevalence_15_49", POP_ALL, "male",   "all"),
+    ("HIV prevalence in females aged 15-49",                 "hiv_prevalence_15_49", POP_ALL, "female", "all"),
     ("HIV prevalence in female sex workers",                 "kp_hiv_prevalence", POP_SEX_WORKERS, "female", "all"),
     ("HIV prevalence in men who have sex with men (ages 18+)", "kp_hiv_prevalence", POP_GBMSM, "male", "18+"),
     ("HIV prevalence in transgender women (ages 18+)",       "kp_hiv_prevalence", POP_TRANSGENDER, "all", "18+"),

@@ -36,6 +36,23 @@ This repository is **Phase 1**: the aggregator layer.
   national. Log: [`docs/PHASE4_FEASIBILITY_WCA.md`](docs/PHASE4_FEASIBILITY_WCA.md).
   The methods note built on all three regions — what is reachable, and the layer above the country
   that carries the funder as a column — is [`docs/ACCESS_LADDER.md`](docs/ACCESS_LADDER.md).
+- **Phase 5**, Latin America and the Caribbean. The log is
+  [`docs/PHASE5_FEASIBILITY_LAC.md`](docs/PHASE5_FEASIBILITY_LAC.md). The assessment closed on
+  28 October 2026 under rulings R72 to R74 of
+  [`research/rulings_2026-10-15.md`](research/rulings_2026-10-15.md).
+- **Phase 6**, South Asia. The working notes are in [`research/phase6_sas`](research/phase6_sas).
+  The region page went live on 27 October 2026.
+- **Phase 7**, East Asia and the Pacific. The working notes are in
+  [`research/phase7_eap`](research/phase7_eap). The region page went live on 27 October 2026.
+- **Phase 8**, Eastern Europe and Central Asia. The working notes are in
+  [`research/phase8_eeca`](research/phase8_eeca). The region page went live on 27 October 2026.
+- **Phase 9**, Middle East and North Africa. The log is
+  [`docs/PHASE9_FEASIBILITY_MENA.md`](docs/PHASE9_FEASIBILITY_MENA.md). The assessment closed on
+  28 October 2026 under rulings R75 to R77 of
+  [`research/rulings_2026-10-15.md`](research/rulings_2026-10-15.md).
+
+The site footer lists the phases in number order, with Southeast Asia under Phase 2, the phase
+of the first country-level connectors, and Phase 1 as the aggregator sources for every region.
 
 ## Install
 

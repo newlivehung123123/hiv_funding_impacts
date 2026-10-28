@@ -98,8 +98,9 @@
         <li>Panel built {{ stats.built_on }}</li>
         <li>{{ stats.n_obs_fmt }} observations</li>
         <li>{{ stats.n_sources }} sources</li>
-        {% for r in nav_regions if r.live %}
-        <li>{{ r.phase }}, {{ r.name }}</li>
+        <li>Phase 1, aggregator sources for all {{ nav_regions|length|count }} regions</li>
+        {% for r in nav_regions|selectattr('phase_no')|sort(attribute='phase_no') %}
+        <li>{{ r.phase }}, {{ r.name }}{% if not r.live %}, in progress{% endif %}</li>
         {% endfor %}
       </ul>
     </div>

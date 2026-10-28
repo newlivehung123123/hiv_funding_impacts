@@ -7,7 +7,7 @@
   <div class="hero__canvas" id="hero-plot"></div>
   <div class="hero__in">
     {% set live = regions|selectattr('status', 'equalto', 'live')|list %}
-    <p class="kicker">{{ live[-1].phase }} &nbsp;·&nbsp; {{ live|length|count(true) }} regions published</p>
+    <p class="kicker">{{ (live|sort(attribute='phase_no')|last).phase }} &nbsp;·&nbsp; {{ live|length|count(true) }} regions published</p>
     <h1>What happens to HIV services <span class="soft">when the funding is withdrawn</span></h1>
     <p class="hero__deck">
       The United States has restructured the country's global health assistance under the
@@ -15,8 +15,9 @@
       what followed the restructuring, including donor funding, epidemic estimates, treatment
       coverage and the records published by national HIV programmes. The aim of our project is
       to measure how the restructuring affects HIV programmes in low- and middle-income
-      countries (LMICs). Southeast Asia, Eastern and Southern Africa, and Western and Central
-      Africa are covered so far, and we will extend the coverage region by region until all
+      countries (LMICs). Southeast Asia, South Asia, East Asia and the Pacific, Eastern and
+      Southern Africa, Western and Central Africa, Latin America and the Caribbean, and Eastern
+      Europe and Central Asia are covered, and we will extend the coverage region by region until all
       {{ regions|length|count }} LMIC regions are covered.
     </p>
     <div class="hero__foot"></div>
@@ -46,20 +47,23 @@
   </div>
   <div class="wrap" style="max-width:var(--maxw);padding-top:10px">
     <p style="font-size:13.5px;color:var(--steel-400);max-width:70ch;line-height:1.6">
-      Southeast Asia is the pilot region of our project. Southeast Asia, Eastern and Southern
-      Africa, and Western and Central Africa now have published region pages. A region marked
-      Not yet published is listed to show the full scope of our project, and pages for the
-      unpublished regions will follow. Point at any region to see the countries in the region.
+      Southeast Asia is the pilot region of our project. Southeast Asia, South Asia, East Asia
+      and the Pacific, Eastern and Southern Africa, Western and Central Africa, Latin America
+      and the Caribbean, the Middle East and North Africa, and Eastern Europe and Central Asia
+      now have published region pages. Point at any region to see the countries in the region.
     </p>
     <p style="font-size:13.5px;color:var(--steel-400);max-width:70ch;line-height:1.6;margin-top:12px">
       A country tagged AT SOURCE is read at source, which means that our project reads the
       figures for the country directly from a national publisher, for example the national HIV
       programme, the health ministry, the national statistics office or, for South Africa, the
-      Thembisa model of the University of Cape Town. A country without a tag appears only
+      Thembisa model of the University of Cape Town and, for India, the HIV estimates of the
+      National AIDS Control Organisation (NACO). A country without a tag appears only
       through international and donor bodies that compile figures across many countries, for
       example UNAIDS, the WHO, the World Bank, the OECD, the Global Fund and PEPFAR. Indonesia carries
       the COMMUNITY tag, because our project also reads reports from community-led monitoring of
-      health facilities in Indonesia.
+      health facilities in Indonesia. Our project also reads reports from community-led
+      monitoring at selected Indian facilities, and India carries the AT SOURCE tag for the NACO
+      estimates.
     </p>
   </div>
 
@@ -233,9 +237,16 @@
         <p>
           National programme reporting is the primary record, and the international and donor
           bodies that compile figures across many countries provide the cross-check. National
-          sources are read directly in Thailand, Cambodia, the Philippines, South Africa, Nigeria,
-          Cameroon, Niger, Guinea and Chad, and our project also reads community-led monitoring
-          reports for Indonesia. Every other country appears through international and donor
+          sources are read directly in 35 countries, namely Thailand, Cambodia and the
+          Philippines in Southeast Asia, Bangladesh, India, the Maldives, Nepal and Sri Lanka in
+          South Asia, China, Mongolia, North Korea, Papua New Guinea, the Solomon Islands and
+          Vanuatu in East Asia and the Pacific, South Africa in Eastern and Southern Africa,
+          Nigeria, Cameroon, Niger, Guinea and Chad in Western and Central Africa, Argentina,
+          Belize, Bolivia, Haiti, Nicaragua, Paraguay and Peru in Latin America and the
+          Caribbean, and Armenia,
+          Belarus, Georgia, Kazakhstan, Kyrgyzstan, Montenegro, Tajikistan and Ukraine in Eastern
+          Europe and Central Asia. Our project also reads community-led monitoring reports for
+          Indonesia and India. Every other country appears through international and donor
           reporting alone, and every country page names the sources used for the country.
         </p>
       </div>

@@ -20,8 +20,10 @@ keychain each time the script runs, so it is typed in once, by hand, and never a
 from __future__ import annotations
 
 import argparse
+import calendar
 import ftplib
 import getpass
+import re
 import ssl
 import subprocess
 import sys
@@ -167,13 +169,17 @@ def store_password() -> int:
 
 # ---------------------------------------------------------------- the remote side
 
-def remote_entries(ftp: ftplib.FTP, path: str) -> list[tuple[str, bool]]:
-    """The names in a remote folder, each with whether it is itself a folder."""
+def remote_entries(ftp: ftplib.FTP, path: str) -> list[tuple[str, bool, dict[str, str]]]:
+    """
+    The names in a remote folder, every name with whether the name is a folder and with the facts
+    the host gives for the name, which include the size and the time of writing where the host
+    gives them.
+    """
     try:
-        return [(name, facts.get("type") == "dir")
+        return [(name, facts.get("type") == "dir", facts)
                 for name, facts in ftp.mlsd(path)
                 if name not in (".", "..")]
-    except ftplib.all_errors:
+    except ftplib.error_perm:
         out = []
         for name in ftp.nlst(path):
             name = name.rsplit("/", 1)[-1]
@@ -182,26 +188,26 @@ def remote_entries(ftp: ftplib.FTP, path: str) -> list[tuple[str, bool]]:
             here = ftp.pwd()
             try:
                 ftp.cwd(f"{path}/{name}")
-                out.append((name, True))
+                out.append((name, True, {}))
                 ftp.cwd(here)
-            except ftplib.all_errors:
-                out.append((name, False))
+            except ftplib.error_perm:
+                out.append((name, False, {}))
         return out
 
 
-def remote_tree(ftp: ftplib.FTP, base: str) -> tuple[set[str], set[str]]:
-    """Every file and every folder under base, as paths relative to base."""
-    files, dirs, queue = set(), set(), [""]
+def remote_tree(ftp: ftplib.FTP, base: str) -> tuple[dict[str, dict[str, str]], set[str]]:
+    """Every file under base with the host's facts for the file, and every folder under base."""
+    files, dirs, queue = {}, set(), [""]
     while queue:
         rel = queue.pop()
         here = f"{base}/{rel}".rstrip("/")
-        for name, is_dir in remote_entries(ftp, here):
+        for name, is_dir, facts in remote_entries(ftp, here):
             child = f"{rel}/{name}".lstrip("/")
             if is_dir:
                 dirs.add(child)
                 queue.append(child)
             else:
-                files.add(child)
+                files[child] = facts
     return files, dirs
 
 
@@ -235,71 +241,283 @@ def ensure_dir(ftp: ftplib.FTP, root: str, path: str, made: set[str]) -> None:
             continue
         try:
             ftp.mkd(walk)
-        except ftplib.all_errors:
+        except ftplib.error_perm:
             pass                       # already there, which is the common case
         made.add(walk)
 
 
 # ---------------------------------------------------------------- publishing
 
+# The host can close the connection part of the way through a publication. On 28 October 2026
+# the host closed the connection between two files after 750 of 975 had gone. A closed
+# connection is therefore opened again and the step which was due is tried again, up to
+# RECONNECTS times in a row before the publication stops. A refusal by the host, a 5xx reply, is not a lost
+# connection and is never retried, with the single exception of BUSY below.
+RECONNECTS = 6
+LOST = (EOFError, OSError, ftplib.error_temp)
+
+# The host writes every upload under a hidden name and gives the upload the real name once the
+# upload is complete. After a lost connection the host can keep the hidden copy of the unfinished
+# upload, and while the hidden copy is there, the host refuses a new upload of the same file with
+# "Temporary hidden file ... already exists". On 28 October 2026 the host refused
+# hiv_panel.sqlite with the same message ten seconds after the second lost connection, and still
+# held the hidden copy more than an hour later. The host also closes a connection left idle for
+# a minute, and the connection is therefore closed before every wait and opened again after the
+# wait. After BUSY_WAITS waits of BUSY_WAIT seconds the hidden copy counts as a leftover of a
+# broken upload by deploy.py, and the hidden copy is removed before a last try.
+BUSY = re.compile(r"Temporary hidden file (\S+) already exists")
+BUSY_WAIT = 60
+BUSY_WAITS = 2
+
+
+def hidden_copy(path: str) -> str:
+    """The name under which the host writes an upload of path until the upload is complete."""
+    folder, name = path.rsplit("/", 1)
+    return f"{folder}/.in.{name}."
+
+
+class Session:
+    """The FTP connection, opened again whenever the host drops the connection."""
+
+    def __init__(self) -> None:
+        self.ftp: ftplib.FTP_TLS | None = connect()
+        self.reopened = 0
+
+    def run(self, what: str, step):
+        lost = busy = 0
+        remove = None
+        while True:
+            try:
+                if self.ftp is None:
+                    self.ftp = connect()
+                if remove is not None:
+                    try:
+                        self.ftp.delete(remove)
+                    except ftplib.error_perm as refused:
+                        print(f"  kept      {remove} ({refused})", flush=True)
+                    remove = None
+                return step(self.ftp)
+            except ftplib.error_perm as e:
+                hidden = BUSY.search(str(e))
+                if hidden is None or busy > BUSY_WAITS:
+                    raise
+                lost = 0                   # a reply from the host shows the connection is alive
+                busy += 1
+                if busy <= BUSY_WAITS:
+                    print(f"  waiting   the host still holds the unfinished copy of {what}, "
+                          f"trying again in {BUSY_WAIT} s ({busy}/{BUSY_WAITS})", flush=True)
+                    self.drop()
+                    time.sleep(BUSY_WAIT)
+                else:
+                    remove = hidden.group(1)
+                    print(f"  removing  {remove}, the unfinished copy the host kept "
+                          f"after {BUSY_WAITS} waits", flush=True)
+            except LOST as e:
+                if lost == RECONNECTS:
+                    raise
+                lost += 1
+                self.reopened += 1
+                print(f"  lost      the connection at {what} ({type(e).__name__}: {e}), "
+                      f"connecting again", flush=True)
+                self.drop()
+                time.sleep(15 * lost)
+
+    def drop(self) -> None:
+        if self.ftp is not None:
+            try:
+                self.ftp.close()
+            except ftplib.all_errors:
+                pass
+        self.ftp = None
+
+    def quit(self) -> None:
+        if self.ftp is not None:
+            try:
+                self.ftp.quit()
+            except ftplib.all_errors:
+                pass
+        self.ftp = None
+
+
+# The pages go up before the large downloads, and a publication cut off during a download of
+# several hundred megabytes therefore still leaves every page of the new build live.
+BIG = 20 * 1024 * 1024
+
+# A file the host already holds from the current build is not sent again, and a second run after
+# a publication was cut off therefore sends only the files which had not arrived. The host's copy
+# counts as the current build's copy when the sizes match and the host wrote the copy at or after
+# the time the build wrote the file. The host gives the time in UTC, and a copy dated more than
+# CLOCK_SLACK seconds ahead of the local clock is sent again, and a host clock running hours
+# ahead therefore cannot pass an older copy off as a new copy.
+CLOCK_SLACK = 300
+
+
+def already_sent(facts: dict[str, str], path: Path) -> bool:
+    try:
+        size = int(facts["size"])
+        stamp = calendar.timegm(time.strptime(facts["modify"][:14], "%Y%m%d%H%M%S"))
+    except (KeyError, ValueError):
+        return False                   # a host which gives no size or time gets every file again
+    st = path.stat()
+    return size == st.st_size and int(st.st_mtime) <= stamp <= time.time() + CLOCK_SLACK
+
+
+# A file above BIG goes up under a new name on every try and takes the real name only once the
+# whole file is on the host. A reader therefore never meets half a download, and a hidden copy
+# kept from a broken upload under the real name cannot block the new upload. A host which refuses
+# the rename gets the file again under the real name. On 28 October 2026 the host kept the hidden
+# copy of hiv_panel.sqlite for more than an hour and refused every new upload of hiv_panel.sqlite.
+def send_big(session: Session, root: str, rel: str, path: Path, made: set[str]) -> None:
+    final = f"{root}/{rel}"
+    folder, name = final.rsplit("/", 1)
+    size = path.stat().st_size
+    parts: list[str] = []
+
+    def held(ftp) -> dict[str, dict[str, str]]:
+        return {n: facts for n, _, facts in remote_entries(ftp, folder)}
+
+    with path.open("rb") as fh:
+        def put(ftp):
+            if "/" in rel:
+                ensure_dir(ftp, root, rel.rsplit("/", 1)[0], made)
+            part = f"{final}.{time.strftime('%Y%m%d%H%M%S')}-{len(parts)}.part"
+            parts.append(part)
+            fh.seek(0)
+            ftp.storbinary(f"STOR {part}", fh)
+            return part
+        part = session.run(rel, put)
+
+    def swap(ftp):
+        there = held(ftp)
+        if part.rsplit("/", 1)[1] not in there and already_sent(there.get(name, {}), path):
+            return                     # the rename went through before the connection was lost
+        try:
+            ftp.rename(part, final)
+        except ftplib.error_perm:
+            aside = f"{part}.old"      # a host which will not rename onto a name in use
+            ftp.rename(final, aside)
+            try:
+                ftp.rename(part, final)
+            except ftplib.error_perm:
+                ftp.rename(aside, final)
+                raise
+            try:
+                ftp.delete(aside)
+            except ftplib.error_perm:
+                pass                   # the strip after the uploads tries again
+
+    try:
+        session.run(rel, swap)
+    except ftplib.error_perm as refused:
+        print(f"  renaming  refused by the host ({refused}), sending {rel} again under the "
+              f"real name", flush=True)
+        with path.open("rb") as fh:
+            def put_final(ftp):
+                fh.seek(0)
+                ftp.storbinary(f"STOR {final}", fh)
+            session.run(rel, put_final)
+
+    def verify(ftp):
+        got = held(ftp).get(name, {}).get("size")
+        if got is not None and int(got) != size:
+            sys.exit(f"the host holds {rel} at {got} bytes, and the build holds {size} bytes")
+    session.run(rel, verify)
+
+    def clear(ftp) -> int:
+        gone = 0
+        for p in [final] + parts:
+            try:
+                ftp.delete(hidden_copy(p))
+                gone += 1
+            except ftplib.error_perm:
+                pass                   # no hidden copy under the name, the usual case
+        return gone
+    gone = session.run(rel, clear)
+    if gone:
+        print(f"  cleared   {gone} unfinished copies of {rel} which the host had kept", flush=True)
+
+
 def publish(dry_run: bool) -> None:
     files = local_files()
     total_kb = sum(p.stat().st_size for p in files.values()) / 1024
     print(f"build       {len(files)} files, {total_kb/1024:.1f} MB, from {LOCAL}")
 
-    ftp = connect()
-    root = remote_root(ftp)
+    session = Session()
+    root = session.run("the site folder", remote_root)
+    if not dry_run:
+        print(f"connected   {HOST} as {USER}, encrypted")
+    print(f"site folder {root}")
+
+    remote_before, _ = session.run("the listing", lambda ftp: remote_tree(ftp, root))
+    order = sorted(files.items(), key=lambda kv: (kv[1].stat().st_size > BIG, kv[0]))
+    todo = [(rel, path) for rel, path in order
+            if not already_sent(remote_before.get(rel, {}), path)]
+    held = len(files) - len(todo)
+    stale = sorted(set(remote_before) - set(files))
 
     if dry_run:
-        remote, _ = remote_tree(ftp, root)
-        ftp.quit()
-        stale = sorted(remote - set(files))
-        print(f"site folder {root}")
-        print(f"would send  {len(files)} files, .htaccess among them")
+        session.quit()
+        htaccess = ", .htaccess among them" if any(rel == ".htaccess" for rel, _ in todo) else ""
+        print(f"would skip  {held} files the host already holds from the current build")
+        print(f"would send  {len(todo)} files{htaccess}")
         print(f"would strip {len(stale)} files no longer in the build")
         for s in stale[:20]:
             print(f"              {s}")
         return
 
-    print(f"connected   {HOST} as {USER}, encrypted")
-    print(f"site folder {root}")
-
-    remote_before, _ = remote_tree(ftp, root)
+    if held:
+        print(f"skipped     {held} files the host already holds from the current build")
     made: set[str] = set()
     sent = 0
-    for rel, path in sorted(files.items()):
-        if "/" in rel:
-            ensure_dir(ftp, root, rel.rsplit("/", 1)[0], made)
-        with path.open("rb") as fh:
-            ftp.storbinary(f"STOR {root}/{rel}", fh)
+    for rel, path in todo:
+        size = path.stat().st_size
+        if size > BIG:
+            print(f"  sending   {rel}, {size/1024/1024:.1f} MB", flush=True)
+            send_big(session, root, rel, path, made)
+        else:
+            with path.open("rb") as fh:
+                def put(ftp, rel=rel, fh=fh):
+                    if "/" in rel:
+                        ensure_dir(ftp, root, rel.rsplit("/", 1)[0], made)
+                    fh.seek(0)             # a file cut off by a lost connection goes again whole
+                    ftp.storbinary(f"STOR {root}/{rel}", fh)
+                session.run(rel, put)
         sent += 1
-        if sent % 10 == 0 or sent == len(files):
-            print(f"  sent      {sent}/{len(files)}")
+        if sent % 10 == 0 or sent == len(todo):
+            print(f"  sent      {sent}/{len(todo)}", flush=True)
 
-    stale = sorted(remote_before - set(files))
+    # The listing after the uploads also finds the copies of a broken upload under a temporary
+    # name, and the strip removes every file outside the build.
+    remote_after, dirs_after = session.run("the listing", lambda ftp: remote_tree(ftp, root))
+    stale = sorted(set(remote_after) - set(files))
     for rel in stale:
-        try:
-            ftp.delete(f"{root}/{rel}")
-        except ftplib.all_errors as e:
-            print(f"  kept      {rel} ({e})")
+        def strip(ftp, rel=rel):
+            try:
+                ftp.delete(f"{root}/{rel}")
+            except ftplib.error_perm as e:
+                print(f"  kept      {rel} ({e})")
+        session.run(rel, strip)
     if stale:
         print(f"  stripped  {len(stale)} files no longer in the build")
 
     # the folders are pruned deepest first, so a folder emptied by the strip above goes too
-    _, dirs_after = remote_tree(ftp, root)
     wanted: set[str] = set()
     for rel in files:
         parts = rel.split("/")[:-1]
         for i in range(1, len(parts) + 1):
             wanted.add("/".join(parts[:i]))
     for d in sorted(dirs_after - wanted, key=lambda s: s.count("/"), reverse=True):
-        try:
-            ftp.rmd(f"{root}/{d}")
-            print(f"  removed   {d}/")
-        except ftplib.all_errors:
-            pass
+        def prune(ftp, d=d):
+            try:
+                ftp.rmd(f"{root}/{d}")
+                print(f"  removed   {d}/")
+            except ftplib.error_perm:
+                pass
+        session.run(d, prune)
 
-    ftp.quit()
+    session.quit()
+    if session.reopened:
+        print(f"  reconnected {session.reopened} times after the host closed the connection")
     print("published")
 
 

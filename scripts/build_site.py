@@ -78,6 +78,11 @@ SITE = {
 }
 
 
+def phase_no(r: dict) -> int:
+    """The number of a region's work phase, for ordering, or 0 for a region with no phase yet."""
+    return int(r["phase"].split()[-1]) if r["phase"] else 0
+
+
 def nav_regions(rel: str) -> list:
     """
     The regions as the masthead and the footer list them.
@@ -87,6 +92,7 @@ def nav_regions(rel: str) -> list:
     any page, and they become links as their pages are built.
     """
     return [{"name": r["name"], "slug": r["slug"], "phase": r["phase"],
+             "phase_no": phase_no(r),
              "href": f'{rel}regions/{r["slug"]}/' if r["status"] == "live" else "",
              "live": r["status"] == "live"}
             for r in REGIONS]
@@ -150,10 +156,10 @@ SOURCE_META = {
                         "Results from PEPFAR-supported sites, which cover the PEPFAR programme "
                         "and not the national total."),
     "dhs": ("Demographic and Health Surveys",
-            "Population-based survey estimates."),
+            "Population-based survey estimates, national and by survey region."),
     "clm_asia": ("CLM Asia",
                  "Community-led monitoring of service access at a small number of selected "
-                 "facilities in Indonesia."),
+                 "facilities in Indonesia and India."),
     "th_hivhub": ("Thailand HIV Info Hub",
                   "The National AIDS Programme cascade, summed across 77 provinces."),
     "kh_nchads_copct": ("Cambodia NCHADS",
@@ -210,7 +216,107 @@ SOURCE_META = {
     "pepfar_vmmc": ("PEPFAR voluntary medical male circumcision",
                     "Circumcisions at PEPFAR-supported sites by country, 2010 to 2017. From "
                     "2018 the panel takes circumcisions from PEPFAR Panorama Spotlight."),
-    "za_thembisa": ("Thembisa model, University of Cape Town",
+    "paho_core": ("PAHO Core Indicators",
+                  "Notified HIV cases reported by the ministries of health of the Americas, "
+                  "with the female and male split, from national case surveillance."),
+    "paho_hiv": ("PAHO Interactive HIV Data Dashboard",
+                 "Notified HIV cases the PAHO Core Indicators table lacks, Haiti from 2010 to "
+                 "2024 among the gaps, and the share of people on ART taking a "
+                 "dolutegravir-based regimen, 2020 to 2025."),
+    "who_hts": ("WHO HIV testing services dashboard",
+                "National HIV tests, test positivity, testing in community and facility "
+                "settings and self-test kits distributed, as countries reported to Global AIDS "
+                "Monitoring for 2018 to 2020 and 2022 to 2024."),
+    "unaids_services": ("UNAIDS service continuation dashboard",
+                        "Monthly HIV service counts 30 countries have reported to UNAIDS since "
+                        "October 2024, kept as December counts of people on ART and as 2025 "
+                        "totals only where a country reported all 12 months."),
+    "unaids_naomi": ("UNAIDS HIV sub-national estimates viewer (Naomi)",
+                     "December 2025 estimates from the Naomi small-area model for 31 countries, "
+                     "nationally and for every province, region or county, with uncertainty "
+                     "ranges, plus an earlier December for nine of the 31 countries. The panel "
+                     "never keeps the projected years."),
+    "unaids_databook": ("UNAIDS Data 2025 country databook",
+                        "Domestic public, private and international HIV expenditure as countries "
+                        "reported to UNAIDS for 2015 to 2023, and the 2024 estimates of people "
+                        "living with HIV for Nigeria's 36 states and Federal Capital Territory "
+                        "and Eritrea's six regions."),
+    "unaids_phia": ("Population-based HIV Impact Assessment (PHIA) surveys, through the UNAIDS "
+                    "Inequalities dashboard",
+                    "National HIV prevalence, ART coverage, viral suppression and HIV incidence "
+                    "for ages 15 to 49 from 17 household surveys in 13 countries of eastern and "
+                    "southern Africa, west Africa and central Africa, 2016 to 2021, with the 95 "
+                    "per cent confidence interval of the survey. The Ethiopian survey of 2018 "
+                    "covered urban areas only and is not shown."),
+    "who_europe_hfa": ("WHO Europe Health for All database",
+                       "New HIV diagnoses for 48 countries and new AIDS cases for 45 countries "
+                       "of the WHO European Region, 2000 to 2019, from the joint ECDC and WHO "
+                       "Europe surveillance reports. Spanish, Italian and Dutch HIV diagnoses "
+                       "start in the first year every region reported, Russian HIV diagnoses "
+                       "start in 2016, the year the Russian case definitions changed, and "
+                       "North Macedonian HIV diagnoses start in 2017, the year North Macedonia "
+                       "began reporting HIV and AIDS in a single record. Spanish HIV diagnoses "
+                       "stop in 2017 and Spanish AIDS cases stop in 2013, because some Spanish "
+                       "regions sent no report for later years. The site holds no Turkish, "
+                       "Luxembourgish or Austrian HIV count, no AIDS count for Turkey, North "
+                       "Macedonia, Sweden, the Russian Federation, Austria or Luxembourg, and "
+                       "no German AIDS count for 2019, because the WHO country notes describe "
+                       "a narrower count or no report, the Luxembourg HIV counts are half the "
+                       "national statistics, the Luxembourg AIDS counts run at 0.56 to 0.67 "
+                       "times the joint report for 2024 data, the joint report for 2024 data "
+                       "says the Austrian counts come from a cohort study, and the German AIDS "
+                       "count for 2019 is a first report frozen when "
+                       "Germany stopped reporting AIDS cases. The Serbian "
+                       "counts of the database include Kosovo, so the site shows no Serbian "
+                       "count from the database and takes the Serbian and Kosovar counts "
+                       "from the joint report for 2024 data. The Armenian counts of the "
+                       "database count citizens of Armenia alone, so the site shows no "
+                       "Armenian count from the database and takes the Armenian HIV count, "
+                       "citizens and foreign citizens together, from the National Centre for "
+                       "Infectious Diseases of Armenia."),
+    "ecdc_hiv_report": ("HIV/AIDS surveillance in Europe 2025, the joint report of ECDC (the "
+                        "European Centre for Disease Prevention and Control) and the WHO "
+                        "Regional Office for Europe, Tables 1 and 13",
+                        "HIV diagnoses for 50 countries and AIDS diagnoses for 42 countries "
+                        "of the WHO European Region, 2015 to 2024, the counts every country reported to The European Surveillance "
+                        "System (TESSy), including people with an earlier positive diagnosis "
+                        "made abroad or elsewhere in the country. The site holds no Austrian or "
+                        "Turkish count, no North Macedonian count before 2017, and no Russian "
+                        "count for 2015, Spanish count for 2018 or Ukrainian count for 2015, "
+                        "because the report describes a cohort study, a narrower count, a change "
+                        "of case definition, a missing region or a rounded figure. The site "
+                        "holds no AIDS count for Austria, Turkey, North Macedonia, Ireland, "
+                        "the United Kingdom, Cyprus, Kyrgyzstan or Spain, "
+                        "no German AIDS count for 2019, no Maltese AIDS count "
+                        "for 2020 or 2023, and no Ukrainian AIDS count from 2020, because the "
+                        "report or the country notes describe a cohort study, AIDS counted "
+                        "only at HIV diagnosis, missing regions, a corrected figure, a change "
+                        "of definition, or counts the 2025 report moved far from the 2020 "
+                        "report with no reason given. The Armenian counts of the report count "
+                        "citizens of Armenia alone, so the site shows no Armenian count from "
+                        "the report and takes the Armenian HIV count, citizens and foreign "
+                        "citizens together, from the National Centre for Infectious Diseases "
+                        "of Armenia."),
+    "unicef_hiv": ("UNICEF HIV/AIDS dataset",
+                   "PMTCT coverage and the vertical transmission rate from the UNAIDS 2026 "
+                   "estimates round, 2010 to 2025, with whole series for Nigeria, Indonesia, "
+                   "Bangladesh and six other countries the UNAIDS AIDSinfo exports show "
+                   "without any value. People living with HIV, new HIV infections and "
+                   "AIDS-related deaths for 10 age groups under age 25 from the same round, "
+                   "2010 to 2025, for all sexes, females and males."),
+    "pacific_data_hub": ("Pacific Data Hub of SPC (the Pacific Community)",
+                         "Comprehensive HIV knowledge, condom use at last higher-risk sex and "
+                         "sex before age 15 from the Pacific Demographic and Health Surveys of "
+                         "eight Pacific countries, 2007 to 2015, for women and men separately, "
+                         "under the standard survey definitions."),
+    "unodc_pwid": ("World Drug Report 2026 of UNODC (the United Nations Office on Drugs and "
+                   "Crime), statistical annex table 4.1",
+                   "HIV prevalence among people who inject drugs for 11 countries, 2013 to 2024, "
+                   "and the number of people who inject drugs for 30 countries, 2009 to 2025, "
+                   "national estimates at the year the estimate describes. The site holds no "
+                   "UNODC figure citing UNAIDS, and no figure from a treatment register, a case "
+                   "notification or a count of lifetime injecting."),
+    "za_thembisa":("Thembisa model, University of Cape Town",
                     "South Africa's official HIV model, nationally and for all nine "
                     "provinces, with 95 per cent uncertainty intervals. The panel keeps only the "
                     "years the model fits to data and never the projected years."),
@@ -226,9 +332,191 @@ SOURCE_META = {
     "gn_annuaire": ("Guinea statistical yearbook",
                     "Pregnant women living with HIV who received antiretrovirals, by region, "
                     "2022 to 2024."),
+    "pe_endes": ("Peru Demographic and Family Health Survey (ENDES)",
+                 "Share of people aged 15 to 49 who had an HIV test in the last 12 months, "
+                 "nationally from 2013 and for 26 departments from 2014, with 95 per cent "
+                 "confidence intervals."),
+    "ht_mspp": ("Haiti Ministry of Public Health and Population statistical reports",
+                "Notified HIV cases for all ten departments and nationally, 2020 to 2023. "
+                "From 2022 the ministry removed duplicate records, so the fall between 2021 "
+                "and 2022 is partly a change in counting."),
+    "bo_anuario": ("Bolivia Ministry of Health and Sports epidemiology yearbook 2016",
+                   "Notified HIV cases for all nine departments and nationally in 2016, "
+                   "counting cases notified with HIV and cases notified in the AIDS phase "
+                   "together."),
+    "bz_moh": ("Belize Ministry of Health HIV Surveillance Report 2018",
+               "Preliminary counts of newly diagnosed HIV infections for the six districts "
+               "in 2018, from case-based surveillance in the Belize Health Information "
+               "System."),
+    "ar_snvs": ("Argentina Ministry of Health open data, HIV case notifications",
+                "HIV cases notified to the national surveillance system SNVS 2.0 for "
+                "the 24 provinces and nationally, by sex, 2015 to 2024, in the release "
+                "of 20 January 2026. The ministry revises past years at every release, "
+                "so the counts for 2015 to 2022 stand above the PAHO figures for the "
+                "same years."),
+    "py_mercosur": ("MERCOSUR HIV epidemiological bulletin 2012",
+                    "New HIV diagnoses in Paraguay by sex, nationally, 2000 to 2009, as "
+                    "the Paraguayan national programme reported the counts to the HIV/AIDS "
+                    "commission of the MERCOSUR health ministers. The PAHO figures for "
+                    "Paraguay start in 2014."),
+    "ni_mapasalud": ("Nicaragua Ministry of Health health map (Mapa Nacional de la Salud)",
+                     "New HIV cases recorded by epidemiological surveillance, for the 19 "
+                     "local health areas (SILAIS) and nationally, 2017 to 2023, read from "
+                     "archived copies of the ministry pages. Archived pages for 2022 cover "
+                     "10 local health areas and for 2023 cover six."),
+    "pe_cdc_sala": ("CDC Peru HIV situation room (Sala VIH)",
+                    "HIV cases notified to CDC Peru, the national epidemiology centre of the "
+                    "Peruvian Ministry of Health, AIDS cases included, for the 25 departments "
+                    "and nationally by sex, 2019 to the last full year, from a web application "
+                    "updated every month. CDC Peru revises past years at every update, and the "
+                    "counts for 2019 and 2025 changed between the reads of 5 and 28 October "
+                    "2026."),
+    "lb_moph_bulletin": ("Lebanon Ministry of Public Health statistical bulletins",
+                         "HIV cases notified to the National AIDS Program of the "
+                         "Lebanese Ministry of Public Health, AIDS cases included, "
+                         "nationally for 2007, 2009 and 2014 to 2018, by sex for "
+                         "2007 and 2014 to 2018, and people newly started on "
+                         "antiretroviral treatment for 2014 to 2017. No bulletin "
+                         "states whether the counts cover residents of other "
+                         "nationalities."),
     "td_annuaire": ("Chad health statistics yearbook",
                     "Antiretroviral treatment and viral load by province for 2023, with "
                     "national treatment starts and treatment of pregnant women for 2022."),
+    "pg_ndoh_dashboard": ("Papua New Guinea National Department of Health provincial HIV dashboard",
+                          "HIV tests, positive HIV test results, people on antiretroviral "
+                          "treatment by age group, people who started treatment and mothers on "
+                          "treatment to prevent transmission to the child, for the 22 provinces "
+                          "and nationally, 2022 and 2023."),
+    "cn_ndcpa": ("China National Disease Control and Prevention Administration yearly notifiable disease tables",
+                 "Reported AIDS cases and the all-cause deaths of reported AIDS patients in "
+                 "China, 2023 to 2025, from the yearly national tables, never from a sum of the "
+                 "monthly tables. The AIDS row counts AIDS cases and not HIV diagnoses."),
+    "mn_hdc": ("Mongolia Health Development Center Health Indicators books",
+               "HIV cases newly registered in Mongolia in the year, nationally, 2015 to 2025, "
+               "read from the 2024 English book and the 2025 Mongolian book and checked "
+               "against the 2019, 2023 and 2024 books."),
+    "lk_nsacp": ("Sri Lanka National STD/AIDS Control Programme annual report 2025",
+                 "HIV cases reported in Sri Lanka in the year, nationally, 2010 to 2025, read "
+                 "from Figure 2.6 of the 2025 annual report and checked against 16 quarterly "
+                 "returns, which never enter the panel."),
+    "ge_geostat": ("National Statistics Office of Georgia (Geostat) statistical database",
+                   "HIV cases newly registered in Georgia in the year, nationally, 2002 to "
+                   "2025, with women and men for 2012 to 2025, read from two tables of the "
+                   "Geostat PxWeb service. The yearly count is kept only where the rise in "
+                   "the cumulative register equals the new cases."),
+    "by_belstat": ("National Statistical Committee of the Republic of Belarus (Belstat) data portal",
+                   "HIV cases newly identified in Belarus in the year, 2000 to 2025, nationally "
+                   "by sex and by five age groups, and for the six regions and Minsk city by "
+                   "sex. A count is kept only where men plus women, the age groups and the "
+                   "regions add to the published totals."),
+    "ua_npsi": ("Public Health Centre of the Ministry of Health of Ukraine, HIV monitoring portal",
+                "People newly registered with HIV in Ukraine in the year, 2016 to 2024, "
+                "nationally by four age groups and by sex at ages 15 and over, and for 22 "
+                "oblasts and Kyiv city for 2017 to 2021. A count is kept only where the age "
+                "groups, the sexes and the regions add to the published totals. The counts "
+                "cover the territory under the control of the Government of Ukraine."),
+    "kg_aidscenter": ("Republican Centre for the Control of Blood-borne Viral Hepatitis and HIV "
+                      "of the Kyrgyz Republic, situation report of 1 July 2026",
+                      "HIV cases registered in Kyrgyzstan in the year among citizens and "
+                      "foreign citizens, nationally, 2013 to 2025. The report enters only "
+                      "where the nine regions add to the national total in every year, every "
+                      "row adds to the printed total, and the citizen and foreign-citizen "
+                      "totals match the page header."),
+    "tj_moh": ("Ministry of Health and Social Protection of the Population of Tajikistan, "
+               "health yearbooks for 2014, 2015, 2016, 2017 and 2021",
+               "People newly registered with HIV in the year in the five regions of "
+               "Tajikistan, 2014, 2015, 2016, 2017 and 2021. A yearbook enters only where "
+               "the five regions add to the Republic total, the districts add to the "
+               "Districts of Republican Subordination, and the next yearbook prints the same "
+               "counts."),
+    "prk_cbs_mics": ("Central Bureau of Statistics of the DPRK and UNICEF, Multiple Indicator "
+                     "Cluster Survey 2009",
+                     "Women with comprehensive knowledge about HIV in the Democratic "
+                     "People's Republic of Korea, aged 15 to 49 and 15 to 24, nationally and "
+                     "in the 10 provinces, 2009. The report enters only where the provinces "
+                     "add to the national total and the sampling-error tables print the "
+                     "same shares and numbers of women."),
+    "tj_stat": ("Agency on Statistics under the President of the Republic of Tajikistan, "
+                "health compendium of 2019",
+                "People newly registered with HIV in the year in Tajikistan, nationally, by "
+                "sex and by age, 2014 to 2018. The compendium enters only where the age "
+                "groups add to the printed total of every sex and men plus women equal all "
+                "people in every age group."),
+    "fj_mohms": ("Ministry of Health and Medical Services of Fiji, public HIV surveillance "
+                 "workbook and summary report for 2025",
+                 "People newly registered with HIV in the year in Fiji, nationally since 1989, "
+                 "and by division, sex and age from 2018, with the diagnosed people living with "
+                 "HIV from 2020 and the people with a suppressed viral load from 2022. The "
+                 "workbook enters only where the division, sex, age group and ethnicity sheets "
+                 "add to the case sheet, and the cascade enters only where the summary report "
+                 "prints the same counts and coverage."),
+    "np_ncasc": ("National Centre for AIDS and STD Control of Nepal, World AIDS Day factsheets "
+                 "of 2014 to 2019",
+                 "Clients with an HIV positive result at the HIV testing and counselling sites "
+                 "in the year in Nepal, which the centre reports as the reported HIV cases of "
+                 "the year, nationally, 2008 to 2018, read from archived copies of six "
+                 "factsheet editions. The factsheets enter only where every edition printing a "
+                 "full year gives the same count, with the 2019 edition revising 2017 from "
+                 "1,856 to 1,842."),
+    "vu_mics": ("Vanuatu National Statistics Office and UNICEF, Multiple Indicator Cluster "
+                "Survey 2007",
+                "Women with comprehensive knowledge about HIV in Vanuatu, aged 15 to 49 and 15 "
+                "to 24, nationally, 2007, read from an archived copy of the survey report. The "
+                "report enters only where the regions, the urban and rural areas and the age "
+                "groups add to the national total and the sampling-error table prints the same "
+                "share for women aged 15 to 24."),
+    "me_ijzcg": ("Institute of Public Health of Montenegro, annual HIV report for 2025",
+                 "People registered with HIV in Montenegro in the year, including people "
+                 "diagnosed abroad, nationally, 2001 to 2025, with men and women for 2025. "
+                 "The report enters only where the columns of Table 5 add to the printed "
+                 "totals, men plus women equal the 2025 total, and the municipalities add "
+                 "to the new diagnoses of 2025."),
+    "bd_asp": ("AIDS/STD Programme of Bangladesh, World AIDS Day files 2016 to 2025",
+               "People newly reported HIV positive in Bangladesh, nationally, 2016 to 2025, "
+               "in the programme's reporting year from 1 November of the year before to 31 "
+               "October, Forcibly Displaced Myanmar Nationals included. The files enter only "
+               "where every cumulative count equals the count of the year before plus the "
+               "new cases."),
+    "mv_moh": ("Ministry of Health of the Maldives, Maldives Health Statistics 2014 and 2015-16",
+               "HIV positive cases detected in the Maldives, nationally, 2005 to 2016, in the "
+               "calendar year, Maldivians and expatriates together. The tables enter only "
+               "where the two editions agree on every year from 2007 to 2014."),
+    "in_naco": ("National AIDS Control Organisation of India, Sankalak 2025, seventh edition",
+                "Modelled HIV prevalence among adults aged 15 to 49, people living with HIV, "
+                "new HIV infections and AIDS-related deaths in India, nationally and by State "
+                "or Union Territory, 2024, with lower and upper bounds. The table enters only "
+                "where the January and August versions of the booklet agree on every row, "
+                "the State counts add to the India count, and the India figures match the "
+                "overview table."),
+    "am_ncid": ("National Centre for Infectious Diseases of Armenia, HIV situation analysis 2025",
+                "HIV cases registered in Armenia in the year among citizens of Armenia and "
+                "foreign citizens, nationally, 2015 to 2025. The report enters only where the "
+                "yearly counts of citizens add to the 6,625 cases the text prints, the yearly "
+                "counts of foreign citizens add to no more than the 490 cases the text prints, "
+                "the citizen series of two charts agree in every year, and the 2025 counts "
+                "match the text."),
+    "kz_kncdiz": ("Kazakh Scientific Centre of Dermatology and Infectious Diseases, surveys "
+                  "among people who inject drugs, 2022 and 2024",
+                  "HIV prevalence among people aged 18 and over who inject drugs in Kazakhstan, "
+                  "weighted for the respondent-driven sample, nationally, 2020, 2022 and 2024. "
+                  "The reports enter only where Table 6, the text and the conclusions print the "
+                  "same weighted figure, the HIV-positive respondents match the sample share, "
+                  "and the two reports print the same 2022 round."),
+    "sb_sinso_dhs": ("Solomon Islands National Statistics Office, Demographic and Health "
+                     "Surveys 2006-2007 and 2015",
+                     "HIV testing in the last 12 months with the result received for women and "
+                     "men aged 15 to 49 in 2015, and comprehensive knowledge of HIV (2007 and "
+                     "2015) and condom use at last higher-risk sex (2007) for men aged 15 to 49, "
+                     "nationally. A table enters only where the testing shares add to 100, the "
+                     "urban and rural rows give the total, and the men aged 15 to 49 and 50 "
+                     "and over give the printed total for all men."),
+    "bd_sdg": ("SDG Tracker of Bangladesh, National AIDS/STD Programme series of indicator "
+               "3.3.1, 2022 and 2024",
+               "People newly reported HIV positive in Bangladesh by gender, men and women, "
+               "nationally, 2022 and 2024, in the programme's reporting year from 1 November "
+               "of the year before to 31 October. A year enters only where the men, women "
+               "and transgender people add to the World AIDS Day count of the programme and "
+               "every count matches the share of the programme's gender chart."),
 }
 
 SOURCE_TYPE_LABEL = {
@@ -336,6 +624,33 @@ AT_SOURCE = {
     "NER": "Read at source",
     "GIN": "Read at source",
     "TCD": "Read at source",
+    "IND": "Model at source",
+    "BGD": "Read at source",
+    "LKA": "Read at source",
+    "MDV": "Read at source",
+    "NPL": "Read at source",
+    "CHN": "Read at source",
+    "MNG": "Read at source",
+    "PRK": "Read at source",
+    "PNG": "Read at source",
+    "SLB": "Read at source",
+    "VUT": "Read at source",
+    "ARM": "Read at source",
+    "BLR": "Read at source",
+    "GEO": "Read at source",
+    "KAZ": "Read at source",
+    "KGZ": "Read at source",
+    "MNE": "Read at source",
+    "TJK": "Read at source",
+    "UKR": "Read at source",
+    "ARG": "Read at source",
+    "BLZ": "Read at source",
+    "BOL": "Read at source",
+    "HTI": "Read at source",
+    "NIC": "Read at source",
+    "PRY": "Read at source",
+    "PER": "Read at source",
+    "LBN": "Read at source",
 }
 
 # Countries whose national system is still to be reached, by an access request or by a probe
@@ -489,6 +804,313 @@ COUNTRY_COPY = {
                  "explanation of the difference."),
         "blurb": "Treatment and viral load by province, from the INSEED yearbooks.",
     },
+    "IND": {
+        "lede": ("India's National AIDS Control Organisation (NACO) publishes the national HIV "
+                 "estimates in Sankalak, a yearly booklet. Our project reads the 2024 estimates "
+                 "from the seventh edition of Sankalak, published in 2025, giving adult HIV "
+                 "prevalence, people living with HIV, new HIV infections and AIDS-related deaths "
+                 "for India and for every State and Union Territory, with lower and upper "
+                 "bounds. The NACO table enters the panel only where the January and August "
+                 "versions of the booklet agree on every row and the State counts add to the "
+                 "India count. The NACO figures are model estimates and not register counts. Our "
+                 "project also reads reports from community-led monitoring at a small number of "
+                 "selected Indian facilities, and the selected facilities do not represent India "
+                 "as a whole."),
+        "blurb": "NACO model estimates for 2024, national and by State or Union Territory.",
+    },
+    "BGD": {
+        "lede": ("The AIDS/STD Programme of Bangladesh, the national programme for HIV and other "
+                 "sexually transmitted diseases (STD), counts the people newly reported HIV "
+                 "positive in every year. Our project reads the national count for 2016 to 2025 "
+                 "from the World AIDS Day files of the programme, and the counts of men and "
+                 "women for 2022 and 2024 from the Sustainable Development Goals (SDG) Tracker "
+                 "of Bangladesh. The reporting year of the programme runs from 1 November of the "
+                 "year before to 31 October, and the counts include Forcibly Displaced Myanmar "
+                 "Nationals. A World AIDS Day file enters the panel only where every cumulative "
+                 "count equals the cumulative count of the year before plus the new cases."),
+        "blurb": "People newly reported HIV positive, 2016 to 2025, from the national programme.",
+    },
+    "LKA": {
+        "lede": ("Sri Lanka's National STD/AIDS Control Programme (NSACP), the national programme "
+                 "for HIV and other sexually transmitted diseases (STD), publishes an annual "
+                 "report with the HIV cases reported in every year. Our project reads the "
+                 "national count for 2010 to 2025 from Figure 2.6 of the 2025 annual report, and "
+                 "checks the count against 16 quarterly returns of the programme, which never "
+                 "enter the panel."),
+        "blurb": ("Reported HIV cases, 2010 to 2025, from the annual report of the national "
+                  "programme."),
+    },
+    "MDV": {
+        "lede": ("The Ministry of Health of the Maldives publishes the HIV positive cases "
+                 "detected in every year in the Maldives Health Statistics. Our project reads "
+                 "the national count for 2005 to 2016 from the 2014 and the 2015-16 editions, "
+                 "and keeps the count only where the 2014 and 2015-16 editions agree on every "
+                 "year from 2007 to 2014. The count covers Maldivians and expatriates together."),
+        "blurb": ("HIV positive cases detected, 2005 to 2016, from the Maldives Health "
+                  "Statistics."),
+    },
+    "NPL": {
+        "lede": ("Nepal's National Centre for AIDS and STD Control (NCASC), where STD stands for "
+                 "sexually transmitted disease, published World AIDS Day factsheets with the "
+                 "clients given an HIV positive result at the HIV testing and counselling sites "
+                 "in every year, which the centre reports as the HIV cases of the year. Our "
+                 "project reads the national count for 2008 to 2018 from archived copies of six "
+                 "factsheet editions, 2014 to 2019, and keeps a count only where every edition "
+                 "printing a full year gives the same count."),
+        "blurb": ("Positive results at testing sites, 2008 to 2018, from archived national "
+                  "factsheets."),
+    },
+    "CHN": {
+        "lede": ("China's National Disease Control and Prevention Administration (NDCPA) "
+                 "publishes yearly tables of the notifiable infectious diseases. Our project "
+                 "reads the reported AIDS cases and the deaths of reported AIDS patients for "
+                 "2023 to 2025 from the yearly national tables, and never from a sum of the "
+                 "monthly tables. The AIDS row counts people reported with AIDS and not people "
+                 "newly diagnosed with HIV, and the deaths count deaths from all causes among "
+                 "reported AIDS patients."),
+        "blurb": "Reported AIDS cases and deaths, 2023 to 2025, from the national yearly tables.",
+    },
+    "MNG": {
+        "lede": ("Mongolia's Health Development Center publishes the Health Indicators books. Our "
+                 "project reads the HIV cases newly registered in every year, nationally, for "
+                 "2015 to 2025, from the 2024 English book and the 2025 Mongolian book, and "
+                 "checks the counts against the 2019, 2023 and 2024 books."),
+        "blurb": "HIV cases newly registered, 2015 to 2025, from the Health Indicators books.",
+    },
+    "PRK": {
+        "lede": ("North Korea's Central Bureau of Statistics (CBS) ran the 2009 Multiple "
+                 "Indicator Cluster Survey (MICS) with the United Nations Children's Fund "
+                 "(UNICEF). Our project reads the share of women with comprehensive knowledge "
+                 "about HIV, at ages 15 to 49 and 15 to 24, nationally and for the 10 provinces. "
+                 "The MICS report enters the panel only where the 10 provinces add to the "
+                 "national total and the sampling-error tables print the same shares and numbers "
+                 "of women."),
+        "blurb": ("Women's knowledge about HIV, 2009, national and 10 provinces, from a household "
+                  "survey."),
+    },
+    "PNG": {
+        "lede": ("Papua New Guinea's National Department of Health (NDOH) publishes a provincial "
+                 "HIV dashboard. Our project reads HIV tests, positive test results, people on "
+                 "antiretroviral treatment by age group, people starting treatment and mothers "
+                 "on treatment to prevent transmission to the child, for all 22 provinces and "
+                 "nationally, for 2022 and 2023. The dashboard counts are programme reports and "
+                 "not modelled estimates."),
+        "blurb": "Testing and treatment by province, 2022 and 2023, from the national dashboard.",
+    },
+    "SLB": {
+        "lede": ("The Solomon Islands National Statistics Office (SINSO) ran the Demographic and "
+                 "Health Surveys (DHS) of 2006-2007 and 2015. Our project reads HIV testing in "
+                 "the last 12 months with the result received, for women and men aged 15 to 49 "
+                 "in 2015, and comprehensive knowledge of HIV in 2007 and 2015 and condom use at "
+                 "last higher-risk sex in 2007, for men aged 15 to 49. A survey table enters the "
+                 "panel only where the testing shares add to 100, the urban and rural rows give "
+                 "the total, and the age groups of men give the printed total for all men. "
+                 "Further survey figures for the Solomon Islands come through the Pacific Data "
+                 "Hub of the Pacific Community (SPC)."),
+        "blurb": ("HIV testing, knowledge and condom use, from the household surveys of 2007 and "
+                  "2015."),
+    },
+    "VUT": {
+        "lede": ("The Vanuatu National Statistics Office ran the 2007 Multiple Indicator Cluster "
+                 "Survey (MICS) with the United Nations Children's Fund (UNICEF). Our project "
+                 "reads the share of women with comprehensive knowledge about HIV, at ages 15 to "
+                 "49 and 15 to 24, nationally, from an archived copy of the survey report. The "
+                 "MICS report enters the panel only where the regions, the urban and rural areas "
+                 "and the age groups add to the national total and the sampling-error table "
+                 "prints the same share for women aged 15 to 24. Further survey figures for "
+                 "Vanuatu come through the Pacific Data Hub of the Pacific Community (SPC)."),
+        "blurb": "Women's knowledge about HIV, 2007, from an archived household survey report.",
+    },
+    "FJI": {
+        "lede": ("Fiji's Ministry of Health and Medical Services publishes a public HIV "
+                 "surveillance workbook and summary report, giving people newly registered with "
+                 "HIV in every year since 1989, with breakdowns by division, sex and age from "
+                 "2018. Our project has written the code to read the 2025 workbook and summary "
+                 "report, but the gov.fj government domain gave no network address in any check "
+                 "from 25 to 27 October 2026, and the workbook and summary report could not be "
+                 "downloaded. Fiji therefore appears only through international and donor "
+                 "reporting, and the Fijian figures enter the panel at the first reading after "
+                 "the gov.fj domain returns."),
+        "blurb": ("International and donor reporting only, while the national workbook host is "
+                  "unreachable."),
+    },
+    "ARM": {
+        "lede": ("Armenia's National Centre for Infectious Diseases (NCID) publishes an HIV "
+                 "situation analysis. Our project reads the HIV cases registered in every year "
+                 "from 2015 to 2025, among citizens of Armenia and among foreign citizens, from "
+                 "the 2025 situation analysis. The 2025 report enters the panel only where the "
+                 "yearly counts agree with the totals printed in the text of the report, and "
+                 "where two charts of the citizen counts agree in every shared year."),
+        "blurb": ("HIV cases registered, citizens and foreign citizens, 2015 to 2025, from the "
+                  "national centre."),
+    },
+    "BLR": {
+        "lede": ("The National Statistical Committee of the Republic of Belarus (Belstat) "
+                 "publishes the HIV cases newly identified in every year on the Belstat data "
+                 "portal. Our project reads the counts for 2000 to 2025, nationally by sex and "
+                 "by five age groups, and for the six regions and Minsk city by sex. A count is "
+                 "kept only where men plus women, the age groups and the regions add to the "
+                 "published totals."),
+        "blurb": ("New HIV cases by sex, age and region, 2000 to 2025, from the statistics "
+                  "committee."),
+    },
+    "GEO": {
+        "lede": ("The National Statistics Office of Georgia (Geostat) publishes the HIV cases "
+                 "newly registered in every year in the Geostat statistical database. Our "
+                 "project reads the national count for 2002 to 2025, with women and men for 2012 "
+                 "to 2025, and keeps the count of a year only where the rise in the cumulative "
+                 "register equals the new cases of the year."),
+        "blurb": "New HIV cases, 2002 to 2025, with sex from 2012, from the statistics office.",
+    },
+    "KAZ": {
+        "lede": ("The Kazakh Scientific Centre of Dermatology and Infectious Diseases (KNCDIZ) "
+                 "runs surveys of people who inject drugs. Our project reads HIV prevalence "
+                 "among people aged 18 and over who inject drugs, weighted for a "
+                 "respondent-driven sample, in which respondents recruit further respondents, "
+                 "for the survey rounds of 2020, 2022 and 2024, from the reports of 2022 and "
+                 "2024. The 2022 and 2024 reports enter the panel only where the table, the text "
+                 "and the conclusions of a report print the same weighted figure, and where the "
+                 "2022 and 2024 reports print the same figure for the 2022 round. The figures "
+                 "describe people who inject drugs and not the whole population of Kazakhstan."),
+        "blurb": "HIV prevalence among people who inject drugs, 2020, 2022 and 2024.",
+    },
+    "KGZ": {
+        "lede": ("The Republican Centre for the Control of Blood-borne Viral Hepatitis and HIV of "
+                 "the Kyrgyz Republic publishes a situation report on HIV. Our project reads the "
+                 "HIV cases registered in every year from 2013 to 2025, among citizens and among "
+                 "foreign citizens, from the report of 1 July 2026. The situation report enters "
+                 "the panel only where the nine regions add to the national total in every year "
+                 "and every row adds to the printed total."),
+        "blurb": "HIV cases registered, 2013 to 2025, from the national HIV centre.",
+    },
+    "MNE": {
+        "lede": ("The Institute of Public Health of Montenegro (IJZCG) publishes an annual HIV "
+                 "report. Our project reads the people registered with HIV in every year from "
+                 "2001 to 2025 from the 2025 report, including people diagnosed abroad, with men "
+                 "and women for 2025. The 2025 report enters the panel only where the columns of "
+                 "the main table add to the printed totals, men plus women equal the 2025 total, "
+                 "and the municipalities add to the new diagnoses of 2025."),
+        "blurb": "People registered with HIV, 2001 to 2025, from the public health institute.",
+    },
+    "TJK": {
+        "lede": ("Our project reads two Tajik publishers. The health yearbooks of the Ministry of "
+                 "Health and Social Protection of the Population give the people newly "
+                 "registered with HIV in the five regions of Tajikistan for 2014 to 2017 and "
+                 "2021, and the 2019 health compendium of the Agency on Statistics under the "
+                 "President gives the national count by sex and by age for 2014 to 2018. A "
+                 "yearbook enters the panel only where the five regions add to the Republic "
+                 "total and the next yearbook prints the same counts, and the compendium enters "
+                 "the panel only where the age groups and the sexes add to the printed totals."),
+        "blurb": "New HIV registrations by region, sex and age, from two national publishers.",
+    },
+    "UKR": {
+        "lede": ("The Public Health Centre of the Ministry of Health of Ukraine publishes an HIV "
+                 "monitoring portal. Our project reads the people newly registered with HIV in "
+                 "every year from 2016 to 2024, nationally by four age groups and by sex at ages "
+                 "15 and over, and for 22 oblasts (regions) and Kyiv city for 2017 to 2021. A "
+                 "count is kept only where the age groups, the sexes and the regions add to the "
+                 "published totals. The counts cover the territory under the control of the "
+                 "Government of Ukraine."),
+        "blurb": "New HIV registrations by age, sex and oblast, from the Public Health Centre.",
+    },
+    "ARG": {
+        "lede": ("Argentina's Ministry of Health publishes the HIV cases notified to the national "
+                 "health surveillance system (SNVS 2.0, Sistema Nacional de Vigilancia de la "
+                 "Salud) on the open-data portal of the ministry. Our project reads the notified "
+                 "cases for 2015 to 2024, for the 24 provinces and nationally, for men, for "
+                 "women and for all sexes, from the release of 20 January 2026. The release "
+                 "enters the panel only where the 24 provinces sum to the national row within 10 "
+                 "cases in every sex and year, and where the row for all sexes lies between five "
+                 "below and 50 above men plus women. The ministry revises past years at every "
+                 "release, and the counts for 2015 to 2022 stand above the counts the Pan "
+                 "American Health Organization (PAHO) holds for the same years."),
+        "blurb": ("Notified HIV cases by province and sex, 2015 to 2024, from the surveillance "
+                  "system."),
+    },
+    "BLZ": {
+        "lede": ("The Epidemiology Unit of Belize's Ministry of Health published the HIV "
+                 "Surveillance Report 2018 in July 2019, with preliminary counts of newly "
+                 "diagnosed HIV infections from case-based surveillance in the Belize Health "
+                 "Information System. Our project reads the counts for the six districts of "
+                 "Belize in 2018, for women, for men and in total. The 2018 report enters the "
+                 "panel only where women plus men equal the total in every row, and where the "
+                 "six districts and the cases with no known district sum exactly to the Grand "
+                 "Total of the table."),
+        "blurb": "Newly diagnosed HIV infections by district, 2018, from the Ministry of Health.",
+    },
+    "BOL": {
+        "lede": ("Bolivia's Ministry of Health and Sports (MSyD, Ministerio de Salud y Deportes) "
+                 "publishes an epidemiology yearbook. Our project reads the notified HIV cases "
+                 "for the nine departments and nationally in 2016 from the 2016 yearbook, "
+                 "counting the cases notified with HIV and the cases notified in the AIDS phase "
+                 "together. The 2016 yearbook enters the panel only where the nine departments "
+                 "sum exactly to the national total in every column, and where the cases with "
+                 "HIV and the cases in the AIDS phase add to the printed total in every row."),
+        "blurb": "Notified HIV cases by department, 2016, from the ministry yearbook.",
+    },
+    "HTI": {
+        "lede": ("Haiti's Ministry of Public Health and Population (MSPP, Ministère de la Santé "
+                 "Publique et de la Population) publishes an annual statistical report. Our "
+                 "project reads the notified HIV cases for the ten departments and nationally "
+                 "for 2020 to 2023 from the reports. A report enters the panel only where the "
+                 "ten departments sum exactly to the national total in people tested and in "
+                 "cases, and where the printed share of positive tests matches the counts in "
+                 "every row. From 2022 the ministry removed duplicate records, and the fall "
+                 "between 2021 and 2022 is partly a change in counting. The Core Indicators "
+                 "table of the Pan American Health Organization (PAHO) holds no Haitian row."),
+        "blurb": "Notified HIV cases by department, 2020 to 2023, from the ministry reports.",
+    },
+    "NIC": {
+        "lede": ("Nicaragua's Ministry of Health (MINSA) publishes a national health map, the "
+                 "Mapa Nacional de la Salud, with the new HIV cases recorded by epidemiological "
+                 "surveillance. Our project reads the national count for 2017 to 2023 from "
+                 "archived copies of the ministry pages. The counts for the 19 local health "
+                 "areas (SILAIS) enter the panel once archived copies of every area page are "
+                 "stored. The archived pages for 2022 cover 10 local health areas, and the "
+                 "archived pages for 2023 cover six."),
+        "blurb": ("New HIV cases nationally, 2017 to 2023, from the Ministry of Health health "
+                  "map."),
+    },
+    "PRY": {
+        "lede": ("The health ministries of Argentina, Brazil, Paraguay and Uruguay published a "
+                 "joint HIV bulletin in 2012 through the HIV/AIDS commission of the health "
+                 "ministers of the Southern Common Market (MERCOSUR). Our project reads the new "
+                 "HIV diagnoses in Paraguay for 2000 to 2009, for men and for women, as the "
+                 "Paraguayan national programme reported the counts to the commission. The 2012 "
+                 "bulletin enters the panel only where the table and the charts of the bulletin "
+                 "print the same rates, and where every count and rate imply a consistent "
+                 "population. The figures of the Pan American Health Organization (PAHO) for "
+                 "Paraguay start in 2014."),
+        "blurb": "New HIV diagnoses by sex, 2000 to 2009, from the MERCOSUR bulletin.",
+    },
+    "PER": {
+        "lede": ("Our project reads two Peruvian publishers. The Demographic and Family Health "
+                 "Survey (ENDES) of the national statistics institute (INEI) gives the share of "
+                 "people aged 15 to 49 who had an HIV test in the last 12 months, nationally "
+                 "from the second half of 2013 and for 26 departments from 2014, with 95 per "
+                 "cent confidence intervals. The HIV situation room of CDC Peru, the national "
+                 "epidemiology centre of the Ministry of Health, gives the HIV cases notified "
+                 "for 2019 to 2025, AIDS cases included, for the 25 departments and nationally "
+                 "by sex. The situation room enters the panel only where the 25 departments sum "
+                 "to the national count in every year, and CDC Peru revises past years at every "
+                 "monthly update."),
+        "blurb": ("HIV testing from the ENDES survey, and notified HIV cases by department from "
+                  "CDC Peru."),
+    },
+    "LBN": {
+        "lede": ("Our project reads the statistical bulletins of the Lebanese Ministry of "
+                 "Public Health for 2007, 2009 and 2014 to 2018. The bulletins give the HIV "
+                 "cases notified to the National AIDS Program of the ministry in every year, "
+                 "AIDS cases included, by sex for 2007 and 2014 to 2018, and the people newly "
+                 "started on antiretroviral therapy (ART) for 2014 to 2017. A bulletin enters "
+                 "the panel only where the stages of disease and the sexes sum to the printed "
+                 "total, and where every printed percentage matches the count over the total. "
+                 "The bulletins for 2010, 2011 and 2013 count cases up to November and are "
+                 "not read, and no bulletin states whether the counts cover residents of "
+                 "other nationalities."),
+        "blurb": ("Notified HIV cases by sex, and people newly started on antiretroviral "
+                  "therapy, from the bulletins of the Ministry of Public Health."),
+    },
 }
 
 FEASIBILITY = [
@@ -635,6 +1257,316 @@ FEASIBILITY_LATER = [
           "No spending assessment, no year in the UNAIDS expenditure workbook and no "
           "sub-national figures from any source.", "Aggregators only", False),
      ]),
+    ("south-asia", "South Asia",
+     ("South Asia was assessed from 14 to 25 October 2026, by the method of the Western and "
+      "Central African assessment. Every candidate national source was graded against the panel, "
+      "and a national report whose years the panel already holds counts as no gain. Bangladesh, "
+      "India, the Maldives, Nepal and Sri Lanka are read at source, through six national "
+      "sources."),
+     [
+         ("India", "Sankalak estimates of the National AIDS Control Organisation (NACO)",
+          "Open booklet, national and every State or Union Territory, 2024.",
+          "Model at source", True),
+         ("Bangladesh", ("World AIDS Day files of the AIDS/STD Programme, and the Sustainable "
+          "Development Goals (SDG) Tracker"),
+          "Open files, 2016 to 2025, with men and women for 2022 and 2024.",
+          "Read at source", True),
+         ("Sri Lanka", ("Annual report of the National STD/AIDS Control Programme (NSACP), "
+          "where STD stands for sexually transmitted disease"),
+          "Open report, 2010 to 2025, checked against the quarterly returns.",
+          "Read at source", True),
+         ("Maldives", "Maldives Health Statistics, Ministry of Health",
+          "Open editions of 2014 and 2015-16, giving 2005 to 2016.",
+          "Read at source", True),
+         ("Nepal", ("World AIDS Day factsheets of the National Centre for AIDS and STD Control "
+          "(NCASC)"),
+          "Archived copies of six editions, giving 2008 to 2018.",
+          "Read at source", True),
+         ("Pakistan", "National AIDS Control Programme and National Institute of Health",
+          ("The programme counts are cumulative and the trend charts are images. The weekly "
+           "bulletins count suspected cases."),
+          "Aggregators only", False),
+         ("Bhutan", "Ministry of Health and National Statistics Bureau",
+          "The ministry and bureau hosts refuse automated requests.",
+          "Aggregators only", False),
+         ("Afghanistan", "Ministry of Public Health and the national statistics office",
+          ("The weekly surveillance reports carry no HIV line, and the statistics host failed a "
+           "secure connection."),
+          "Aggregators only", False),
+     ]),
+    ("east-asia-and-the-pacific", "East Asia and the Pacific",
+     ("East Asia and the Pacific was assessed from 14 to 27 October 2026, by the method of the "
+      "Western and Central African assessment. China, Mongolia, North Korea, Papua New Guinea, "
+      "the Solomon Islands and Vanuatu are read at source. The Fijian connector is built, and "
+      "the Fijian figures enter the panel once the gov.fj government domain gives a network "
+      "address again."),
+     [
+         ("China", ("Yearly tables of the National Disease Control and Prevention "
+          "Administration (NDCPA)"),
+          "Open tables of reported AIDS cases and deaths, 2023 to 2025.",
+          "Read at source", True),
+         ("Mongolia", "Health Indicators books, Health Development Center",
+          "Open books, 2015 to 2025.",
+          "Read at source", True),
+         ("North Korea", ("Multiple Indicator Cluster Survey (MICS) 2009, Central Bureau of "
+          "Statistics and the United Nations Children's Fund (UNICEF)"),
+          "Open report, national and 10 provinces.",
+          "Read at source", True),
+         ("Papua New Guinea", "Provincial HIV dashboard, National Department of Health",
+          "Open dashboard, 22 provinces, 2022 and 2023.",
+          "Read at source", True),
+         ("Solomon Islands", ("Demographic and Health Surveys (DHS) of 2006-2007 and 2015, "
+          "Solomon Islands National Statistics Office"),
+          "Open survey reports.",
+          "Read at source", True),
+         ("Vanuatu", "MICS 2007, Vanuatu National Statistics Office",
+          "Archived copy of the survey report.",
+          "Read at source", True),
+         ("Fiji", "Public HIV surveillance workbook, Ministry of Health and Medical Services",
+          ("Connector built. The gov.fj domain gave no network address from 25 to 27 October "
+           "2026."),
+          "Aggregators only", False),
+         ("Samoa", "Ministry of Health bulletins",
+          "Open, but the bulletins count laboratory specimens tested and not people.",
+          "Aggregators only", False),
+         ("Tonga", "Ministry of Health and Tonga Statistics Department",
+          ("The health site was under maintenance, and the statistics department has no HIV "
+           "table."),
+          "Aggregators only", False),
+         ("Kiribati", "DHS 2009 and MICS 2018-19",
+          ("The 2009 survey failed the consistency checks, and the 2018-19 survey report refused "
+           "access."),
+          "Aggregators only", False),
+         ("Tuvalu", "MICS 2019-20",
+          "The survey report refused access.",
+          "Aggregators only", False),
+         ("Micronesia", "Health and statistics offices",
+          ("The health and statistics hosts failed, and the statistics office publishes no HIV "
+           "table."),
+          "Aggregators only", False),
+         ("Marshall Islands", "Ministry of Health and Human Services",
+          "The HIV page is empty, and the health dashboard is an image.",
+          "Aggregators only", False),
+     ]),
+    ("eastern-europe-and-central-asia", "Eastern Europe and Central Asia",
+     ("Eastern Europe and Central Asia was assessed from 20 to 22 October 2026, by the method of "
+      "the Western and Central African assessment. Armenia, Belarus, Georgia, Kazakhstan, "
+      "Kyrgyzstan, Montenegro, Tajikistan and Ukraine are read at source, through nine national "
+      "sources."),
+     [
+         ("Armenia", "Situation analysis of the National Centre for Infectious Diseases",
+          "Open report, 2015 to 2025.",
+          "Read at source", True),
+         ("Belarus", "Data portal of the National Statistical Committee (Belstat)",
+          "Open portal, 2000 to 2025, by sex, age and region.",
+          "Read at source", True),
+         ("Georgia", ("Statistical database of the National Statistics Office of Georgia "
+          "(Geostat)"),
+          "Open database tables, 2002 to 2025.",
+          "Read at source", True),
+         ("Kazakhstan", ("Surveys among people who inject drugs, Kazakh Scientific Centre of "
+          "Dermatology and Infectious Diseases"),
+          "Open reports, rounds of 2020, 2022 and 2024.",
+          "Read at source", True),
+         ("Kyrgyzstan", "Situation report of the national HIV centre",
+          "Open report, 2013 to 2025.",
+          "Read at source", True),
+         ("Montenegro", "Annual report of the Institute of Public Health of Montenegro",
+          "Open report, 2001 to 2025.",
+          "Read at source", True),
+         ("Tajikistan", ("Ministry of Health yearbooks and the compendium of the statistics "
+          "agency"),
+          "Open yearbooks for the five regions, and an open compendium by sex and age.",
+          "Read at source", True),
+         ("Ukraine", "HIV monitoring portal of the Public Health Centre",
+          "Open portal, 2016 to 2024, territory under government control.",
+          "Read at source", True),
+         ("Azerbaijan", "State Statistical Committee",
+          "Open, but the workbook counts citizens only.",
+          "Aggregators only", False),
+         ("Moldova", "National Bureau of Statistics",
+          "Open, but the tables exclude the left bank of the Nistru and Bender.",
+          "Aggregators only", False),
+         ("Bosnia and Herzegovina", ("Public health institutes of the Federation of Bosnia and "
+          "Herzegovina and of Republika Srpska"),
+          "Open, but the reports count to 1 December and not the full year.",
+          "Aggregators only", False),
+         ("Serbia", "Statistics portal and the Batut Institute of Public Health",
+          "The portal republishes the UNAIDS estimate, and the institute host timed out.",
+          "Aggregators only", False),
+         ("North Macedonia", ("MakStat, the database of the State Statistical Office, and the "
+          "Institute of Public Health"),
+          "MakStat holds no HIV indicator, and the monthly bulletins give no yearly figure.",
+          "Aggregators only", False),
+         ("Albania", "Institute of Public Health and INSTAT, the statistics institute",
+          ("The 2025 count covers part of the year, a firewall blocked further requests, and "
+           "INSTAT timed out."),
+          "Aggregators only", False),
+         ("Türkiye", ("TÜİK, the Turkish Statistical Institute, and the Ministry of Health "
+          "yearbook"),
+          ("The data service refused access, and the published AIDS counts do not state the case "
+           "definition."),
+          "Aggregators only", False),
+         ("Turkmenistan", "State Committee on Statistics",
+          "No health table.",
+          "Aggregators only", False),
+         ("Uzbekistan", "National Statistics Committee and Republican AIDS Centre",
+          ("The statistics portal gives a rate with no stated method, and the AIDS centre timed "
+           "out."),
+          "Aggregators only", False),
+     ]),
+    ("latin-america-and-the-caribbean", "Latin America and the Caribbean",
+     ("Latin America and the Caribbean was assessed from 5 to 28 October 2026, by the method of "
+      "the Western and Central African assessment. Argentina, Belize, Bolivia, Haiti, Nicaragua, "
+      "Paraguay and Peru are read at source, through eight country sources."),
+     [
+         ("Argentina", ("Open data of the Ministry of Health, from the national health "
+          "surveillance system (SNVS 2.0)"),
+          "Open files, 2015 to 2024, by province and sex.",
+          "Read at source", True),
+         ("Belize", "HIV Surveillance Report 2018 of the Ministry of Health",
+          "Open report, 2018, by district.",
+          "Read at source", True),
+         ("Bolivia", "Epidemiology yearbook 2016 of the Ministry of Health and Sports",
+          "Open yearbook, 2016, by department.",
+          "Read at source", True),
+         ("Haiti", ("Annual statistical reports of the Ministry of Public Health and "
+          "Population"),
+          "Open reports, 2020 to 2023, by department.",
+          "Read at source", True),
+         ("Nicaragua", "National health map of the Ministry of Health",
+          "Archived copies of the ministry pages, 2017 to 2023, national.",
+          "Read at source", True),
+         ("Paraguay", ("HIV bulletin of the health ministers of the Southern Common Market "
+          "(MERCOSUR), 2012"),
+          "Open bulletin, 2000 to 2009, by sex.",
+          "Read at source", True),
+         ("Peru", ("Demographic and Family Health Survey (ENDES) of the statistics institute, "
+          "and the HIV situation room of CDC Peru, the national epidemiology centre"),
+          ("Open survey tables from 2013, and an open web application, 2019 to 2025, by "
+           "department."),
+          "Read at source", True),
+         ("Brazil", "Ministry of Health portals on gov.br",
+          "Not queried, under a project decision of 12 October 2026.",
+          "Aggregators only", False),
+         ("Colombia", "SIVIGILA, the national public health surveillance system",
+          "Open, but event 850 counts HIV cases, AIDS cases and AIDS deaths together.",
+          "Aggregators only", False),
+         ("Costa Rica", "Ministry of Health",
+          ("A firewall blocked the reports, and the HIV workbook stands above the PAHO count for "
+           "2011 to 2017 for a reason not verified."),
+          "Aggregators only", False),
+         ("Cuba", "Ministry of Public Health yearbook and ONEI, the statistics office",
+          ("The yearbook gives AIDS cases and registered deaths with no province HIV table, and "
+           "the ONEI hosts timed out."),
+          "Aggregators only", False),
+         ("Dominican Republic", ("National HIV council (CONAVIHSIDA) and SeNaSa, the public "
+          "health insurer"),
+          ("The council host refused access, and the insurer files count the users of one insurer "
+           "only."),
+          "Aggregators only", False),
+         ("Ecuador", "Ministry of Public Health",
+          "The ministry host timed out.",
+          "Aggregators only", False),
+         ("El Salvador", "Ministry of Health",
+          "The hosts refused or did not answer automated requests.",
+          "Aggregators only", False),
+         ("Guatemala", "Ministry of Public Health and INE, the statistics institute",
+          ("The HIV category of the ministry situation room refused access, and the statistics "
+           "institute and the open-data catalogue sit behind bot challenges."),
+          "Aggregators only", False),
+         ("Guyana", "Ministry of Health statistical bulletins",
+          "The bulletins of 2004 to 2009 survive only in web archives.",
+          "Aggregators only", False),
+         ("Honduras", ("Health ministry reports, copied by a national association of people "
+          "living with HIV"),
+          "The report link asks for a sign-in, and the department counts appear only as images.",
+          "Aggregators only", False),
+         ("Jamaica", "National health and statistics hosts",
+          "The hosts refused or did not answer automated requests.",
+          "Aggregators only", False),
+         ("Mexico", ("CENSIDA, the national HIV centre, and the morbidity yearbook of the "
+          "epidemiology directorate"),
+          ("CENSIDA counts patients per medicine, the CENSIDA document list sits behind a bot "
+           "challenge, and the yearbook host timed out."),
+          "Aggregators only", False),
+         ("Panama", "National statistics yearbooks",
+          ("The yearbooks give registered HIV deaths only, a source class the panel does not yet "
+           "carry."),
+          "Aggregators only", False),
+         ("Suriname", "General Bureau of Statistics (ABS)",
+          ("The tables give registered HIV and AIDS deaths only, a source class the panel does "
+           "not yet carry."),
+          "Aggregators only", False),
+         ("Trinidad and Tobago", "Ministry of Health budget guides and development estimates",
+          ("The HIV project items appear only in scanned files, and the project enters no figure "
+           "read from a scan."),
+          "Aggregators only", False),
+         ("Venezuela", "Morbidity yearbooks of the Ministry of Health (MPPS)",
+          ("Open, but the yearbooks count consultations, with the 2013 count at 55 per cent of "
+           "the PAHO count for 2014."),
+          "Aggregators only", False),
+     ]),
+    ("middle-east-and-north-africa", "Middle East and North Africa",
+     ("The Middle East and North Africa was assessed on 28 October 2026, by the method of "
+      "the Western and Central African assessment. Lebanon is read at source, through the "
+      "statistical bulletins of the Ministry of Public Health."),
+     [
+         ("Lebanon", "Statistical bulletins of the Ministry of Public Health",
+          "Open bulletins, 2007, 2009 and 2014 to 2018, national and by sex.",
+          "Read at source", True),
+         ("Algeria", ("Ministry of Health, the National Public Health Institute (INSP) and "
+          "the National Office of Statistics (ONS)"),
+          "Every host timed out.",
+          "Aggregators only", False),
+         ("Djibouti", "INSTAD, the statistics institute, and the Ministry of Health",
+          ("The statistics institute serves a JavaScript application with no published "
+           "table, and the ministry host gave no reply to the second request."),
+          "Aggregators only", False),
+         ("Egypt", "CAPMAS, the statistics agency, and the Ministry of Health and Population",
+          ("The statistics agency serves a JavaScript application with no published table, "
+           "and the ministry host timed out."),
+          "Aggregators only", False),
+         ("Iran", "Statistical Centre of Iran and the Ministry of Health",
+          "No host answered.",
+          "Aggregators only", False),
+         ("Iraq", "Ministry of Health and COSIT, the statistics organisation",
+          ("The ministry host blocked automated requests, and the statistics organisation "
+           "publishes no health section."),
+          "Aggregators only", False),
+         ("Jordan", "Ministry of Health and the Department of Statistics",
+          "Every host timed out.",
+          "Aggregators only", False),
+         ("Libya", ("National Centre for Disease Control and the Bureau of Statistics and "
+          "Census"),
+          ("The AIDS department page of the disease control centre lists branch offices "
+           "only, and the statistics bureau gave no reply to the second request."),
+          "Aggregators only", False),
+         ("Morocco", "Ministry of Health and the High Commission for Planning (HCP)",
+          ("The ministry host did not answer, and the HCP gives only a cumulative count to "
+           "2014, quoted from the ministry."),
+          "Aggregators only", False),
+         ("Palestine", "Ministry of Health and the Palestinian Central Bureau of Statistics",
+          "No host answered.",
+          "Aggregators only", False),
+         ("Sudan", "Federal Ministry of Health and the Central Bureau of Statistics",
+          ("The ministry host redirects to itself, and the statistics host gave no network "
+           "address."),
+          "Aggregators only", False),
+         ("Syria", "Central Bureau of Statistics and the Ministry of Health",
+          ("The statistics domain now carries a parked page, and the ministry host timed "
+           "out."),
+          "Aggregators only", False),
+         ("Tunisia", "INS, the statistics institute, and the Ministry of Health",
+          ("The statistical yearbook for 2019 to 2023 holds no HIV table, and the ministry "
+           "host has no network address."),
+          "Aggregators only", False),
+         ("Yemen", "Ministry of Public Health and Population and the Central Statistical "
+          "Organisation",
+          ("The ministry host returned a server error, and the statistics site carries no "
+           "health table."),
+          "Aggregators only", False),
+     ]),
 ]
 
 # What each region page says in words. `lede_tail` follows the region's own counts in the
@@ -691,6 +1623,124 @@ REGION_COPY = {
                     "count of people on treatment at 31 December 2022 is excluded, because the "
                     "2022 and 2023 yearbooks print two different figures for 31 December 2022."),
     },
+    "south-asia": {
+        "lede_tail": ("Bangladesh, the Maldives, Nepal and Sri Lanka are read at source through "
+                      "national case counts, and India through the model estimates of the "
+                      "National AIDS Control Organisation (NACO) for 2024, with reports from "
+                      "community-led monitoring at selected Indian facilities. Afghanistan, "
+                      "Bhutan and Pakistan appear only through international and donor "
+                      "reporting, and PEPFAR's results by province reach India and Nepal."),
+        "callout": ("Sub-national figures for South Asia come from the NACO estimates for the "
+                    "States and Union Territories of India, from the Demographic and Health "
+                    "Surveys of India, and from PEPFAR's results by province for India and "
+                    "Nepal, which count only the sites PEPFAR supports. The NACO figures are "
+                    "model estimates for 2024 and not register counts. The Nepal counts run from "
+                    "2008 to 2018 and the Maldives counts from 2005 to 2016. Pakistan's national "
+                    "programme publishes cumulative counts and trend charts as images, and the "
+                    "weekly disease surveillance bulletins of Pakistan count suspected cases. "
+                    "The Ministry of Health and the National Statistics Bureau of Bhutan refused "
+                    "automated requests, and the weekly surveillance reports of the Ministry of "
+                    "Public Health of Afghanistan carry no HIV line."),
+    },
+    "east-asia-and-the-pacific": {
+        "lede_tail": ("China, Mongolia, North Korea, Papua New Guinea, the Solomon Islands and "
+                      "Vanuatu are read at source, through national disease tables, health "
+                      "indicator books, a provincial dashboard and national household surveys. "
+                      "Fiji, Samoa, Tonga, Kiribati, Tuvalu, Micronesia and the Marshall Islands "
+                      "appear only through international and donor reporting. The Pacific Data "
+                      "Hub of the Pacific Community (SPC) gives survey figures for Kiribati, the "
+                      "Marshall Islands, Samoa, the Solomon Islands, Tonga, Tuvalu and Vanuatu, "
+                      "and PEPFAR's results by province reach China and Papua New Guinea."),
+        "callout": ("Fiji's national connector is built, but the gov.fj government domain gave no "
+                    "network address from 25 to 27 October 2026, and no Fijian figure is yet "
+                    "read at source. The national sources give sub-national figures for the 22 "
+                    "provinces of Papua New Guinea and the 10 provinces of North Korea, and "
+                    "PEPFAR's results by province for China and Papua New Guinea count only the "
+                    "sites PEPFAR supports. The North Korean, Solomon Islands and Vanuatu "
+                    "figures are survey shares from 2007 to 2015, and the national tables of "
+                    "China count AIDS cases and not HIV diagnoses. Samoa's health bulletins "
+                    "count laboratory specimens tested and not people tested, Tonga's health "
+                    "site was under maintenance, and the statistics offices of Tonga and "
+                    "Micronesia publish no HIV table. The Kiribati survey of 2009 failed the "
+                    "consistency checks of our project, the hosts of the later Kiribati and "
+                    "Tuvalu survey reports refused access, and the HIV page of the health "
+                    "ministry of the Marshall Islands is empty."),
+    },
+    "eastern-europe-and-central-asia": {
+        "lede_tail": ("Armenia, Belarus, Georgia, Kazakhstan, Kyrgyzstan, Montenegro, Tajikistan "
+                      "and Ukraine are read at source, through national statistics offices, "
+                      "public health bodies and national HIV centres. Albania, Azerbaijan, "
+                      "Bosnia and Herzegovina, Moldova, North Macedonia, Serbia, Türkiye, "
+                      "Turkmenistan and Uzbekistan appear only through international and donor "
+                      "reporting, including the joint HIV surveillance report of the European "
+                      "Centre for Disease Prevention and Control (ECDC) and the WHO Regional "
+                      "Office for Europe, and the WHO Europe Health for All database. PEPFAR's "
+                      "results by province reach Kazakhstan, Kyrgyzstan, Tajikistan and Ukraine."),
+        "callout": ("Kazakhstan is read at source only for HIV prevalence among people who inject "
+                    "drugs. The national sources give sub-national figures for the six regions "
+                    "and Minsk city of Belarus, for 22 oblasts and Kyiv city of Ukraine for 2017 "
+                    "to 2021, and for the five regions of Tajikistan, and the Ukrainian counts "
+                    "cover the territory under the control of the Government of Ukraine. "
+                    "PEPFAR's results by province for Kazakhstan, Kyrgyzstan, Tajikistan and "
+                    "Ukraine count only the sites PEPFAR supports. Azerbaijan's statistics "
+                    "committee counts citizens only, Moldova's statistics bureau excludes the "
+                    "left bank of the Nistru and Bender, the reports of the public health "
+                    "institutes of Bosnia and Herzegovina count to 1 December and not the full "
+                    "year, and Serbia's statistics portal republishes the UNAIDS estimate. North "
+                    "Macedonia's statistics office holds no HIV indicator, Albania's 2025 count "
+                    "covers part of the year, Türkiye's statistics institute refused access to "
+                    "the data service, Turkmenistan's statistics committee has no health table, "
+                    "and Uzbekistan's statistics portal gives an HIV rate with no stated method."),
+    },
+    "latin-america-and-the-caribbean": {
+        "lede_tail": ("Argentina, Belize, Bolivia, Haiti, Nicaragua, Paraguay and Peru are read "
+                      "at source, through ministries of health, the Peruvian statistics "
+                      "institute and a joint bulletin of the health ministers of the Southern "
+                      "Common Market (MERCOSUR). Brazil, Colombia, Costa Rica, Cuba, the "
+                      "Dominican Republic, Ecuador, El Salvador, Guatemala, Guyana, Honduras, "
+                      "Jamaica, Mexico, Panama, Suriname, Trinidad and Tobago and Venezuela "
+                      "appear only through international and donor reporting, including Core "
+                      "Indicator 93 of the Pan American Health Organization (PAHO), the count of "
+                      "notified HIV cases reported by the ministries of health of the Americas."),
+        "callout": ("Nicaragua enters the panel nationally, and the counts for the 19 local "
+                    "health areas enter once archived copies of every area page are stored. "
+                    "Belize is read for 2018, Bolivia for 2016, and Paraguay for 2000 to 2009, "
+                    "the years before the PAHO series for Paraguay starts. The Argentine and "
+                    "Peruvian sources revise past years at every release. Brazil's Ministry of "
+                    "Health publishes on gov.br hosts, which the project does not query, "
+                    "Colombia's national surveillance system (SIVIGILA) counts HIV cases, AIDS "
+                    "cases and AIDS deaths together under event 850, and Mexico's national HIV "
+                    "centre (CENSIDA) counts people on antiretroviral therapy (ART) per medicine "
+                    "and excludes the social-security institutions. The Salvadoran and Jamaican "
+                    "hosts refused or did not answer automated requests, the HIV items of "
+                    "Trinidad and Tobago appear only in scanned files, and the national hosts of "
+                    "Costa Rica, the Dominican Republic and Guatemala blocked automated requests "
+                    "or refused access. The health ministry hosts of Ecuador and Paraguay did "
+                    "not answer, the statistical bulletins of Guyana survive only in web "
+                    "archives, the Honduran ministry report asks for a sign-in, and the "
+                    "Venezuelan morbidity yearbooks count consultations, with the 2013 count at "
+                    "55 per cent of the PAHO count for 2014. Cuba, Panama and Suriname publish "
+                    "registered HIV or AIDS deaths from civil registration, a source class the "
+                    "panel does not yet carry."),
+    },
+    "middle-east-and-north-africa": {
+        "lede_tail": ("Lebanon is read at source, through the statistical bulletins of the "
+                      "Ministry of Public Health. Algeria, Djibouti, Egypt, Iran, Iraq, "
+                      "Jordan, Libya, Morocco, Palestine, Sudan, Syria, Tunisia and Yemen "
+                      "appear only through international and donor reporting."),
+        "callout": ("Lebanon enters the panel nationally, for 2007, 2009 and 2014 to 2018, "
+                    "and the Lebanese bulletins for 2010, 2011 and 2013 count cases up to "
+                    "November and are not read. The national hosts of Algeria, Iran, Jordan "
+                    "and Palestine did not answer, the Iraqi health ministry host blocked "
+                    "automated requests, and the statistics agencies of Djibouti and Egypt "
+                    "serve JavaScript applications with no published table. The statistics "
+                    "yearbook of Tunisia holds no HIV table, the Moroccan planning commission "
+                    "gives only a cumulative count to 2014, and the Libyan disease control "
+                    "centre lists branch offices only. The health ministry hosts of Sudan, "
+                    "Syria and Yemen did not serve a page, and the regional health observatory "
+                    "of the WHO Regional Office for the Eastern Mediterranean returned a "
+                    "missing-page error."),
+    },
 }
 
 # The words a country card and a country page carry when no national source has been read and
@@ -701,7 +1751,8 @@ DEFAULT_BLURB_SNU = "International and donor reporting, with PEPFAR's results by
 
 
 # countries whose names take the article at the start of a sentence
-WITH_ARTICLE = {"Central African Republic", "Gambia"}
+WITH_ARTICLE = {"Central African Republic", "Dominican Republic", "Gambia", "Maldives",
+                "Marshall Islands"}
 
 
 def default_lede(name: str, has_snu: bool) -> str:
@@ -1322,7 +2373,8 @@ def build_regions(df) -> list:
                               else "COMMUNITY")} for c in r["iso3"]]
         countries.sort(key=lambda c: sort_name(c["name"]))
         item = {"slug": r["slug"], "name": r["name"], "status": r["status"],
-                "phase": r["phase"], "note": r["note"], "countries": countries,
+                "phase": r["phase"], "phase_no": phase_no(r), "note": r["note"],
+                "countries": countries,
                 "n_countries": len(r["iso3"]), "photo": photo(f'region-{r["slug"]}')}
         d = df[df["country_iso3"].isin(r["iso3"])]
         if r["status"] == "live" and len(d):
@@ -1445,23 +2497,37 @@ def pair_basis(r) -> str:
     key = (r["indicator_id"], r["source_a"], r["source_b"])
     if key in DECLARED_BASIS:
         return DECLARED_BASIS[key]
-    n = int(r["n_cells"])
+    n_all = int(r["n_cells"])
+    # Ruling R21 of research/rulings_2026-10-15.md. reconcile reads the statistics from the
+    # matched figures with a point value from source a and from source b, and sets aside a figure
+    # printed as a bound.
+    n_pt = r.get("n_point_cells")
+    n = int(n_pt) if n_pt is not None and pd.notna(n_pt) else n_all
     matched = f"{count_word(n)} matched figure{'' if n == 1 else 's'}"
     rel, med = r["relationship"], r["median_rel_diff"]
+    # A pair in reconcile.DECLARED_RELATIONSHIPS and not in DECLARED_BASIS carries the statistics
+    # sentence, and lead opens the sentence by saying our project classified the pair from
+    # documents and not from the statistics.
+    lead = "Classified by our project from documents. " if r.get("basis") == "declared" else ""
+    k = n_all - n
+    bound = (f" A further {count_word(k)} matched figure{'' if k == 1 else 's'} "
+             f"{'is' if k == 1 else 'are'} printed by a source as a bound, for example <100, "
+             f"and {'is' if k == 1 else 'are'} set aside.") if k > 0 else ""
     if rel == "insufficient" or pd.isna(med):
-        return f"Only {matched}."
+        return f"{lead}Only {matched}.{bound}"
     if rel == "derived":
-        return (f"The two sources agree within 2 per cent on "
+        return (f"{lead}The two sources agree within 2 per cent on "
                 f"{r['agree_share_within_2pct'] * 100:.0f} per cent of {matched}, with a median "
-                f"difference of {med * 100:.2f} per cent.")
+                f"difference of {med * 100:.2f} per cent.{bound}")
     if rel == "subset":
         a, b = source_name(r["source_a"]), source_name(r["source_b"])
         ratio = r["median_ratio_a_over_b"]
         small = a if ratio < 1 else b
-        return (f"{small} gives the smaller figure on "
+        return (f"{lead}{small} gives the smaller figure on "
                 f"{r['direction_consistency'] * 100:.0f} per cent of {matched}, and the median "
-                f"ratio of the {a} figure to the {b} figure is {ratio:.2f}.")
-    return f"{matched[0].upper()}{matched[1:]}, with a median difference of {med * 100:.1f} per cent."
+                f"ratio of the {a} figure to the {b} figure is {ratio:.2f}.{bound}")
+    return (f"{lead}{matched[0].upper()}{matched[1:]}, with a median difference of "
+            f"{med * 100:.1f} per cent.{bound}")
 
 
 def live_regions() -> list:

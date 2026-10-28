@@ -86,13 +86,16 @@ GHO_SERIES: List[GHOSeries] = [
     GHOSeries("community_viral_suppression_pct", "HIV_VIRALLOADSUPPRESSED"),
 
     # -- what countries reported, as distinct from what Spectrum modelled -------
-    # This is the reason to come back to GHO at all. The seven above are the same
-    # Spectrum output UNAIDS publishes, so they agree with AIDSinfo by construction and
-    # buy nothing but a checksum. The reported series are a different instrument: a
-    # programme counting its own patients. Against the panel's existing on_art_count
-    # they are identical in 1 per cent of overlapping country-years, within one per cent
-    # in half, and more than a tenth apart in 13 per cent — and they carry 1,636
-    # country-years the panel has no ART figure for at all, 155 of them 2023 or later.
+    # The reported series are the reason to read GHO at all. The estimate series from plhiv
+    # to community_viral_suppression_pct come from the same UNAIDS/WHO model as the AIDSinfo estimates, in a later annual round, and ruling R19 of
+    # research/rulings_2026-10-15.md declares the AIDSinfo and GHO pairs derived. The
+    # reported series are the counts every national programme reports to Global AIDS Monitoring.
+    # AIDSinfo publishes the same reported number on ART rounded to two significant figures
+    # and prints a small count as a bound, so in the panel of 15 October 2026 the GHO value
+    # rounded to two significant figures equals the AIDSinfo value in 1,602 of 2,030 shared
+    # country-years, and ruling R20 declares the on_art_count pair derived. When the
+    # connector was written, the GHO series carried 1,636 country-years with no ART figure
+    # in the panel, 155 for 2023 or later.
     # They also un-censor AIDSinfo: Maldives is "<100" in the UNAIDS export and 2, 3, 5,
     # 6, 8 people here, which confirms from the outside that those censored cells are
     # small true numbers and not missing data.

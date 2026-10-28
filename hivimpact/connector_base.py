@@ -65,6 +65,12 @@ class BaseConnector:
     # valid multi-country queries). 401/403/404/410 are NOT here -> they fail fast.
     RETRYABLE_STATUS = (400, 429, 500, 502, 503, 504)
 
+    def _retry_wait(self, attempt: int, status: Optional[int]) -> float:
+        """Seconds to wait before retrying a request. `status` is None after a transport error,
+        and a subclass overrides the wait for a host whose rate limit outlasts the default
+        backoff."""
+        return min(2 ** attempt, 30)
+
     def _request(self, method: str, url: str, **kw) -> requests.Response:
         kw.setdefault("timeout", self.timeout)
         last_exc: Optional[Exception] = None
@@ -73,13 +79,13 @@ class BaseConnector:
                 resp = self.session.request(method, url, **kw)
             except requests.RequestException as exc:  # transport error -> retry
                 last_exc = exc
-                wait = min(2 ** attempt, 30)
+                wait = self._retry_wait(attempt, None)
                 log.warning("%s %s -> %s (attempt %d/%d), retrying in %ss",
                             self.source_id, url, exc, attempt, self.max_retries, wait)
                 time.sleep(wait)
                 continue
             if resp.status_code in self.RETRYABLE_STATUS:
-                wait = min(2 ** attempt, 30)
+                wait = self._retry_wait(attempt, resp.status_code)
                 log.warning("%s %s -> HTTP %s (attempt %d/%d), backing off %ss",
                             self.source_id, url, resp.status_code, attempt, self.max_retries, wait)
                 time.sleep(wait)

@@ -36,15 +36,54 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   "Denominator for coverage/incidence rates. World Bank SP.POP.TOTL."),
 
     # -- epidemic (mostly UNAIDS/WHO modelled estimates, carry CIs) -------------
-    IndicatorSpec("plhiv", "People living with HIV (all ages)", "count",
-                  SourceType.MODELLED_ESTIMATE, "epi"),
-    IndicatorSpec("new_infections", "New HIV infections (all ages)", "count",
-                  SourceType.MODELLED_ESTIMATE, "epi"),
-    IndicatorSpec("aids_deaths", "AIDS-related deaths (all ages)", "count",
-                  SourceType.MODELLED_ESTIMATE, "epi"),
+    # Ruling R17 of research/rulings_2026-10-15.md puts the UNAIDS age-group estimates under the
+    # three modelled count ids, with the age range in age_group and age_group "all" for all ages.
+    IndicatorSpec("plhiv", "People living with HIV", "count",
+                  SourceType.MODELLED_ESTIMATE, "epi",
+                  "A count for all ages carries age_group all. The UNAIDS estimates for an age "
+                  "group (unaids_aidsinfo and unicef_hiv, ruling R17) carry the age range in "
+                  "age_group. The State estimates of the National AIDS Control Organisation "
+                  "of India (in_naco, ruling R44) carry the State or Union Territory in "
+                  "admin1, and the India figure is the in_naco row with admin1 empty, never "
+                  "a sum of admin1 rows (ruling R14)."),
+    IndicatorSpec("new_infections", "New HIV infections", "count",
+                  SourceType.MODELLED_ESTIMATE, "epi",
+                  "A count for all ages carries age_group all. The UNAIDS estimates for an age "
+                  "group (unaids_aidsinfo and unicef_hiv, ruling R17) carry the age range in "
+                  "age_group. The State estimates of the National AIDS Control Organisation "
+                  "of India (in_naco, ruling R44) carry the State or Union Territory in "
+                  "admin1, and the India figure is the in_naco row with admin1 empty, never "
+                  "a sum of admin1 rows (ruling R14)."),
+    IndicatorSpec("aids_deaths", "AIDS-related deaths", "count",
+                  SourceType.MODELLED_ESTIMATE, "epi",
+                  "A count for all ages carries age_group all. The UNAIDS estimates for an age "
+                  "group (unaids_aidsinfo and unicef_hiv, ruling R17) carry the age range in "
+                  "age_group. The State estimates of the National AIDS Control Organisation "
+                  "of India (in_naco, ruling R44) carry the State or Union Territory in "
+                  "admin1, and the India figure is the in_naco row with admin1 empty, never "
+                  "a sum of admin1 rows (ruling R14)."),
     IndicatorSpec("hiv_prevalence_15_49", "HIV prevalence, ages 15-49", "percent",
                   SourceType.MODELLED_ESTIMATE, "epi",
-                  "World Bank SH.DYN.AIDS.ZS (UNAIDS-derived) — a triangulation duplicate of UNAIDS."),
+                  "World Bank SH.DYN.AIDS.ZS repeats the UNAIDS modelled value and is kept as a "
+                  "triangulation duplicate of UNAIDS. DHS survey prevalence comes national and by "
+                  "survey region, and admin1 holds the survey's own first regional level, which "
+                  "can differ from the country's first administrative level. PHIA survey "
+                  "prevalence (unaids_phia, ruling R13) comes national only. The modelled "
+                  "State prevalence of the National AIDS Control Organisation of India "
+                  "(in_naco, ruling R44) comes national and by State or Union Territory in "
+                  "admin1. The id name carries "
+                  "the age range, so every source writes age_group all (ruling R18)."),
+    # Household survey, research/rulings_2026-10-15.md ruling R13. The modelled new_infections
+    # id holds a count for all ages, and a survey incidence is a rate for a stated age range.
+    IndicatorSpec("hiv_incidence_survey_per_1000",
+                  "HIV incidence per 1,000 uninfected people a year (household survey)",
+                  "per_1000", SourceType.SURVEY, "epi",
+                  "Annual HIV incidence a Population-based HIV Impact Assessment (PHIA) survey "
+                  "estimates from recent infections found by a recency test, as new infections "
+                  "per 1,000 uninfected people a year, for the age range in age_group. The "
+                  "UNAIDS Inequalities dashboard publishes the PHIA incidence with no interval, "
+                  "so value_lower and value_upper stay empty. A survey rate is never compared "
+                  "with the modelled count new_infections."),
 
     # -- treatment cascade (the 95-95-95) --------------------------------------
     IndicatorSpec("know_status_pct", "% of PLHIV who have been diagnosed (first 95)", "percent",
@@ -54,7 +93,220 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
     IndicatorSpec("on_art_count", "Number of people on ART (PEPFAR MER TX_CURR)", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade"),
     IndicatorSpec("new_diagnoses", "Number newly diagnosed HIV-positive (PEPFAR MER HTS_TST_POS)", "count",
-                  SourceType.ROUTINE_PROGRAMME, "cascade"),
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "Positive HIV test results reported by the testing programme named in "
+                  "source_id, a count of positive tests and not a count of people. PEPFAR MER "
+                  "HTS_TST_POS (pepfar_modality, pepfar_panorama, pepfar_snu, pepfar_agency) "
+                  "counts positive tests at PEPFAR-supported sites, global_fund carries Global "
+                  "Fund grant results, th_hivhub and unaids_services carry national programme "
+                  "counts, and pg_ndoh_dashboard carries the Papua New Guinea National "
+                  "Department of Health counts by province from 2022 (research/"
+                  "rulings_2026-10-15.md, ruling R2). A person tested by PEPFAR and by a "
+                  "national programme appears in the PEPFAR count and in the national count, "
+                  "and a person tested twice in a year can count twice. Counts from different "
+                  "programmes are never added, and new_diagnoses is never compared with "
+                  "notified_hiv_cases."),
+    # National case surveillance, decided by Jason on 8 October 2026 as a separate id. A notified
+    # case is a person the ministry of health registers as newly diagnosed anywhere in the
+    # country, while new_diagnoses counts positive test results reported by a testing programme.
+    # Never merge notified_hiv_cases with new_diagnoses, and never compare notified_hiv_cases with
+    # new_diagnoses as two measurements of a single count.
+    IndicatorSpec("notified_hiv_cases", "Notified HIV cases, national case surveillance", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "PAHO Core Indicator 93, the count every ministry of health reports, with the "
+                  "female and male split from indicators 94 and 95. Unknown sex travels in "
+                  "extra.sex_unknown. Haiti's rows come from the ministry's own annual "
+                  "statistical reports (ht_mspp), people who tested HIV positive and know the "
+                  "result, by department, 2020 to 2023, with duplicates removed from 2022. "
+                  "Bolivia's department rows come from the 2016 epidemiology yearbook of "
+                  "the Ministry of Health and Sports (bo_anuario), cases notified with HIV "
+                  "plus cases notified in the AIDS phase, for 2016 only. "
+                  "Belize's district rows come from the Ministry of Health HIV Surveillance "
+                  "Report 2018 (bz_moh), preliminary counts of newly diagnosed HIV "
+                  "infections by district of residence, for 2018 only. "
+                  "Argentina's province rows come from the Ministry of Health open "
+                  "data (ar_snvs), cases notified to SNVS 2.0 by province of "
+                  "residence and sex, 2015 to 2024, in the release of 20 January "
+                  "2026, which revises past years above the PAHO counts. "
+                  "Paraguay's national rows for 2000 to 2009 come from Tabela 3.2 of "
+                  "the MERCOSUR HIV epidemiological bulletin 2012 (py_mercosur), new "
+                  "HIV diagnoses by sex as the national programme reported the counts, "
+                  "with no total for men and women together. "
+                  "Nicaragua's rows come from the Ministry of Health Mapa Nacional de la "
+                  "Salud (ni_mapasalud), read from Wayback captures, new HIV cases (Casos "
+                  "Nuevos) for the 19 SILAIS (local health areas) and nationally, 2017 to "
+                  "2023, with 2022 and 2023 archived for some SILAIS only. 13 SILAIS equal "
+                  "a department and carry the department name. Six SILAIS cross department "
+                  "lines and carry \"SILAIS\" and the SILAIS name. "
+                  "Peru's rows for 2019 to the last full year come from the HIV "
+                  "situation room of CDC Peru (pe_cdc_sala), HIV cases notified to "
+                  "CDC Peru, AIDS cases included, for the 25 departments and "
+                  "nationally by sex, read over the websocket of the Shiny "
+                  "application, kept only where the departments add to the national "
+                  "count and men plus women lie within 10 cases of the national count, under ruling "
+                  "R72. "
+                  "Mongolia's national rows for 2015 to 2025 come from the Health "
+                  "Indicators books of the Health Development Center (mn_hdc), HIV cases "
+                  "newly registered in the year, read from Figure 6.23 of the 2024 English "
+                  "book and from the HIV section of the 2025 Mongolian book, with no split "
+                  "by sex. "
+                  "Sri Lanka's national rows for 2010 to 2025 come from the 2025 annual "
+                  "report of the National STD/AIDS Control Programme (lk_nsacp), HIV cases "
+                  "reported in the year, read from the Total row of Figure 2.6, with no split "
+                  "by sex. The quarterly returns of the programme serve as a cross-check "
+                  "only, under ruling R8. "
+                  "Georgia's national rows for 2002 to 2025 come from two tables of the "
+                  "PxWeb service of the National Statistics Office of Georgia (ge_geostat), "
+                  "HIV cases newly registered in the year, kept only where the rise in the "
+                  "cumulative register equals the new cases, with women and men for 2012 to "
+                  "2025 where women plus men equals the total, under ruling R31. "
+                  "Belarus's rows for 2000 to 2025 come from indicator 10104000078 of the "
+                  "data portal of the National Statistical Committee of the Republic of "
+                  "Belarus (by_belstat), HIV cases newly identified in the year, nationally "
+                  "by sex and by the age groups 0-14, 15-19, 20-29, 30-39 and 40+, and for "
+                  "the six regions and Minsk city by sex, kept only where men plus women, the "
+                  "age groups and the regions add to the published totals, under ruling R33. "
+                  "Ukraine's rows for 2016 to 2024 come from the HIV monitoring portal of the "
+                  "Public Health Centre of the Ministry of Health of Ukraine (ua_npsi), people "
+                  "newly registered with HIV in the year in the territory under the control of "
+                  "the Government of Ukraine, nationally by the age groups 0-14, 15-24, 25-49 "
+                  "and 50+ and by sex at ages 15 and over, and for 22 oblasts and Kyiv city "
+                  "for 2017 to 2021, kept only where the age groups, the sexes and the regions "
+                  "add to the published totals, with the Donetsk and Luhansk oblasts refused "
+                  "in every year and every oblast refused from 2022, under ruling R34. "
+                  "Kyrgyzstan's national rows for 2013 to 2025 come from the situation report "
+                  "of 1 July 2026 of the Republican Centre for the Control of Blood-borne "
+                  "Viral Hepatitis and HIV of the Kyrgyz Republic (kg_aidscenter), HIV cases "
+                  "registered in the year among citizens plus foreign citizens, kept only "
+                  "where the nine regions, every row and the page header add to the published "
+                  "totals, with no split by sex, under ruling R38. "
+                  "Montenegro's national rows for 2001 to 2025 come from Table 5 of the 2025 "
+                  "annual HIV report of the Institute of Public Health of Montenegro "
+                  "(me_ijzcg), people registered with HIV in the year including people "
+                  "diagnosed abroad, with men and women for 2025 from Table 1, kept only where "
+                  "the columns add to the published totals, men plus women equal the 2025 "
+                  "total and the municipalities add to the new diagnoses, under ruling R39. "
+                  "Bangladesh's national rows for 2016 to 2025 come from the World AIDS Day "
+                  "files of the AIDS/STD Programme (bd_asp), people newly reported HIV "
+                  "positive in the programme's reporting year, which runs from 1 November of "
+                  "the year before to 31 October of the row year, with the 12 months named in "
+                  "extra.reporting_period, Forcibly Displaced Myanmar Nationals included, kept "
+                  "only where every cumulative count equals the count of the year before plus "
+                  "the new cases, with no split by sex, under ruling R42. "
+                  "The Maldives' national rows for 2005 to 2016 come from the Maldives "
+                  "Health Statistics 2014 and 2015-16 of the Ministry of Health (mv_moh), "
+                  "HIV positive cases detected in the calendar year, Maldivians and "
+                  "expatriates together, with the two counts in extra.maldivians and "
+                  "extra.expatriates, kept only where the two editions agree for 2007 to "
+                  "2014, under ruling R43. "
+                  "Armenia's national rows for 2015 to 2025 come from Figures 1 and 2 of the "
+                  "HIV situation analysis 2025 of the National Centre for Infectious Diseases "
+                  "of Armenia (am_ncid), HIV cases registered in the year among citizens of "
+                  "Armenia plus foreign citizens, with the two counts in extra.citizens and "
+                  "extra.foreign_citizens, kept only where the citizen counts add to the "
+                  "6,625 cases the text prints, the citizen series of Figures 2 and 3 agree "
+                  "and the 2025 counts match the text, under ruling R45. "
+                  "Tajikistan's rows for the five first-level units for 2014, 2015, 2016, "
+                  "2017 and 2021 come from the HIV table of the Ministry of Health yearbooks "
+                  "(tj_moh), people newly registered with HIV in the year, kept only where the "
+                  "regions add to the Republic total, the districts add to the Districts of "
+                  "Republican Subordination and the next yearbook prints the same counts, "
+                  "with no national row, under rulings R55 and R59. Tajikistan's national "
+                  "rows by sex and by age for 2014 to 2018 come from page 32 of the 2019 "
+                  "health compendium of the Agency on Statistics (tj_stat), kept only where "
+                  "the age groups add to the printed total of every sex and men plus women "
+                  "equal all people in every age group, with no row for all people of all "
+                  "ages, under ruling R59. "
+                  "Fiji's rows come from the public HIV surveillance workbook of 2025 of the "
+                  "Ministry of Health and Medical Services (fj_mohms), people newly registered "
+                  "with HIV in the year, nationally for 1989 to 2025, for the three divisions "
+                  "for 2018 to 2025, nationally and by division for men, women, transgender "
+                  "people and the age groups 0-14 and 15+ for 2018 to 2025, and nationally by "
+                  "the age groups 0-4 to 45-49 and 50+ for 2022, 2024 and 2025, kept only "
+                  "where the divisions add to the national count and "
+                  "the summary report of 2025 prints the workbook counts, under ruling R66. "
+                  "Nepal's national rows for 2008 to 2018 come from Table 1 of the World AIDS "
+                  "Day factsheets of the National Centre for AIDS and STD Control (np_ncasc), "
+                  "read from Wayback captures of six editions, clients with an HIV positive "
+                  "result at the HIV testing and counselling sites in the calendar year, which "
+                  "the centre reports as the reported HIV cases of the year, kept only where "
+                  "every edition printing a full year gives the same count, with the revision "
+                  "of 2017 from 1,856 to 1,842 the one known exception, and with no split by "
+                  "sex, under ruling R67. "
+                  "Never merged with or compared to new_diagnoses (Jason's ruling of 8 "
+                  "October 2026). Haiti's national rows for 2010 to 2024, and country-years "
+                  "Core Indicator 93 lacks for 16 other countries, come from the "
+                  "\"Nuevos diagnosticos\" table of the PAHO Interactive HIV Data Dashboard "
+                  "(paho_hiv), only where paho_core emits no row for the same country, year "
+                  "and sex. Rows for 48 countries of the WHO European Region, 2000 to "
+                  "2019, come from measure HFA_350 of the WHO Europe Health for All "
+                  "database (who_europe_hfa), new HIV diagnoses from the joint ECDC and "
+                  "WHO Europe surveillance reports, not adjusted for reporting delay, "
+                  "with Spain before 2013 and in 2018 and 2019, Italy before 2012 and the "
+                  "Netherlands before 2002 refused as partial coverage, Turkey refused "
+                  "because the Turkish HIV counts exclude people diagnosed with AIDS at the "
+                  "time of HIV diagnosis, North Macedonia before 2017 refused because the "
+                  "North Macedonian HIV counts under the separate HIV record type fall below "
+                  "the AIDS counts in 10 years from 2000 to 2011, and the Russian "
+                  "Federation before 2016 refused because the joint ECDC and WHO report for "
+                  "2019 data says the "
+                  "Russian case definitions changed in 2016, and Luxembourg refused in every "
+                  "year, Austria refused in every year as study cohort data, Serbia refused "
+                  "in every year because the WHO Europe Serbian count includes Kosovo, "
+                  "which the panel holds under XKX, and Ukraine refused for 2015 under "
+                  "ruling R35, with Armenia refused in every year under ruling R45 because "
+                  "the Armenian counts hold citizens of Armenia alone. Rows for 50 countries "
+                  "of the WHO European Region, 2015 to 2024, come from Table 1 of the joint "
+                  "ECDC and WHO Europe report HIV/AIDS surveillance in Europe 2025 "
+                  "(ecdc_hiv_report), HIV diagnoses reported to The European Surveillance "
+                  "System (TESSy), including people with a previous positive diagnosis made "
+                  "abroad or elsewhere in the country, not adjusted for reporting delay, with "
+                  "Austria and Turkey refused in every year, North Macedonia for 2015 and "
+                  "2016, the Russian Federation for 2015, Spain for 2018 and Ukraine for 2015 "
+                  "under ruling R35, Armenia refused in every year under ruling R45 because "
+                  "the Armenian counts hold citizens of Armenia alone, and with Serbia "
+                  "excluding Kosovo under SRB and Kosovo "
+                  "under XKX. "
+                  "Reconcile declares ecdc_hiv_report and who_europe_hfa derived, two "
+                  "editions of the same TESSy reports."),
+    # National AIDS surveillance, research/rulings_2026-10-15.md ruling R7. aids_deaths and
+    # new_infections hold modelled estimates, so a surveillance count takes a separate id.
+    # Sources on 15 October 2026 are who_europe_hfa (HFA_348, cases only) and cn_ndcpa (the
+    # Chinese yearly tables under ruling R10, cases and deaths). From 20 October 2026
+    # ecdc_hiv_report adds Table 13 of the 2025 joint ECDC and WHO Europe report, the European
+    # AIDS counts for 2015 to 2024, declared derived from HFA_348 (ruling R36). From 21 October
+    # 2026 both sources refuse every Armenian AIDS count, a count of citizens alone (ruling R45).
+    IndicatorSpec("aids_cases_reported", "People newly reported with AIDS, national surveillance",
+                  "count", SourceType.ROUTINE_PROGRAMME, "epi",
+                  "The count of people newly reported with AIDS in a calendar year by national "
+                  "surveillance, under the AIDS case definition the source names in "
+                  "extra.case_definition. Case definitions differ between national "
+                  "surveillance systems, so the id compares a country across years and "
+                  "compares sources for the same country, and a comparison across countries "
+                  "needs extra.case_definition. Never compared with the modelled aids_deaths or "
+                  "new_infections, and never with notified_hiv_cases, which counts HIV "
+                  "diagnoses at any stage."),
+    IndicatorSpec("aids_deaths_reported", "Deaths reported among people reported with AIDS",
+                  "count", SourceType.ROUTINE_PROGRAMME, "epi",
+                  "The count of deaths from any cause reported in a calendar year among people "
+                  "ever reported with AIDS by national surveillance, under the case definition "
+                  "in extra.case_definition, with the death definition the source names in "
+                  "extra.death_definition. A count of deaths related to HIV, the Fijian "
+                  "surveillance definition, is a different measure and never shares the id. "
+                  "Never compared with the modelled aids_deaths."),
+    # Treatment regimen, added 2026-10-14 for paho_hiv. The denominator is the count in the
+    # regimen report every country sends PAHO, which is not the national count on ART.
+    IndicatorSpec("on_art_dtg_pct", "People on ART on a dolutegravir-based regimen", "percent",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "Percentage of people in the country's ART regimen report who take "
+                  "dolutegravir or another second-generation integrase inhibitor, from the "
+                  "\"DTG\" table of the PAHO Interactive HIV Data Dashboard (paho_hiv), "
+                  "31 countries in the Americas, 2020 to 2025. age_group \"10+\" covers "
+                  "people aged ten and over and \"0-9\" children under ten, and the two age "
+                  "groups are never summed. numerator and denominator hold the counts on a "
+                  "dolutegravir regimen and in the regimen report. The regimen report's total "
+                  "matches who_gho on_art_count exactly in 31 of 108 country-years, so the "
+                  "denominator is never read as the national count on ART."),
 
     # -- the same two counts, split by which US agency paid for them --------------------
     # The country total is the sum of several US funding agencies, and the agencies were not
@@ -113,11 +365,41 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   SourceType.MODELLED_ESTIMATE, "cascade",
                   "Community viral suppression (denominator = all PLHIV, ~product of the three 95s). "
                   "Distinct from the 3rd 95 — the amfAR report flags MOUs that conflate the two."),
+    # Household survey ids, research/rulings_2026-10-15.md ruling R13. art_coverage_pct and
+    # community_viral_suppression_pct hold modelled values for all ages, and a PHIA value covers
+    # a stated age range with a sampling interval, so a PHIA value takes a survey id under
+    # Jason's ruling of 7 October 2026.
+    IndicatorSpec("art_coverage_survey_pct",
+                  "% of people living with HIV on ART (household survey)", "percent",
+                  SourceType.SURVEY, "cascade",
+                  "People living with HIV who are on antiretroviral therapy, as a share of all "
+                  "people living with HIV in the survey sample, from a Population-based HIV "
+                  "Impact Assessment (PHIA) survey, for the age range in age_group, with the 95 "
+                  "per cent confidence interval in value_lower and value_upper where published. "
+                  "Never compared with the modelled art_coverage_pct."),
+    IndicatorSpec("community_viral_suppression_survey_pct",
+                  "% of people living with HIV who are virally suppressed (household survey)",
+                  "percent", SourceType.SURVEY, "cascade",
+                  "People living with HIV with a suppressed viral load, as a share of all people "
+                  "living with HIV in the survey sample, from a Population-based HIV Impact "
+                  "Assessment (PHIA) survey, for the age range in age_group, with the 95 per "
+                  "cent confidence interval in value_lower and value_upper where published. The "
+                  "denominator is all people living with HIV, so the id is never compared with "
+                  "viral_suppression_pct and never with the modelled "
+                  "community_viral_suppression_pct."),
     IndicatorSpec("pmtct_coverage_pct", "PMTCT ART coverage among pregnant women with HIV", "percent",
                   SourceType.ROUTINE_PROGRAMME, "cascade"),
     IndicatorSpec("kp_hiv_prevalence", "HIV prevalence among a key population", "percent",
                   SourceType.SURVEY, "epi",
-                  "Denominator = the key population (set via population_group). Adrian's section 2."),
+                  "Denominator = the key population (set via population_group). Adrian's section 2. "
+                  "Kazakhstan's national pwid rows for 2020, 2022 and 2024 come from Table 6 of "
+                  "the survey reports of the Kazakh Scientific Centre of Dermatology and "
+                  "Infectious Diseases (kz_kncdiz), the prevalence weighted in RDS-Analyst "
+                  "(RDS is respondent-driven sampling) among people aged 18 and over who "
+                  "injected drugs in the last 12 months, with age group 18+, the survey year as "
+                  "the year, and the sample share and the interval of the sample share in "
+                  "extra, kept only where Table 6, the text and the conclusions agree and the "
+                  "two reports print the same 2022 round, under ruling R47."),
     IndicatorSpec("know_status_count", "Number of PLHIV who have been diagnosed with HIV", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "Count (not %) — national programme figure. Reconcile vs know_status_pct × plhiv."),
@@ -172,12 +454,48 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   "of the WHO GHO figure and not a rival estimate of it. PEPFAR publishes the "
                   "same count twice, once as a partner sum and once as a country row, and "
                   "pepfar_modality reads the country row — see the community and facility "
-                  "series below for why the two disagree in the regional operating units."),
+                  "series below for why the two disagree in the regional operating units. "
+                  "who_hts, added on 2026-10-14, reads the WHO HTS Dashboard query service and "
+                  "carries the national Global AIDS Monitoring total for 2018, 2019, 2020 and "
+                  "2022 to 2024. The who_hts figure equals the who_gho figure in every "
+                  "country-year compared for 2022 to 2024, and fills 2018 and 2020, the years "
+                  "no other source in the panel carries a national total for."),
     IndicatorSpec("hiv_test_positivity_pct", "% of returned HIV test results that were positive", "percent",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "The yield of the testing programme (WHO GHO HIV_POSITIVITY). Read next to "
                   "hiv_tests_performed: falling volume with rising positivity is a programme "
                   "narrowing to its highest-yield sites, which is what retrenchment looks like."),
+    # Household survey, cleared by Jason on 7 October 2026 under a separate id carrying the
+    # survey's own definition. The id says nothing about receiving the result, because ENDES
+    # table 3.3 sets no condition on the result. The DHS and UNAIDS indicator of people tested
+    # who received the result is a different measure and never shares hiv_tested_12m_survey_pct.
+    IndicatorSpec("hiv_tested_12m_survey_pct",
+                  "People aged 15 to 49 who had an HIV test in the last 12 months (household survey)",
+                  "percent", SourceType.SURVEY, "cascade",
+                  "Peru ENDES table 3.3, women and men aged 15 to 49 together, a weighted share "
+                  "with the 95 per cent confidence interval in value_lower and value_upper. "
+                  "ENDES table 3.4 (tested and learned the result, as a share of people tested) "
+                  "has a different denominator and never enters the panel as a product with table "
+                  "3.3. A survey share, not a test count, so never compare the id with "
+                  "hiv_tests_performed. Values INEI marks as low precision (coefficient of "
+                  "variation above 15 per cent) carry extra.low_precision. Added 2026-10-13 for "
+                  "pe_endes."),
+    # Household survey, research/rulings_2026-10-15.md ruling R9. The DHS and PHIA measure sets
+    # a condition on the result, which hiv_tested_12m_survey_pct does not.
+    IndicatorSpec("hiv_tested_12m_result_survey_pct",
+                  "People tested for HIV in the last 12 months who received the result "
+                  "(household survey)",
+                  "percent", SourceType.SURVEY, "cascade",
+                  "Respondents who had an HIV test in the 12 months before the interview and "
+                  "received the result, as a share of all respondents, for the age range in "
+                  "age_group as the survey's own records give the range, with the 95 per cent "
+                  "confidence interval in value_lower and value_upper where published. DHS "
+                  "indicators HA_CPHT_W_T1R (women) and HA_CPHT_M_T1R (men), which count a "
+                  "missing testing answer as not tested. PHIA values are refused, because the "
+                  "PHIA tabulation plan removes a respondent with no testing answer from the "
+                  "denominator (ruling R13, 16 October 2026). Never compared with "
+                  "hiv_tested_12m_survey_pct, which sets no "
+                  "condition on the result, and never with hiv_tests_performed, a test count."),
 
     # -- the same two counts, split by HOW the person was reached ------------------------
     # Facility testing is a nurse offering a test to somebody who already walked into a clinic,
@@ -201,12 +519,23 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "PEPFAR MER HTS_TST at the modality PEPFAR marks as community-based, being "
                   "IndexMod, MobileMod, VCTMod, OtherMod, SNSMod and HomeMod. The cancellable "
-                  "arm of the testing programme, and the earliest visible effect of a cut."),
+                  "arm of the testing programme, and the earliest visible effect of a cut. "
+                  "who_hts, added on 2026-10-14, carries a second definition, the national "
+                  "Global AIDS Monitoring count of tests in community settings whoever paid, "
+                  "covering mobile testing, community voluntary counselling and testing and "
+                  "other community testing. Filter on source_id, because the PEPFAR count "
+                  "covers PEPFAR-supported sites only and is never the same count as the "
+                  "national figure."),
     IndicatorSpec("hiv_tests_performed_facility", "HIV tests performed at a health facility", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "PEPFAR MER HTS_TST at every modality delivered inside a facility. The "
                   "comparison arm for hiv_tests_performed_community, being the same country, the "
-                  "same year and the same indicator definition at a different cost structure."),
+                  "same year and the same indicator definition at a different cost structure. "
+                  "who_hts, added on 2026-10-14, carries the national Global AIDS Monitoring "
+                  "count of tests in health facilities whoever paid, covering provider-initiated "
+                  "testing, antenatal clinics, facility voluntary counselling and testing, family "
+                  "planning clinics and other facility testing. Filter on source_id, the same "
+                  "rule as for hiv_tests_performed_community."),
     IndicatorSpec("new_diagnoses_community", "People newly diagnosed through community outreach", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "PEPFAR MER HTS_TST_POS at the community modalities. Divided by "
@@ -215,6 +544,13 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
     IndicatorSpec("new_diagnoses_facility", "People newly diagnosed at a health facility", "count",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
                   "PEPFAR MER HTS_TST_POS at the facility modalities."),
+    IndicatorSpec("hiv_self_tests_distributed", "HIV self-test kits distributed", "count",
+                  SourceType.ROUTINE_PROGRAMME, "cascade",
+                  "Self-test kits a country reports distributing in the year, from Global AIDS "
+                  "Monitoring through the WHO HTS Dashboard (who_hts). A kit handed out is not a "
+                  "test performed and carries no result, so the count never enters "
+                  "hiv_tests_performed. 12 countries report for 2018 and 50 for 2024. Added "
+                  "2026-10-14 for who_hts."),
 
     # -- ART initiations: the flow the panel was missing ------------------------
     # Almost everything else here is a stock, and a stock is the wrong instrument for
@@ -327,11 +663,16 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   "UNAIDS AIDSinfo, 2013-2024. The yield of TB screening in HIV care, and it reads "
                   "like hiv_test_positivity_pct: rising yield on a falling number screened is a "
                   "programme narrowing to the sickest patients, not a worsening epidemic."),
-    IndicatorSpec("tbhiv_comanagement_pct", "% of TB patients living with HIV who are on ART", "percent",
+    IndicatorSpec("tbhiv_comanagement_pct", "% of estimated HIV-positive incident TB cases on TB treatment and ART", "percent",
                   SourceType.ROUTINE_PROGRAMME, "cascade",
-                  "UNAIDS AIDSinfo, 2000-2024, 168 countries. The percentage counterpart to "
-                  "tbhiv_on_art over tb_patients_hiv_positive, both of which the panel holds from "
-                  "WHO TME, so this is a third instrument on a step two others already measure."),
+                  "UNAIDS AIDSinfo, 2000-2024, 168 countries. The numerator counts notified HIV-positive "
+                  "TB patients on TB treatment and ART, and the denominator is the WHO estimate of "
+                  "HIV-positive incident TB, so values above 100 occur where the notified count exceeds "
+                  "the estimate. The percentage is not the ratio of tbhiv_on_art to "
+                  "tb_patients_hiv_positive, the notified counts the panel holds from WHO TME. On 1,227 "
+                  "country-years shared with WHO TME, the AIDSinfo value lies within a tenth of "
+                  "tbhiv_on_art over tbhiv_incidence in 702 and within a tenth of tbhiv_on_art over "
+                  "tb_patients_hiv_positive in 32 (ruling R29 of research/rulings_2026-10-15.md)."),
 
     # -- TB/HIV burden, modelled, with WHO's own bounds -------------------------
     IndicatorSpec("tbhiv_incidence", "Incident TB cases among people living with HIV", "count",
@@ -473,6 +814,33 @@ CANONICAL_INDICATORS = {s.canonical_id: s for s in [
                   "The baseline a funding cut starts from (population_group says which key "
                   "population). 156 values. Single point, not a series, so it sets the level "
                   "rather than showing a change."),
+    # Household survey, research/rulings_2026-10-15.md ruling R22. The Pacific Data Hub
+    # (pacific_data_hub) publishes the three measures for the Pacific Demographic and Health
+    # Surveys, and the DHS Program API (dhs) publishes the knowledge and condom measures for the
+    # DHS surveys. age_group keeps the ages 15 to 49, 15 and over, and 15 to 24 apart.
+    IndicatorSpec("hiv_comprehensive_knowledge_survey_pct",
+                  "People with comprehensive correct knowledge of HIV (household survey)",
+                  "percent", SourceType.SURVEY, "prevention",
+                  "Respondents who know consistent condom use and a single faithful uninfected "
+                  "partner reduce the chance of getting HIV, know a healthy-looking person can "
+                  "have HIV and reject the two most common local "
+                  "misconceptions about HIV transmission or prevention, as a share of all "
+                  "respondents, for the age range in age_group and the sex in sex. Demographic "
+                  "and Health Survey (DHS) standard definition."),
+    IndicatorSpec("condom_last_higher_risk_sex_survey_pct",
+                  "Condom use at last higher-risk sex (household survey)",
+                  "percent", SourceType.SURVEY, "prevention",
+                  "Respondents who used a condom at the last higher-risk intercourse, as a share "
+                  "of respondents who had higher-risk intercourse in the 12 months before the "
+                  "interview, for the age range in age_group and the sex in sex. The DHS term "
+                  "higher-risk intercourse means sex with a partner who was not a spouse and "
+                  "did not live with the respondent. DHS standard definition."),
+    IndicatorSpec("sex_before_15_survey_pct",
+                  "Young people who had sex before age 15 (household survey)",
+                  "percent", SourceType.SURVEY, "prevention",
+                  "Respondents aged 15 to 24 who had sexual intercourse before age 15, as a share "
+                  "of all respondents aged 15 to 24, for the sex in sex, with age_group 15-24. "
+                  "DHS standard definition."),
 
     # -- key-population programme flows (population_group carries WHICH key population) ---
     # NCHADS Cambodia "Boosted CoPCT" quarterly report. These are PERIOD FLOWS (activity

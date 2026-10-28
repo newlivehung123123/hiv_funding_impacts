@@ -1356,6 +1356,26 @@ than a moved threshold. **Unfixed, and left unfixed deliberately**, because chan
 changes the verdict on all 94 pairs and that is a decision for Jason, not a tuning exercise to be
 run after seeing which side of the line the new connector landed on.
 
+**Settled on 15 October 2026** by rulings R19, R20 and R21 of `research/rulings_2026-10-15.md`,
+under Jason's instruction to put data accuracy and consistency first and scientific rigour second.
+The inference rule and the thresholds stay unchanged, and reconcile gains no fourth category.
+`reconcile.DECLARED_RELATIONSHIPS` now declares the AIDSinfo and WHO GHO pairs derived from
+documents, R19 for the seven GHO estimate series with `aids_deaths` among the seven, and R20 for
+`on_art_count`, `pmtct_arv_count`, `pregnant_women_hiv` and `hiv_test_positivity_pct`. The
+`aids_deaths` values of AIDSinfo and WHO GHO, equal on most country-years and far apart on other
+country-years, come from two annual rounds of the UNAIDS/WHO estimates, since WHO GHO carries a
+2025 value in all seven estimate series and every AIDSinfo export stops at 2024. AIDSinfo rounds
+the reported number on antiretroviral treatment to two significant figures and prints a small count
+as a bound, and the WHO GHO count rounded to two significant figures equals the AIDSinfo count in
+1,602 of 2,030 shared country-years. The `pepfar_modality` and `pepfar_panorama` pair for
+`new_diagnoses` stays inferred, because the gap on the regional operating units is the finding §9l
+records. R21 keeps a value AIDSinfo prints as a bound (for example <500) out of the statistics
+reconcile infers a relationship from, and sets aside a comparison whose bound holds the other
+value. Jason's reconcile run of 15 October 2026 with R19 took the independent pairs from 105 to 84
+and the material divergences from 9,095 to 6,015. Jason's reconcile run with R20 and R21, reported on
+16 October 2026, took the independent pairs to 78 and the material divergences to 5,291, the figures
+a read of the panel predicted.
+
 ### §9n. A file excluded for the right reason, and the sixteen years the exclusion cost
 
 `pepfar_expenditure` reads `Public_Partner_Budgets_and_Expenditures` and its code excludes the
@@ -3769,7 +3789,7 @@ is written, because a hazard nobody anticipated has no gate waiting for it.**
 | Community testing fell four times as far as facility testing | Q4 FY2024 → Q4 FY2025 over the 52 clean countries: community 3,056,545 → 1,068,854 (-65.0%), facility 16,021,304 → 13,517,748 (-15.6%), share 16.0% → 7.3%. Community fell further in 21 of the 26 countries over 20,000 tests a quarter with both arms running, UGA -93.5 against -10.3, NGA -83.4 against -15.8 |
 | Outreach was cut before the clinic, and yield rose as it went | Community positives 51,185 → 34,825 (-32.0%) against facility 294,968 → 241,411 (-18.2%); community positivity 1.67% → 3.26% while facility positivity moved 1.84% → 1.79% |
 | The reconciler splits identical pairs on a two-cell margin | Same run. `pepfar_modality` against `pepfar_panorama`, identical 415 cells, both at median relative difference 0.000000 and median ratio 1.000000: `hiv_tests_performed` agrees within 2% on 374 cells and is `derived`, `new_diagnoses` agrees on 372 and is `independent`. The `derived` test needs 374 |
-| Eight independent pairs are identical on the typical cell | 8 of 65 independent pairs, holding 8,567 of 28,671 independent cells (panel of 2026-09-19, which added the 46-cell `pepfar_ou_budgets` against `gam` pair at 7.2%; 8 of 64 and 28,625 before it), have a median relative difference at or below 1%. AIDSinfo against WHO GHO is `derived` on `hiv_tests_performed` (323 cells) and `independent` on `aids_deaths` (3,264), `pmtct_arv_count` (1,515), `on_art_count` (2,030) and `hiv_test_positivity_pct` (321), all at or below 1%. **Unfixed pending a decision** |
+| Eight independent pairs are identical on the typical cell | 8 of 65 independent pairs, holding 8,567 of 28,671 independent cells (panel of 2026-09-19, which added the 46-cell `pepfar_ou_budgets` against `gam` pair at 7.2%; 8 of 64 and 28,625 before it), have a median relative difference at or below 1%. AIDSinfo against WHO GHO is `derived` on `hiv_tests_performed` (323 cells) and `independent` on `aids_deaths` (3,264), `pmtct_arv_count` (1,515), `on_art_count` (2,030) and `hiv_test_positivity_pct` (321), all at or below 1%. **Unfixed pending a decision**. *Settled 2026-10-15* by rulings R19 and R20 of `research/rulings_2026-10-15.md` (§9m) |
 | The OU budgets file and the partner file are the same money | Restricted to ISO3 rows with the three aggregate layers removed: FY2021 budget 5,036,285,258 in both, FY2021 expenditure 4,121,559,166 in both, FY2025 budget 4,281,549,540 in both, FY2025 expenditure 2,789,722,472 against the panel's 2,789,722,474. `pepfar_ou_budgets` therefore emits nothing after 2020 |
 | ~~Excluding that file cost the panel seventeen years~~ — corrected 2026-09-19, see below | Counted the 2004 budget column, 68,991,569 over 11 countries, as a year's budget. §9r shows the 2004 column is one figure per country split 70/30 by a fixed rule. 611 rows, 496 budget and 115 expenditure, was the count with the 2004 column emitted |
 | Excluding that file cost the panel sixteen years | `Public_Partner_Budgets_and_Expenditures` starts at FY2021. The OU file carries budget from 2005 (1,069,544,078 over 14 countries) to 2020 (4,657,232,673 over 53) and expenditure from 2018. 600 rows recovered, 485 budget and 115 expenditure, over 55 countries. Run into the panel 2026-09-19, taking the panel from 183,000 to 182,989; the 11 rows removed are exactly the 2004 budget rows and no other value moved |

@@ -1,12 +1,14 @@
 """
-CLM Asia — Community-Led Monitoring connector (Indonesia sentinel; community_led_monitoring).
+CLM Asia — Community-Led Monitoring connector (Indonesia and India sentinels; community_led_monitoring).
 
 Source: data.clm-asia.org — the amfAR TREAT Asia / ITPC "Community-Led Monitoring in Asia"
 dashboard: a public D3/billboard.js dashboard backed by an UNAUTHENTICATED JSON API
 (reverse-engineered 2026-07-19). Community teams survey service users and facilities each
 quarter on the AAAQ framework (availability / accessibility / affordability / acceptability /
-quality). We take the **Indonesia** slice (SNU1='ID'; the other country covered, India, is
-out of SEA scope).
+quality). We take the **Indonesia** slice (SNU1='ID') and the **India** slice (SNU1='IN').
+The India slice was out of scope while the build covered Southeast Asia only, and the South Asia
+phase brought India into scope on 14 October 2026. The India slice holds two to five facilities
+a quarter, and the public API gives no facility location for India.
 
 Endpoint (one call per indicator × year × quarter):
   GET https://data.clm-asia.org/api/?component=indicator_data_table&CC=AA&ind=<IND>
@@ -40,7 +42,12 @@ from ..schema import PanelRow, SourceType, POP_ALL
 log = logging.getLogger("hivimpact")
 
 _API = "https://data.clm-asia.org/api/"
-_SNU = "ID"  # Indonesia (the SEA slice; 'IN' = India, out of scope)
+# SNU1 code -> (ISO3, country name, sample note for extra)
+_SNUS = {
+    "ID": ("IDN", "Indonesia", "CLM sentinel facilities (Jakarta area) — NOT nationally representative"),
+    "IN": ("IND", "India", "CLM sentinel facilities in India, two to five a quarter, location not "
+                           "given by the public API, NOT nationally representative"),
+}
 
 # (canonical_id, source indicator code, target response option, higher_is, label) — VALIDATED
 # against the live API 2026-07-19 (option keys confirmed present in the Indonesia data).
@@ -67,8 +74,9 @@ _MAP = [
 class CLMAsiaConnector(BaseConnector):
     source_id = "clm_asia"
     default_source_type = SourceType.COMMUNITY_LED_MONITORING
-    description = "CLM Asia (data.clm-asia.org) — Indonesia community-led monitoring (service disruption, sentinel)."
-    country = "IDN"
+    description = ("CLM Asia (data.clm-asia.org) — Indonesia and India community-led monitoring "
+                   "(service disruption, sentinel).")
+    country = "IDN"  # first country, kept for code that reads one ISO3, while fetch() reads _SNUS
     request_pause = 0.3
     timeout = 45
 
@@ -93,7 +101,7 @@ class CLMAsiaConnector(BaseConnector):
         cd = data.get("chartdata")
         if not cd or not isinstance(cd, list):          # {"chartdata": false} => no data
             return None
-        return [r for r in cd if r.get("SNU1") == _SNU]  # Indonesia facilities only
+        return [r for r in cd if r.get("SNU1") in _SNUS]  # Indonesia and India facilities
 
     def fetch(
         self,
@@ -102,34 +110,39 @@ class CLMAsiaConnector(BaseConnector):
         end_year: Optional[int] = None,
     ) -> Iterator[PanelRow]:
         wanted = set(c.upper() for c in countries) if countries else None
-        if wanted and self.country not in wanted:
+        snus = {k: v for k, v in _SNUS.items() if not wanted or v[0] in wanted}
+        if not snus:
             return
         end_year = min(end_year or date.today().year, date.today().year)
         years = range(max(2023, start_year), end_year + 1)   # dashboard starts 2023 Q1
 
         emitted = 0
         for canonical, ind, opt, higher_is, label in _MAP:
-            # year -> [numerator, denominator, {quarters}]
-            agg: Dict[int, list] = {}
+            # (SNU1, year) -> [numerator, denominator, {quarters}]. One API call per quarter
+            # returns every country, so the pooling splits the facilities by SNU1.
+            agg: Dict[tuple, list] = {}
             for year in years:
                 for q in (1, 2, 3, 4):
                     rows = self._fetch_quarter(ind, year, q)
                     if not rows:
                         continue
-                    num = sum((r.get(opt) or 0) for r in rows)
-                    denom = sum((r.get("IDCOUNT") or 0) for r in rows)
-                    if denom <= 0:
-                        continue
-                    b = agg.setdefault(year, [0, 0, set()])
-                    b[0] += num
-                    b[1] += denom
-                    b[2].add(q)
+                    for snu in snus:
+                        sub = [r for r in rows if r.get("SNU1") == snu]
+                        num = sum((r.get(opt) or 0) for r in sub)
+                        denom = sum((r.get("IDCOUNT") or 0) for r in sub)
+                        if denom <= 0:
+                            continue
+                        b = agg.setdefault((snu, year), [0, 0, set()])
+                        b[0] += num
+                        b[1] += denom
+                        b[2].add(q)
             n = 0
-            for year, (num, denom, quarters) in sorted(agg.items()):
+            for (snu, year), (num, denom, quarters) in sorted(agg.items()):
                 if denom <= 0:
                     continue
+                iso3, cname, sample = snus[snu]
                 yield self.make_row(
-                    country_iso3="IDN", country_name="Indonesia",
+                    country_iso3=iso3, country_name=cname,
                     indicator_id=canonical, year=year,
                     value=round(100.0 * num / denom, 2), unit="percent",
                     numerator=num, denominator=denom, population_group=POP_ALL,
@@ -142,11 +155,12 @@ class CLMAsiaConnector(BaseConnector):
                         "quarters_included": sorted(quarters),
                         "n_quarters": len(quarters),
                         "aggregation": "pooled proportion across quarters (sum numerator / sum denominator)",
-                        "sample": "CLM sentinel facilities (Jakarta area) — NOT nationally representative",
+                        "sample": sample,
                         "reconcile_with": "none (community source; complements the aggregator & cascade layers)",
                     },
                 )
                 n += 1
                 emitted += 1
-            log.info("clm_asia: %-32s -> %d years (%s)", canonical, n, ind)
-        log.info("clm_asia: emitted %d rows (Indonesia CLM sentinel)", emitted)
+            log.info("clm_asia: %-32s -> %d country-years (%s)", canonical, n, ind)
+        log.info("clm_asia: emitted %d rows (%s CLM sentinels)", emitted,
+                 " and ".join(v[1] for v in snus.values()))

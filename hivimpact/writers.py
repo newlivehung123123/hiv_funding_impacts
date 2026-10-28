@@ -394,6 +394,13 @@ def validate(df: pd.DataFrame) -> List[str]:
                   > pd.to_numeric(b["value_upper"], errors="coerce"))]
     if len(inverted):
         warns.append(f"{len(inverted)} rows with value_lower > value_upper")
+    # A single bound counts too. Under ruling R30 a connector drops bounds which exclude the
+    # value of the same row, so a row found here comes from a connector without the R30 check.
+    v = pd.to_numeric(df["value"], errors="coerce")
+    outside = df[(pd.to_numeric(df["value_lower"], errors="coerce") > v)
+                 | (pd.to_numeric(df["value_upper"], errors="coerce") < v)]
+    if len(outside):
+        warns.append(f"{len(outside)} rows whose bounds exclude the value (ruling R30)")
 
     dups = df.duplicated(
         subset=["country_iso3", "admin1", "indicator_id", "population_group", "sex", "age_group", "year", "source_id"],
