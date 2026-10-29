@@ -147,7 +147,7 @@ East Asia and the Pacific under hivimpact/config/regions.py covers 13 countries,
 ## Solomon Islands
 - solomons.gov.sb, the government site holding the Ministry of Health and Medical Services pages, answered with a Sucuri cloud proxy JavaScript challenge (HTTP 307), BLOCKED, with no retry.
 - www.statistics.gov.sb answered with curl code 000 on a single probe, a REACH FAILURE held for the re-probe pass.
-- The re-probe pass of 21 October 2026 found the statistics office at statistics.gov.sb, and ruling R48 builds sb_sinso_dhs (connector 67) from the Demographic and Health Survey reports of 2006-2007 and 2015. Solomon Islands closes after Jason's run (see the re-probe pass below).
+- The re-probe pass of 21 October 2026 found the statistics office at statistics.gov.sb, and ruling R48 builds sb_sinso_dhs (connector 67) from the Demographic and Health Survey reports of 2006-2007 and 2015. Jason ran sb_sinso_dhs on 21 October 2026, the data page of the site built on 29 October 2026 lists the five sb_sinso_dhs rows, and Solomon Islands is closed (see the re-probe pass below).
 
 ## Kiribati
 - www.health.gov.ki answered with curl code 000 on a single probe, a REACH FAILURE held for the re-probe pass.
@@ -190,7 +190,7 @@ East Asia and the Pacific under hivimpact/config/regions.py covers 13 countries,
 ## North Korea, later on 21 October 2026
 - The DPRK MICS 2017 report (https://www.unicef.org/dprk/media/156/file/MICS.pdf, 4,113,875 bytes) holds no HIV module, NOT CARRIED under R58.
 - The DPRK MICS 2009 report (https://dprk.un.org/sites/default/files/2019-07/03.10.b_MICS_DPRK_2009.pdf, 2,030,354 bytes) prints comprehensive knowledge about HIV for women aged 15 to 49 and 15 to 24 in the 10 provinces. Connector 69, prk_cbs_mics, carries 22 rows under R58.
-- North Korea closes once Jason runs prk_cbs_mics.
+- North Korea is closed. Jason ran prk_cbs_mics on 22 October 2026, and the data page of the site built on 29 October 2026 lists the 22 prk_cbs_mics rows.
 - Jason's run of 22 October 2026 wrote the 22 prk_cbs_mics rows, and North Korea is closed.
 
 ## Wayback pass, 22 October 2026

@@ -136,7 +136,7 @@ def transactions(path: Path, org: str, country: str, start_year: int, end_year: 
                 codes = FA._countries(transaction) or activity_countries
                 if len(codes) != 1:
                     continue
-                iso3 = resolve_country(codes[0])
+                iso3 = resolve_country(codes[0], reporting_ref)
                 if iso3 != country:
                     continue
                 date_element = fields.get("transaction-date")

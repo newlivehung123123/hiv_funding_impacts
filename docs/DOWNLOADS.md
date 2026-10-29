@@ -124,8 +124,10 @@ again.
   or FY2020 as a State baseline is reading a hole in the source.**
 - **The last fiscal year is a part year.** The publishers rewrite these files during a running
   US fiscal year and nothing in them says which year is incomplete, so the connector infers it
-  and flags every row of that year with `partial_fiscal_year`. The default `--end 2025` keeps
-  FY2026 out of the panel anyway.
+  and flags every row of that year with `partial_fiscal_year`. The panel holds the FY2026
+  part year, because the runs of 12 October and 29 October 2026 used `--end 2026`. A run at the
+  default `--end 2025` drops every FY2026 row, and the first guarded run of 29 October 2026
+  stopped before the build when a run at `--end 2025` lost the FY2026 rows.
 - **USAID and State publish the same awards twice from FY2025.** The USAID XML file reports
   State's transactions as well as USAID's, and ForeignAssistance.gov reports the USAID figure
   net of the State figure, so the connector subtracts the State country total from the USAID
@@ -183,6 +185,25 @@ again.
   rows was ever affected. **Anyone holding a copy of the panel exported before 27 September 2026
   should drop Tuvalu from any analysis of `foreign_assistance` and drop Moldova FY2022 and
   FY2024, or take a fresh export.** Access ladder §9z holds the full account.
+- **Sudan's `foreign_assistance` figures were short by 8,903,002 dollars over FY2012 to FY2018 in
+  every panel built before 29 October 2026, and the defect is fixed.** Health and Human Services
+  publishes Sudan under the code `SF`, which is the FIPS 10-4 code (Federal Information
+  Processing Standard 10-4, a retired United States list of country codes) for South Africa and
+  which no code list the panel consults reads as Sudan, and the connector dropped 22 HIV
+  disbursements as naming no country. Two readings of the cached files place `SF` in Sudan, and
+  ruling R78 adds a table to the connector which reads `SF` as Sudan for Health and Human
+  Services and the State Department alone. The table stays out of `hivimpact/normalize.py`, and a
+  later source using the FIPS code still reads `SF` as South Africa. The rerun of 29 October 2026
+  added 13 Sudan rows, raised the Sudan totals of FY2013, FY2014 and FY2015, gave Sudan a total
+  in FY2012, FY2016, FY2017 and FY2018, and took `foreign_assistance` from 6,271 rows to 6,284
+  and the panel from 456,316 rows to 456,329. The rerun fetched no file. The first guarded run of
+  the same day fetched two Department of Defense files from the ForeignAssistance.gov bucket on
+  Amazon S3, `iati/dod/iati-activities-Gambia_The.xml` at 33,130 bytes and
+  `iati/dod/iati-activities-Western_Hemisphere_Region.xml` at 7,867 bytes, and the rerun read the two
+  files along with the 54 Millennium Challenge Corporation files which failed with ConnectionError
+  on 12 October 2026. Five files are still refused with HTTP 403. **Anyone holding a copy of the
+  panel exported before 29 October 2026 should take a fresh export before analysing Sudan.**
+  Ruling R78 and access ladder §9aa hold the full account.
 
 ## 4. Global Fund — NO download needed (comes from OECD automatically)
 
@@ -242,17 +263,16 @@ publication and is written under `global_fund_hiv_disbursements` with `source_id
 the same country count and the same year span the run of 30 September 2026 produced.
 
 Run the connector with `--countries all --start 2000 --end 2026`. Both arguments have to be typed.
-`scripts/run_all.py` defaults `--countries` to `sea` and `--end` to 2025, and `iati` is the only
-source in the panel reaching 2026, so a run taking either default writes a panel that cannot be
-compared with the last one.
+`scripts/run_all.py` defaults `--countries` to `sea` and `--end` to 2025. `iati`,
+`foreign_assistance` and `ng_ndr` are among the sources reaching 2026, and a run taking the
+default `--countries` or the default `--end` writes a panel which cannot be compared with the
+last panel.
 
-**What the download page holds today, and what it does not.** The files on the download page are
-the site build of 7 September 2026. That build holds 177,594 rows from 18 sources and not one
-`iati` row, because the `iati` connector was first run on 28 September 2026, and the published
-`reconciliation_pairs.csv` holds 87 pairs and no pair naming `iati`. Everything in this section 7
-therefore describes the panel a run of the connector produces and not the file a reader downloads
-today. The six limitations below are written for the day the `iati` rows are published. Four of
-the six describe a defect in this project's own code, being the first, the third, the fifth and the
+**What the download page holds.** The download page holds the panel published on 29 October
+2026, 456,329 rows including the `iati` rows. When section 7 was first written, the
+download page held the site build of 7 September 2026, 177,594 rows from 18 sources and no
+`iati` row, because the `iati` connector was first run on 28 September 2026. Four of
+the six limitations below describe a defect in this project's own code, being the first, the third, the fifth and the
 sixth, the first, the third and the fifth repaired on 30 September 2026 and the sixth on 1 October
 2026, all four before any `iati` row reached the download page.
 The second and the fourth describe how the Global Fund and d-portal publish and stand whatever

@@ -244,7 +244,35 @@ HISTORY_DISAGREEMENT_TOTAL_NOTE = (
 )
 
 
-def resolve_country(code: str) -> Optional[str]:
+# Item 18(y) of RESUME.md, settled by ruling R78 on 29 October 2026. An alphabetic
+# recipient-country code which no lookup in `code_to_iso3` or `to_iso3` resolves is read here,
+# and only for the publisher named in the key. The Department of Health and Human Services
+# (US-GOV-14) files 22 HIV disbursements worth 8,903,002 USD from FY2012 to FY2018 under `SF`,
+# every disbursement on treasury account 19x1030 and sector 13040, which makes the money PEPFAR
+# money. Two separate readings of the corpus place `SF` in Sudan. The department orders the
+# recipient countries inside an activity alphabetically by name, and activity US-GOV-14-47141
+# runs ZA, ZW, SS, SF, SZ, TJ where the sibling activity US-GOV-14-43311 runs ZA, ZW, SS, SD,
+# SZ, TJ, which puts `SF` between South Sudan and Swaziland, where Sudan falls. The State
+# Department file iati-activities-Sudan.xml holds only the codes SD and SF, and activity
+# US-GOV-11-SSJTIP21GR3024-89567, titled Identifying and Protecting VoTs in Sudan, files all 12
+# transactions of the activity under SF. South Africa and South Sudan are ruled out, because the
+# same Health and Human Services file uses ZA 870 times and SS 488 times.
+#
+# The key holds the publisher because SF is the FIPS 10-4 code for South Africa, and a publisher
+# writing FIPS codes would mean South Africa by SF. An SF from a publisher missing from the table
+# stays dropped and is named with the publisher in the run log. The table must not move into
+# hivimpact/normalize.py, because a shared entry would read every FIPS-coded SF from any later
+# source as Sudan, and hivimpact/connectors/global_fund.py keeps the Global Fund code QNA out of
+# the shared normaliser on the same ground. State (US-GOV-11) is keyed as well, because the State
+# file for Sudan supplies the second reading, although no State HIV disbursement in the corpus
+# scanned for item 18(y) carries SF.
+PUBLISHER_CODE_ALIASES: Dict[Tuple[str, str], str] = {
+    ("US-GOV-14", "SF"): "SDN",  # Sudan, read from activity US-GOV-14-47141
+    ("US-GOV-11", "SF"): "SDN",  # Sudan, read from iati-activities-Sudan.xml
+}
+
+
+def resolve_country(code: str, publisher: str = "") -> Optional[str]:
     """The ISO3 code one IATI `recipient-country` code names, or None when the code names no
     country the panel can hold.
 
@@ -261,16 +289,29 @@ def resolve_country(code: str) -> Optional[str]:
     other 20, among them 998 and the regional codes ending in 89, were already dropped here.
     A real country always arrives as an alphabetic code, so refusing the fallback on an
     all-digit code loses no money and ends the contamination.
+
+    `publisher` is the `reporting-org ref` of the activity, and only `PUBLISHER_CODE_ALIASES`
+    reads the value, after `code_to_iso3` and before the `to_iso3` fallback. A caller passing no
+    publisher gets the behaviour from before 29 October 2026, which drops `SF`.
     """
+    return _resolve_country(code, publisher)[0]
+
+
+def _resolve_country(code: str, publisher: str = "") -> Tuple[Optional[str], bool]:
+    """`resolve_country`, with a flag which is True only when `PUBLISHER_CODE_ALIASES` gave the
+    answer, kept apart because the run log counts every disbursement the table places."""
     raw = (code or "").strip()
     if not raw:
-        return None
+        return None, False
     direct = code_to_iso3(raw)
     if direct:
-        return direct
+        return direct, False
     if raw.isdigit():
-        return None
-    return to_iso3(raw)
+        return None, False
+    alias = PUBLISHER_CODE_ALIASES.get(((publisher or "").strip(), raw.upper()))
+    if alias:
+        return alias, True
+    return to_iso3(raw), False
 
 
 NON_POSITIVE_NOTE = (
@@ -412,6 +453,11 @@ class ForeignAssistanceConnector(BaseConnector):
         # the codes and a publisher moving to a new numbering shows up instead of resolving to
         # whatever country shares the number under UN M49. See `resolve_country`.
         self._numeric_codes: Dict[str, int] = collections.Counter()
+        # every other recipient-country code the run dropped, keyed on publisher and code, and
+        # every kept disbursement `PUBLISHER_CODE_ALIASES` placed, keyed on publisher, code and
+        # country with the count and the dollars. See `resolve_country`.
+        self._alpha_codes: Dict[Tuple[str, str], int] = collections.Counter()
+        self._aliased: Dict[Tuple[str, str, str], List[float]] = {}
 
     # -- HTTP ---------------------------------------------------------------------------
     @property
@@ -796,7 +842,7 @@ class ForeignAssistanceConnector(BaseConnector):
                 counters["multi_country"] += 1
                 continue
 
-            iso3 = resolve_country(codes[0])
+            iso3, aliased = _resolve_country(codes[0], reporting_ref)
             if not iso3:
                 # regional money: USAID's Multiple Countries files hold 905 HIV disbursements
                 # worth 101.245m USD under region codes 289, 998, 789, 380 and 619, and the API
@@ -805,6 +851,9 @@ class ForeignAssistanceConnector(BaseConnector):
                 if codes[0].strip().isdigit():
                     counters["numeric_code"] += 1
                     self._numeric_codes[codes[0].strip()] += 1
+                else:
+                    counters["other_code"] += 1
+                    self._alpha_codes[(reporting_ref, codes[0].strip())] += 1
                 continue
             if wanted and iso3 not in wanted:
                 continue
@@ -839,6 +888,11 @@ class ForeignAssistanceConnector(BaseConnector):
 
             raw[(iso3, year, bucket)] = raw.get((iso3, year, bucket), 0.0) + value
             counters["kept"] += 1
+            if aliased:
+                hit = self._aliased.setdefault(
+                    (reporting_ref, codes[0].strip().upper(), iso3), [0, 0.0])
+                hit[0] += 1
+                hit[1] += value
             award = self._award_number(identifier, bucket)
             if award:
                 awards.setdefault((iso3, year, bucket), set()).add(award)
@@ -914,8 +968,11 @@ class ForeignAssistanceConnector(BaseConnector):
         seen: Set[tuple] = set()
         counters: Dict[str, int] = {k: 0 for k in (
             "activities", "kept", "duplicate", "no_country", "multi_country",
-            "not_a_country", "numeric_code", "not_usd", "unreadable_value", "unreadable_file")}
+            "not_a_country", "numeric_code", "other_code", "not_usd", "unreadable_value",
+            "unreadable_file")}
         self._numeric_codes = collections.Counter()
+        self._alpha_codes = collections.Counter()
+        self._aliased = {}
         log.info("foreign_assistance: parsing %d files", len(files))
         started = time.time()
         for n, record in enumerate(files, start=1):
@@ -945,6 +1002,27 @@ class ForeignAssistanceConnector(BaseConnector):
                      ", ".join(f"{code} ({n:,})" for code, n
                                in sorted(self._numeric_codes.items(),
                                          key=lambda kv: (-kv[1], kv[0]))))
+        if self._alpha_codes:
+            # item 18(y) found `SF` dropped here with no line naming the code, and the
+            # 8,903,002 USD of Sudan money went missing without a word in the log
+            log.info("foreign_assistance: %d of the %d HIV disbursements dropped as naming no "
+                     "country carried a recipient-country code which is not all digits and "
+                     "which no lookup in the shared normaliser or the publisher code table "
+                     "resolves, namely %s",
+                     counters["other_code"], counters["not_a_country"],
+                     ", ".join(f"{code or 'a blank code'} from {pub or 'no reporting-org ref'} "
+                               f"({n:,})" for (pub, code), n
+                               in sorted(self._alpha_codes.items(),
+                                         key=lambda kv: (-kv[1], kv[0]))))
+        if self._aliased:
+            for (pub, code, iso3), (n, usd) in sorted(self._aliased.items()):
+                log.info("foreign_assistance: the publisher code table read %s from %s as %s on "
+                         "%d kept HIV %s worth %s USD (item 18(y), ruling R78)",
+                         code, pub, iso3, n, "disbursement" if n == 1 else "disbursements",
+                         f"{usd:,.0f}")
+        else:
+            log.info("foreign_assistance: the publisher code table placed no kept HIV "
+                     "disbursement during the run")
 
         raw = self._subtract_overlap(raw, awards)
         merged, provenance = self._merge_history(raw, self._history(), start_year, end_year,
