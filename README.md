@@ -1,10 +1,14 @@
-# HIV Funding Impacts
+# [HIV Funding Impacts](https://hivfundingimpacts.aiinsocietyhub.com)
 
-A contamination-safe data pipeline tracking how global-health funding cuts (PEPFAR /
-USAID / UNAIDS, under the *America First Global Health Strategy*) affect HIV services
-across LMICs. Joint work with Adrian Smith (Oxford Population Health).
+HIV Funding Impacts is a contamination-safe data pipeline and public website which track how
+cuts to global health funding affect HIV services across low-income and middle-income countries
+(LMICs). The cuts fall on the US President's Emergency Plan for AIDS Relief (PEPFAR), the US
+Agency for International Development (USAID) and the Joint United Nations Programme on HIV/AIDS
+(UNAIDS), under the *America First Global Health Strategy*. HIV Funding Impacts is joint work by
+Jason Hung and [Adrian Smith](https://www.ndph.ox.ac.uk/team/adrian-smith-1) of Oxford Population Health.
 
-This repository is **Phase 1**: the aggregator layer.
+The live site covers 130 countries in eight regions, and the panel published on 29 October 2026
+holds 456,329 rows.
 
 ## Principles (non-negotiable)
 
@@ -25,7 +29,7 @@ This repository is **Phase 1**: the aggregator layer.
 
 - **Phase 1** — aggregator connectors (UNAIDS AIDSinfo, WHO GHO, OECD CRS, World Bank).
   Few, structured, near-global → the reliable panel skeleton + triangulation baseline.
-  - **Phase 1.1** — filter/present the **Southeast Asia** slice first (for Adrian). Not
+  - **Phase 1.1** — filter/present the **Southeast Asia** slice first. Not
     a separate build: the connectors are global; `--countries sea` is just the filter.
 - **Phase 2** — SEA country-level "to source" connectors (the feasibility test).
   Log: [`docs/PHASE2_FEASIBILITY.md`](docs/PHASE2_FEASIBILITY.md).
@@ -62,7 +66,7 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Run the collection  — *you run this; Claude writes the code but does not execute collection*
+## Run the collection
 
 ```bash
 # 1. (UNAIDS only) export CSVs from https://aidsinfo.unaids.org/ into data/raw/unaids/,
@@ -152,8 +156,8 @@ hivimpact/
   connectors/
     world_bank.py  who_gho.py  unaids_aidsinfo.py  oecd_crs.py
 scripts/
-  run_all.py                    # assemble the panel  (you run)
-  list_who_hiv_indicators.py    # dump WHO catalogue   (you run)
+  run_all.py                    # assemble the panel
+  list_who_hiv_indicators.py    # dump WHO catalogue
   build_site.py                 # panel -> the static site in site/dist
   deploy.py                     # site/dist -> the web host, over FTP with TLS
 site/
@@ -167,7 +171,7 @@ decision.
 
 ## Authors
 
-The authors are Jason Hung and Adrian Smith. Adrian Smith is at Oxford Population Health, University of Oxford.
+The authors are Jason Hung and Adrian Smith. Jason Hung is a postdoctoral researcher in the Global South upon finishing his PhD in Sociology from the University of Cambridge. Adrian Smith is the Associate Professor and Director of Clinical Studies at Oxford Population Health, University of Oxford.
 
 ## Licence
 

@@ -45,3 +45,6 @@ research/phase5_lac/dl/
 research/phase5_lac/r2h_*.html
 research/phase5_lac/ocr_tto/
 research/phase5_lac/bak_*.md
+
+# Editor and assistant settings
+.claude/
