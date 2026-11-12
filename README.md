@@ -164,3 +164,15 @@ DESIGN.md              # the living design doc
 
 See `DESIGN.md` for the schema, source-type taxonomy, and the reasoning behind each
 decision.
+
+## Authors
+
+The authors are Jason Hung and Adrian Smith. Adrian Smith is at Oxford Population Health, University of Oxford.
+
+## Licence
+
+The code is released under the MIT Licence in `LICENSE`. The panel files, documents and site text are released under CC BY 4.0 (Creative Commons Attribution 4.0 International), as `LICENSE-DATA` sets out. Figures and text drawn from upstream publishers stay under the terms of the publisher concerned.
+
+## Citation
+
+`CITATION.cff` holds the citation for the project, and GitHub shows the citation through the "Cite this repository" button.

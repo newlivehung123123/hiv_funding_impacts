@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use HIV Funding Impacts, please cite the project with the metadata in CITATION.cff."
+title: "HIV Funding Impacts"
+type: software
+abstract: "A data pipeline and public website which track how cuts to global health funding affect HIV services in low-income and middle-income countries across eight regions. Every row of the panel carries the source address, the source type and the date of retrieval."
+authors:
+  - given-names: Jason
+    family-names: Hung
+  - given-names: Adrian
+    family-names: Smith
+    affiliation: "Oxford Population Health, University of Oxford"
+repository-code: "https://github.com/newlivehung123123/hiv_funding_impacts"
+url: "https://hivfundingimpacts.aiinsocietyhub.com"
+license: MIT
+keywords:
+  - HIV
+  - global health financing
+  - PEPFAR
+  - open data
