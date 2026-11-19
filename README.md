@@ -14,8 +14,7 @@ holds 456,329 rows.
 ## Principles (non-negotiable)
 
 1. **Reliability & validity first.** Structured/authoritative feeds only. We never
-   parse prose or PDFs for numbers. An honest *"not published in structured form"*
-   beats a fabricated figure.
+   parse prose or PDFs for numbers. 
 2. **No mass-LLM extraction** anywhere in the pipeline. Phase 1 needs no LLM at all —
    every source here is machine-readable.
 3. **Provenance on every row** — `source_url`, `source_type`, `retrieved_at`.
