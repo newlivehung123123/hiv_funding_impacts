@@ -4,8 +4,9 @@ HIV Funding Impacts is a contamination-safe data pipeline and public website whi
 cuts to global health funding affect HIV services across low-income and middle-income countries
 (LMICs). The cuts fall on the US President's Emergency Plan for AIDS Relief (PEPFAR), the US
 Agency for International Development (USAID) and the Joint United Nations Programme on HIV/AIDS
-(UNAIDS), under the *America First Global Health Strategy*. HIV Funding Impacts is joint work by
-Jason Hung and [Adrian Smith](https://www.ndph.ox.ac.uk/team/adrian-smith-1) of Oxford Population Health.
+(UNAIDS), under the *America First Global Health Strategy*. HIV Funding Impacts is joint work by 
+[Adrian Smith](https://www.ndph.ox.ac.uk/team/adrian-smith-1) of Oxford Population Health and 
+Jason Hung.
 
 The live site covers 130 countries in eight regions, and the panel published on 29 October 2026
 holds 456,329 rows.
